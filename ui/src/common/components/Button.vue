@@ -131,28 +131,28 @@ button.icon-btn {
   background: #fff;
   padding: 0.5rem 0.75rem;
   border: 1px solid;
-  border-color: #007bff;
+  border-color: #67271a;
   border-radius: 1.125rem;
 }
 
 .inline-button.btn:hover {
-  background: #0069d9;
+  background: #67271a;
   color: #ffffff;
-  border-color: #0069d9;
+  border-color: #67271a;
   cursor: pointer;
 }
 
 .btn.primary {
   color: #fff;
-  background-color: #337ab7;
-  border-color: #2e6da4;
+  background-color: #67271a;
+  border-color: #2d2220;
 }
 
 .btn.primary:hover,
 .btn.primary:focus {
   color: #fff;
-  background-color: #286090;
-  border-color: #204d74;
+  background-color: #2d2220;
+  border-color: #1f1817;
 }
 
 .btn.secondary {
@@ -197,13 +197,13 @@ button.icon-btn {
 .btn.text {
   background: transparent;
   border: 1px solid transparent;
-  color: #428bca;
+  color: #67271a;
 }
 
 .btn.text:hover {
-  color: #2a6496;
+  color: #2d2220;
   text-decoration: none;
-  border: 1px solid #428bca;
+  border: 1px solid #67271a;
 }
 
 .btn.no-outline {

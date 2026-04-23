@@ -216,8 +216,8 @@ export default {
   display: block;
   height: 40px;
   width: 100%;
-  background: #205081;
-  border-bottom: 1px solid #2e3d54;
+  background: #67271a;
+  border-bottom: 1px solid #2d2220;
   color: #fff;
   font-weight: bold;
 }

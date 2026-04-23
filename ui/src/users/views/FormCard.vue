@@ -47,7 +47,7 @@ export default {
   flex-direction: column;
   align-items: center;
   height: 100vh;
-  background: linear-gradient(135deg, #205081, #2d67a3);
+  background: linear-gradient(135deg, #67271a, #2d2220);
   padding-top: 1.25rem;
 }
 
@@ -124,7 +124,7 @@ export default {
 .user-form :deep(.os-input-text .p-float-label .p-inputtext:enabled:focus ~ label),
 .user-form :deep(.os-input-password .p-float-label .p-password.p-inputwrapper-focus ~ label),
 .user-form :deep(.os-dropdown .p-float-label .p-dropdown.p-inputwrapper-focus ~ label) {
-  color: #007bff;
+  color: #67271a;
 }
 
 .user-form :deep(.os-dropdown .p-float-label .p-dropdown .p-inputtext),
@@ -152,7 +152,7 @@ export default {
 .user-form :deep(.os-dropdown .p-float-label .p-dropdown.p-inputwrapper-focus),
 .user-form :deep(.os-input-text .p-float-label .p-inputtext:enabled:focus),
 .user-form :deep(.os-input-password .p-float-label .p-inputtext:enabled:focus) {
-  border: 1px solid #007bff;
+  border: 1px solid #67271a;
 }
 
 .logo {

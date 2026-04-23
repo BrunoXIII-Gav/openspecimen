@@ -28,4 +28,86 @@
         name in ('image_url_tmpl', 'imaging')
     </sql>
   </changeSet>
+
+  <changeSet author="brunoxiii" id="UI visibility settings for navbar and ask os widgets">
+    <sql>
+      call add_cfg_prop(
+        'common', 'navbar_favorites_enabled',
+        'nb_fav_en', 'nb_fav_en_desc',
+        'BOOLEAN', 'true'
+      );
+
+      call add_cfg_prop(
+        'common', 'navbar_new_stuff_enabled',
+        'nb_news_en', 'nb_news_en_desc',
+        'BOOLEAN', 'true'
+      );
+
+      call add_cfg_prop(
+        'common', 'navbar_help_enabled',
+        'nb_help_en', 'nb_help_en_desc',
+        'BOOLEAN', 'true'
+      );
+
+      call add_cfg_prop(
+        'common', 'navbar_notifications_enabled',
+        'nb_notif_en', 'nb_notif_en_desc',
+        'BOOLEAN', 'true'
+      );
+
+      call add_cfg_prop(
+        'common', 'navbar_ask_os_enabled',
+        'nb_askos_en', 'nb_askos_en_desc',
+        'BOOLEAN', 'true'
+      );
+
+      call add_cfg_prop(
+        'common', 'floating_ask_os_enabled',
+        'flt_askos_en', 'flt_askos_en_desc',
+        'BOOLEAN', 'true'
+      );
+
+      call add_cfg_prop(
+        'common', 'deploy_env_enabled',
+        'dep_env_badge_en', 'dep_env_badge_en_desc',
+        'BOOLEAN', 'true'
+      );
+    </sql>
+  </changeSet>
+
+  <changeSet author="brunoxiii" id="UI visibility setting for primary navbar logo">
+    <sql>
+      call add_cfg_prop(
+        'common', 'navbar_primary_logo_enabled',
+        'nb_logo_en', 'nb_logo_en_desc',
+        'BOOLEAN', 'true'
+      );
+    </sql>
+  </changeSet>
+
+  <changeSet author="brunoxiii" id="UI visibility setting for home useful links widget">
+    <sql>
+      call add_cfg_prop(
+        'common', 'home_useful_links_enabled',
+        'hm_use_links_en', 'hm_use_links_desc',
+        'BOOLEAN', 'true'
+      );
+    </sql>
+  </changeSet>
+
+  <changeSet author="brunoxiii" id="UI visibility settings for help buttons and training menu">
+    <sql>
+      call add_cfg_prop(
+        'common', 'page_help_links_enabled',
+        'pg_help_en', 'pg_help_desc',
+        'BOOLEAN', 'true'
+      );
+
+      call add_cfg_prop(
+        'common', 'training_menu_enabled',
+        'menu_train_en', 'menu_train_desc',
+        'BOOLEAN', 'true'
+      );
+    </sql>
+  </changeSet>
 </databaseChangeLog>

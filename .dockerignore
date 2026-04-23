@@ -1,0 +1,15 @@
+.git
+.gitignore
+.codex
+
+.gradle
+.gradle-user
+
+build
+
+ui/node_modules
+www/node_modules
+
+*.log
+*.tmp
+*.swp

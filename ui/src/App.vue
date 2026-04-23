@@ -243,6 +243,7 @@ export default {
         },
 
         {
+          showIf: () => ui.global.appProps.training_menu_enabled != false,
           href: async () => {
             let setting = await settingSvc.getSetting('training', 'training_url');
             return setting[0].value;

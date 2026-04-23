@@ -2,13 +2,14 @@
   <div class="os-navbar">
     <div class="items">
       <div class="logo">
-        <a :href="homeUrl" relopener="noopener">
-          <img :src="osLogo">
+        <a :href="homeUrl" relopener="noopener" class="primary-home-link">
+          <img :src="osLogo" v-if="navbarPrimaryLogoEnabled">
+          <span class="home-link-text" v-else>Home</span>
         </a>
         <a class="deploy-logo" :href="deploySiteUrl" v-if="deploySiteLogo" target="_blank" rel="noopener">
           <img :src="deploySiteLogo">
         </a>
-        <div class="deploy-env">
+        <div class="deploy-env" v-if="deployEnvEnabled">
           <span>{{deployEnv}}</span>
         </div>
       </div>
@@ -18,17 +19,17 @@
       </div>
 
       <div class="buttons">
-        <os-add-to-favorites v-if="!minimalLogin" />
+        <os-add-to-favorites v-if="!minimalLogin && navbarFavoritesEnabled" />
 
-        <os-new-stuff  v-if="!minimalLogin" />
+        <os-new-stuff  v-if="!minimalLogin && navbarNewStuffEnabled" />
 
         <os-user-feedback v-if="!minimalLogin" />
 
-        <os-about />
+        <os-about v-if="navbarHelpEnabled" />
 
-        <os-notifs-overlay v-if="!minimalLogin" />
+        <os-notifs-overlay v-if="!minimalLogin && navbarNotificationsEnabled" />
 
-        <os-ask-os />
+        <os-ask-os v-if="navbarAskOsEnabled" />
 
         <div class="user-profile" v-os-tooltip.bottom="$t('common.user_profile')" v-if="authenticated">
           <button @click="toggleProfileMenu">
@@ -114,14 +115,47 @@ export default {
       return this.noLogin || this.hideButtons || !this.authenticated;
     },
 
+    appProps: function() {
+      return (this.$ui && this.$ui.global && this.$ui.global.appProps) || {};
+    },
+
+    deployEnvEnabled: function() {
+      return this.appProps.deploy_env_enabled != false;
+    },
+
+    navbarPrimaryLogoEnabled: function() {
+      return this.appProps.navbar_primary_logo_enabled != false;
+    },
+
+    navbarFavoritesEnabled: function() {
+      return this.appProps.navbar_favorites_enabled != false;
+    },
+
+    navbarNewStuffEnabled: function() {
+      return this.appProps.navbar_new_stuff_enabled != false;
+    },
+
+    navbarHelpEnabled: function() {
+      return this.appProps.navbar_help_enabled != false;
+    },
+
+    navbarNotificationsEnabled: function() {
+      return this.appProps.navbar_notifications_enabled != false;
+    },
+
+    navbarAskOsEnabled: function() {
+      return this.appProps.navbar_ask_os_enabled != false;
+    },
+
     siteAssets: function() {
       return (this.$ui && this.$ui.global && this.$ui.global.siteAssets) || {};
     },
 
     deployEnv: function() {
-      if (this.$ui && this.$ui.global && this.$ui.global.appProps.deploy_env) {
-        return this.$ui.global.appProps.deploy_env.toUpperCase();
+      if (this.appProps.deploy_env) {
+        return this.appProps.deploy_env.toUpperCase();
       }
+
       return 'UNKNOWN';
     },
 
@@ -204,6 +238,19 @@ export default {
 
 .os-navbar .items .logo img {
   height: 2rem;
+}
+
+.os-navbar .items .logo .primary-home-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.os-navbar .items .logo .home-link-text {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0rem 0.4rem;
 }
 
 .os-navbar .items .logo .deploy-logo {

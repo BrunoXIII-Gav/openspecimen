@@ -1,7 +1,9 @@
 <template>
   <FormCard ref="loginForm" :schema="loginSchema" :data="ctx" :logo="osLogo" @keydown.enter.prevent="login">
     <template #title v-if="showHeader">
-      <h3 class="header">Sign in to continue to OpenSpecimen</h3>
+      <h3 class="header">
+        {{ ctx.showLoginAppName ? $t('login.sign_in_to_continue_to_os') : $t('login.sign_in_to_continue') }}
+      </h3>
     </template>
 
     <template #primary-action>
@@ -35,14 +37,15 @@ export default {
 
   data() {
     const {global: {appProps}} = this.ui;
+    const domainName = appProps.default_domain || 'openspecimen';
     return {
-      osLogo,
+      osLogo: appProps.login_logo_enabled === false ? null : osLogo,
 
       loginSchema: loginSchema.layout,
 
       ctx: {
         loginDetail: {
-          domainName: appProps.default_domain
+          domainName: domainName
         },
 
         getDomains: async () => this.domains,
@@ -50,6 +53,8 @@ export default {
         otpAuthEnabled: false,
 
         forgotPasswordEnabled: appProps.forgot_password,
+
+        showLoginAppName: appProps.login_app_name_enabled !== false,
 
         externalAuth: false
       }
@@ -64,6 +69,10 @@ export default {
     this._getDomains().then(
       domains => {
         this.domains = domains.filter(domain => domain.allowLogins);
+        if (!this.domains.some(domain => domain.name == this.ctx.loginDetail.domainName)) {
+          this.ctx.loginDetail.domainName = this.domains.find(domain => domain.name == 'openspecimen')?.name || this.domains[0]?.name;
+        }
+
         this._toggleExternalAuthSelected();
       }
     );

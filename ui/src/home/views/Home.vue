@@ -13,7 +13,7 @@
 
     <os-page-body>
       <os-grid>
-        <os-grid-column :width="9" style="overflow-y: auto;">
+        <os-grid-column :width="mainColumnWidth" style="overflow-y: auto;">
           <os-card class="os-widgets-info" v-if="ctx.widgets.length == 0">
             <template #body>
               <span class="message">
@@ -29,24 +29,26 @@
           </div>
         </os-grid-column>
 
-        <os-grid-column :width="3" style="overflow-y: auto;">
+        <os-grid-column v-if="showRightPanel" :width="3" style="overflow-y: auto;">
           <div class="os-widgets">
-            <div class="widget widget-6" v-if="ctx.favorites && ctx.favorites.length > 0">
-              <os-home-list-card class="os-favorite-links" :icon="'heart'" :title="$t('common.home.favorites')"
-                :show-star="false" :list="ctx.favorites" :hide-search="true">
-                <template #actions="slotProps">
-                  <os-button size="small" left-icon="trash" @click="confirmRemoveFavorite(slotProps.item)" />
-                </template>
-              </os-home-list-card>
-            </div>
+            <template v-if="favoritesPanelEnabled">
+              <div class="widget widget-6" v-if="ctx.favorites && ctx.favorites.length > 0">
+                <os-home-list-card class="os-favorite-links" :icon="'heart'" :title="$t('common.home.favorites')"
+                  :show-star="false" :list="ctx.favorites" :hide-search="true">
+                  <template #actions="slotProps">
+                    <os-button size="small" left-icon="trash" @click="confirmRemoveFavorite(slotProps.item)" />
+                  </template>
+                </os-home-list-card>
+              </div>
 
-            <div class="widget widget-6" style="padding-bottom: 0px;" v-else>
-              <os-card class="os-quick-links">
-                <template #body>
-                  <span v-t="'common.home.no_favorites'">No favorite links</span>
-                </template>
-              </os-card>
-            </div>
+              <div class="widget widget-6" style="padding-bottom: 0px;" v-else>
+                <os-card class="os-quick-links">
+                  <template #body>
+                    <span v-t="'common.home.no_favorites'">No favorite links</span>
+                  </template>
+                </os-card>
+              </div>
+            </template>
 
             <div class="widget widget-6" style="padding-bottom: 0px;" v-if="usefulLinksEnabled">
               <os-card class="os-quick-links">
@@ -204,6 +206,18 @@ export default {
 
     usefulLinksEnabled: function() {
       return this.appProps.home_useful_links_enabled != false;
+    },
+
+    favoritesPanelEnabled: function() {
+      return this.appProps.home_favorites_panel_enabled != false;
+    },
+
+    showRightPanel: function() {
+      return this.favoritesPanelEnabled || this.usefulLinksEnabled;
+    },
+
+    mainColumnWidth: function() {
+      return this.showRightPanel ? 9 : 12;
     },
 
     widgets: function() {

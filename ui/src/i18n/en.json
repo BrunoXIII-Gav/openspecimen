@@ -1576,6 +1576,8 @@
   },
 
   "login": {
+    "sign_in_to_continue": "Sign in to continue",
+    "sign_in_to_continue_to_os": "Sign in to continue to OpenSpecimen",
     "sign_up": "Sign Up"
   },
 
@@ -2243,10 +2245,16 @@
       "hosting_institute_desc": "Name of the institute hosting OpenSpecimen and the biobank services",
       "home_useful_links_enabled": "Home Useful Links Widget",
       "home_useful_links_enabled_desc": "Enable to display Useful Links widget on the home page.",
+      "home_favorites_panel_enabled": "Home Favorites Panel",
+      "home_favorites_panel_enabled_desc": "Enable to display favorites panel on the home page.",
       "page_help_links_enabled": "Page Help Buttons",
       "page_help_links_enabled_desc": "Enable to display Help buttons in page toolbars.",
       "training_menu_enabled": "Training Menu Item",
       "training_menu_enabled_desc": "Enable to show Training item in the navigation menu.",
+      "login_app_name_enabled": "Login Header App Name",
+      "login_app_name_enabled_desc": "Enable to display the app name in the sign-in page header.",
+      "login_logo_enabled": "Login Page Logo",
+      "login_logo_enabled_desc": "Enable to display the logo image on the sign-in page.",
       "gen_fast_unique_ids": "Fast Unique IDs",
       "gen_fast_unique_ids_desc": "Enable for faster generation of system unique IDs (SYS_UID) by reducing bottlenecks for concurrent requests.",
       "import_max_records_per_txn": "Pre-validate Records Limit",

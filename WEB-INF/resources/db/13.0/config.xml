@@ -95,6 +95,16 @@
     </sql>
   </changeSet>
 
+  <changeSet author="brunoxiii" id="UI visibility setting for home favorites panel">
+    <sql>
+      call add_cfg_prop(
+        'common', 'home_favorites_panel_enabled',
+        'hm_fav_panel_en', 'hm_fav_panel_desc',
+        'BOOLEAN', 'true'
+      );
+    </sql>
+  </changeSet>
+
   <changeSet author="brunoxiii" id="UI visibility settings for help buttons and training menu">
     <sql>
       call add_cfg_prop(
@@ -106,6 +116,26 @@
       call add_cfg_prop(
         'common', 'training_menu_enabled',
         'menu_train_en', 'menu_train_desc',
+        'BOOLEAN', 'true'
+      );
+    </sql>
+  </changeSet>
+
+  <changeSet author="brunoxiii" id="UI visibility setting for login header app name">
+    <sql>
+      call add_cfg_prop(
+        'common', 'login_app_name_enabled',
+        'login_hdr_en', 'login_hdr_desc',
+        'BOOLEAN', 'true'
+      );
+    </sql>
+  </changeSet>
+
+  <changeSet author="brunoxiii" id="UI visibility setting for login logo">
+    <sql>
+      call add_cfg_prop(
+        'common', 'login_logo_enabled',
+        'login_logo_en', 'login_logo_desc',
         'BOOLEAN', 'true'
       );
     </sql>

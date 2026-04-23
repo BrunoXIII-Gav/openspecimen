@@ -48,7 +48,7 @@
               </os-card>
             </div>
 
-            <div class="widget widget-6" style="padding-bottom: 0px;">
+            <div class="widget widget-6" style="padding-bottom: 0px;" v-if="usefulLinksEnabled">
               <os-card class="os-quick-links">
                 <template #header>
                   <span class="title" v-t="'common.home.useful_links'">Useful Links</span>
@@ -198,6 +198,14 @@ export default {
   },
 
   computed: {
+    appProps: function() {
+      return (this.$ui && this.$ui.global && this.$ui.global.appProps) || {};
+    },
+
+    usefulLinksEnabled: function() {
+      return this.appProps.home_useful_links_enabled != false;
+    },
+
     widgets: function() {
       const accessible = homePageSvc.getWidgets();
       return this.ctx.widgets.filter(({name}) => accessible.indexOf(name) != -1);

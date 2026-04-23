@@ -1,6 +1,6 @@
 
 <template>
-  <a :href="url" class="button-link" :target="target" rel="noopener">
+  <a :href="url" class="button-link" :target="target" rel="noopener" v-if="isVisible">
     <icon v-if="leftIcon" :name="leftIcon" :class="leftIconClass" />
     <span>{{label}}</span>
     <icon v-if="rightIcon" :name="rightIcon" :class="rightIconClass" />
@@ -18,6 +18,22 @@ export default {
   },
 
   computed: {
+    appProps: function() {
+      return (this.$ui && this.$ui.global && this.$ui.global.appProps) || {};
+    },
+
+    isHelpLink: function() {
+      return this.leftIcon == 'question-circle';
+    },
+
+    isVisible: function() {
+      if (this.isHelpLink && this.appProps.page_help_links_enabled == false) {
+        return false;
+      }
+
+      return true;
+    },
+
     leftIconClass: function() {
       return this.label ? 'pad-right' : '';
     },

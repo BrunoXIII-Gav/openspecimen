@@ -588,6 +588,17 @@ public class ConfigurationServiceImpl implements ConfigurationService, Initializ
 		props.put("feedback_enabled",        getBoolSetting("common", "feedback_enabled", true));
 		props.put("mrn_restriction_enabled", getBoolSetting("biospecimen", "mrn_restriction_enabled", false));
 		props.put("deploy_env",              getStrSetting("common", "deploy_env"));
+		props.put("deploy_env_enabled",      getBoolSetting("common", "deploy_env_enabled", true));
+		props.put("home_useful_links_enabled", getBoolSetting("common", "home_useful_links_enabled", true));
+		props.put("page_help_links_enabled", getBoolSetting("common", "page_help_links_enabled", true));
+		props.put("training_menu_enabled",   getBoolSetting("common", "training_menu_enabled", true));
+		props.put("navbar_primary_logo_enabled", getBoolSetting("common", "navbar_primary_logo_enabled", true));
+		props.put("navbar_favorites_enabled", getBoolSetting("common", "navbar_favorites_enabled", true));
+		props.put("navbar_new_stuff_enabled", getBoolSetting("common", "navbar_new_stuff_enabled", true));
+		props.put("navbar_help_enabled",      getBoolSetting("common", "navbar_help_enabled", true));
+		props.put("navbar_notifications_enabled", getBoolSetting("common", "navbar_notifications_enabled", true));
+		props.put("navbar_ask_os_enabled",    getBoolSetting("common", "navbar_ask_os_enabled", true));
+		props.put("floating_ask_os_enabled",  getBoolSetting("common", "floating_ask_os_enabled", true));
 		props.put("user_sign_up",            getBoolSetting("administrative", "user_sign_up", true));
 		props.put("forgot_password",         getBoolSetting("auth", "forgot_password", true));
 		props.put("toast_disp_time",         getIntSetting("common", "toast_disp_time", 5));

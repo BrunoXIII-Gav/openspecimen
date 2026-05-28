@@ -34,12 +34,13 @@
 
 <script>
 
-import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
-import exprUtil from '@/common/services/ExpressionUtil.js';
-import formUtil from '@/common/services/FormUtil.js';
+import cpSvc      from '@/biospecimen/services/CollectionProtocol.js';
+import exprUtil   from '@/common/services/ExpressionUtil.js';
+import formUtil   from '@/common/services/FormUtil.js';
+import routerSvc  from '@/common/services/Router.js';
 import settingSvc from '@/common/services/Setting.js';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
-import util from '@/common/services/Util.js';
+import util       from '@/common/services/Util.js';
 
 export default {
   props: ['cp', 'cpr', 'visit', 'specimen', 'specimens', 'refDate', 'page-top'],
@@ -244,7 +245,13 @@ export default {
         const instance = await wfInstanceSvc.createInstance({name: wfName}, null, null, null, [inputItem], opts);
         wfInstanceSvc.gotoInstance(instance.id);
       } else {
-        alert('Workflow module not installed!');
+        const route = routerSvc.getCurrentRoute();
+        const params = {cpId: this.visit.cpId, cprId: this.visit.cprId, visitId: this.visit.id || -1};
+        if (route.name && route.name.indexOf('ParticipantsListItem') >= 0) {
+          routerSvc.goto('ParticipantsListItemVisitDetail.Overview', params, {eventId: this.visit.eventId});
+        } else {
+          routerSvc.goto('VisitDetail.Overview', params, {eventId: this.visit.eventId});
+        }
       }
     },
 

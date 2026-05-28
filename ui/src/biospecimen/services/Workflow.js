@@ -1,10 +1,11 @@
-import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
-import i18n  from '@/common/services/I18n.js';
+import cpSvc      from '@/biospecimen/services/CollectionProtocol.js';
+import i18n       from '@/common/services/I18n.js';
+import routerSvc  from '@/common/services/Router.js';
 
 class Workflow {
   async collectVisitSpecimens(visit, repeat) {
     if (!this._wfInstanceSvc()) {
-      alert('Workflow module not installed!');
+      this._gotoVisitDetail(visit);
       return;
     }
 
@@ -33,7 +34,7 @@ class Workflow {
 
   async collectPending(visit) {
     if (!this._wfInstanceSvc()) {
-      alert('Workflow module not installed!');
+      this._gotoVisitDetail(visit);
       return;
     }
 
@@ -59,7 +60,7 @@ class Workflow {
 
   async addSpecimen(cp, visit) {
     if (!this._wfInstanceSvc()) {
-      alert('Workflow module not installed!');
+      routerSvc.goto('SpecimenAddEdit', {cpId: visit.cpId, cprId: visit.cprId, visitId: visit.id, specimenId: -1});
       return;
     }
 
@@ -130,7 +131,7 @@ class Workflow {
 
   async createPooledSpecimens(specimens) {
     if (!this._wfInstanceSvc()) {
-      alert('Workflow module not installed!');
+      this._gotoSpecimenDetail(specimens[0]);
       return;
     }
 
@@ -171,7 +172,7 @@ class Workflow {
 
   async transferSpecimens(specimens) {
     if (!this._wfInstanceSvc()) {
-      alert('Workflow module not installed!');
+      this._gotoSpecimenDetail(specimens[0]);
       return;
     }
 
@@ -212,7 +213,7 @@ class Workflow {
 
   async bulkAddEditEvents(specimens) {
     if (!this._wfInstanceSvc()) {
-      alert('Workflow module not installed!');
+      this._gotoSpecimenDetail(specimens[0]);
       return;
     }
 
@@ -253,7 +254,7 @@ class Workflow {
 
   async _createChildSpecimens(cpId, cpShortTitle, specimens, wfName, title) {
     if (!this._wfInstanceSvc()) {
-      alert('Workflow module not installed!');
+      this._gotoSpecimenDetail(specimens[0]);
       return;
     }
 
@@ -368,6 +369,26 @@ class Workflow {
     }
 
     return description;
+  }
+
+  _gotoVisitDetail(visit) {
+    const route = routerSvc.getCurrentRoute();
+    const params = {cpId: visit.cpId, cprId: visit.cprId, visitId: visit.id || -1};
+    if (route.name && route.name.indexOf('ParticipantsListItem') >= 0) {
+      routerSvc.goto('ParticipantsListItemVisitDetail.Overview', params, {eventId: visit.eventId});
+    } else {
+      routerSvc.goto('VisitDetail.Overview', params, {eventId: visit.eventId});
+    }
+  }
+
+  _gotoSpecimenDetail(specimen) {
+    const route = routerSvc.getCurrentRoute();
+    const params = {cpId: specimen.cpId, cprId: specimen.cprId, visitId: specimen.visitId, specimenId: specimen.id};
+    if (route.name && route.name.indexOf('ParticipantsListItem') >= 0) {
+      routerSvc.goto('ParticipantsListItemSpecimenDetail.Overview', params);
+    } else {
+      routerSvc.goto('SpecimenResolver', {specimenId: specimen.id});
+    }
   }
 
   _wfInstanceSvc() {

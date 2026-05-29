@@ -1,9 +1,13 @@
 import routerSvc from '@/common/services/Router.js';
 
 class Workflow {
-  async collectVisitSpecimens(visit) {
+  async collectVisitSpecimens(visit, repeat) {
     const {cpId, cprId, id: visitId} = visit;
-    routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1});
+    if (repeat) {
+      routerSvc.goto('VisitAddEdit', {cpId, cprId, visitId: -1}, {eventId: visit.eventId});
+    } else {
+      routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1});
+    }
   }
 
   async collectPending(visit) {
@@ -33,7 +37,7 @@ class Workflow {
 
   async transferSpecimens(specimens) {
     const {cpId, cprId, visitId, id: specimenId} = specimens[0];
-    routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId});
+    routerSvc.goto('ParticipantsListItemSpecimenDetail.Overview', {cpId, cprId, visitId, specimenId});
   }
 
   async bulkAddEditEvents(specimens) {

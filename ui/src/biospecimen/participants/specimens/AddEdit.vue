@@ -56,7 +56,10 @@ export default {
   data() {
     const specimen = this.specimen ? util.clone(this.specimen) : {};
     if (!specimen.id) {
-      Object.assign(specimen, {lineage: 'New', status: 'Collected'});
+      Object.assign(specimen, {
+        lineage: specimen.lineage || 'New',
+        status: specimen.status || 'Collected'
+      });
     }
 
     if (specimen.extensionDetail) {

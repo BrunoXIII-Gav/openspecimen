@@ -40,6 +40,7 @@ import formUtil from '@/common/services/FormUtil.js';
 import settingSvc from '@/common/services/Setting.js';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 import util from '@/common/services/Util.js';
+import routerSvc from '@/common/services/Router.js';
 
 export default {
   props: ['cp', 'cpr', 'visit', 'specimen', 'specimens', 'refDate', 'page-top'],
@@ -244,7 +245,7 @@ export default {
         const instance = await wfInstanceSvc.createInstance({name: wfName}, null, null, null, [inputItem], opts);
         wfInstanceSvc.gotoInstance(instance.id);
       } else {
-        alert('Workflow module not installed!');
+        routerSvc.goto('SpecimenAddEdit', {cpId: this.cp.id, cprId: this.cpr.id, visitId: this.visit.id || -1, specimenId: -1});
       }
     },
 

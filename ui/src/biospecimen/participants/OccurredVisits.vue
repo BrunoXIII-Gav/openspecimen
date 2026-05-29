@@ -177,7 +177,7 @@ export default {
         const instance = await wfInstanceSvc.createInstance({name: wfName}, null, null, null, [inputItem], opts);
         wfInstanceSvc.gotoInstance(instance.id);
       } else {
-        alert('Workflow module not installed!');
+        routerSvc.goto('SpecimenAddEdit', {cpId: visit.cpId, cprId: visit.cprId, visitId: visit.id || -1, specimenId: -1}, {eventId: visit.eventId});
       }
     },
 
@@ -201,7 +201,7 @@ export default {
         const instance = await wfInstanceSvc.createInstance({name: wfName}, null, null, null, [inputItem], opts);
         wfInstanceSvc.gotoInstance(instance.id);
       } else {
-        alert('Workflow module not installed!');
+        routerSvc.goto('SpecimenAddEdit', {cpId: visit.cpId, cprId: visit.cprId, visitId: visit.id || -1, specimenId: -1}, {eventId: visit.eventId});
       }
     },
 

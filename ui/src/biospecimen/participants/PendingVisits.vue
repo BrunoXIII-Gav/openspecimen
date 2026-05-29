@@ -167,7 +167,12 @@ export default {
         const instance = await wfInstanceSvc.createInstance({name: wfName}, null, null, null, inputItems, opts);
         wfInstanceSvc.gotoInstance(instance.id);
       } else {
-        alert('Workflow module not installed!');
+        const visit = visits[0];
+        const cpId = this.cp.id;
+        const cprId = this.cpr.id;
+        const visitId = visit.id > 0 ? visit.id : -1;
+        routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1},
+          {eventId: visit.eventId});
       }
     },
 

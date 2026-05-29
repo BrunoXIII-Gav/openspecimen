@@ -1,0 +1,365 @@
+{
+  "nodes": [
+    {
+      "id": "audit_revisions_auditrevisionsview",
+      "label": "Audit Revisions Modal View",
+      "file_type": "document",
+      "source_file": "www/app/modules/common/audit/revisions.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "import_add_importjobform",
+      "label": "Bulk Import Job Add Form",
+      "file_type": "document",
+      "source_file": "www/app/modules/common/import/add.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "import_list_importjoblist",
+      "label": "Bulk Import Jobs List View",
+      "file_type": "document",
+      "source_file": "www/app/modules/common/import/list.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "notif_all_notificationspage",
+      "label": "All Notifications Page",
+      "file_type": "document",
+      "source_file": "www/app/modules/common/notif/all.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "notif_list_notificationdropdown",
+      "label": "Notification Dropdown List",
+      "file_type": "document",
+      "source_file": "www/app/modules/common/notif/list.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "query_forms_list_queryformsindex",
+      "label": "Query Forms Index List",
+      "file_type": "document",
+      "source_file": "WEB-INF/resources/query-forms/list.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "participant_register_participantregisterform",
+      "label": "Custom Participant and Specimen Registration Form",
+      "file_type": "document",
+      "source_file": "www/app/custom-modules/biospecimen/participant/register.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "delete_modal_deleteconfirmmodal",
+      "label": "Delete Confirmation Modal",
+      "file_type": "document",
+      "source_file": "www/app/modules/common/delete/modal.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "export_add_exportform",
+      "label": "Data Export Add Form",
+      "file_type": "document",
+      "source_file": "www/app/modules/common/export/add.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "search_search_quicksearchwidget",
+      "label": "Quick Search Widget",
+      "file_type": "document",
+      "source_file": "www/app/modules/common/search/search.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "images_os_dna_logo_brandicon",
+      "label": "OpenSpecimen DNA Logo Icon (Circular Branding)",
+      "file_type": "image",
+      "source_file": "ui/src/assets/images/os_dna_logo.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "images_os_logo_brandlogo",
+      "label": "OpenSpecimen Logo with Krishagni Tagline",
+      "file_type": "image",
+      "source_file": "ui/src/assets/images/os_logo.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "select2_css_select2_uisprite",
+      "label": "Select2 UI Sprite Image (Arrows and Search Icons)",
+      "file_type": "image",
+      "source_file": "www/external_components/select2/css/select2.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_bulkimport_workflow",
+      "label": "Bulk Import Workflow Concept",
+      "file_type": "concept",
+      "source_file": "www/app/modules/common/import/add.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_notification_system",
+      "label": "Notification System Concept",
+      "file_type": "concept",
+      "source_file": "www/app/modules/common/notif/all.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_audit_trail",
+      "label": "Audit Trail Concept",
+      "file_type": "concept",
+      "source_file": "www/app/modules/common/audit/revisions.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "import_add_importjobform",
+      "target": "import_list_importjoblist",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "www/app/modules/common/import/add.html",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "import_add_importjobform",
+      "target": "concept_bulkimport_workflow",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "www/app/modules/common/import/add.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "import_list_importjoblist",
+      "target": "concept_bulkimport_workflow",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "www/app/modules/common/import/list.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notif_all_notificationspage",
+      "target": "concept_notification_system",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "www/app/modules/common/notif/all.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notif_list_notificationdropdown",
+      "target": "concept_notification_system",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "www/app/modules/common/notif/list.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notif_list_notificationdropdown",
+      "target": "notif_all_notificationspage",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "www/app/modules/common/notif/list.html",
+      "source_location": "line 35",
+      "weight": 1.0
+    },
+    {
+      "source": "notif_all_notificationspage",
+      "target": "notif_list_notificationdropdown",
+      "relation": "semantically_similar_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "www/app/modules/common/notif/all.html",
+      "source_location": null,
+      "weight": 0.95
+    },
+    {
+      "source": "audit_revisions_auditrevisionsview",
+      "target": "concept_audit_trail",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "www/app/modules/common/audit/revisions.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "delete_modal_deleteconfirmmodal",
+      "target": "concept_audit_trail",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "www/app/modules/common/delete/modal.html",
+      "source_location": null,
+      "weight": 0.65
+    },
+    {
+      "source": "participant_register_participantregisterform",
+      "target": "concept_bulkimport_workflow",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.55,
+      "source_file": "www/app/custom-modules/biospecimen/participant/register.html",
+      "source_location": null,
+      "weight": 0.55
+    },
+    {
+      "source": "export_add_exportform",
+      "target": "concept_bulkimport_workflow",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "www/app/modules/common/export/add.html",
+      "source_location": null,
+      "weight": 0.75
+    },
+    {
+      "source": "images_os_dna_logo_brandicon",
+      "target": "images_os_logo_brandlogo",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "ui/src/assets/images/os_dna_logo.png",
+      "source_location": null,
+      "weight": 0.95
+    },
+    {
+      "source": "select2_css_select2_uisprite",
+      "target": "import_add_importjobform",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "www/external_components/select2/css/select2.png",
+      "source_location": null,
+      "weight": 0.75
+    },
+    {
+      "source": "select2_css_select2_uisprite",
+      "target": "search_search_quicksearchwidget",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "www/external_components/select2/css/select2.png",
+      "source_location": null,
+      "weight": 0.75
+    },
+    {
+      "source": "query_forms_list_queryformsindex",
+      "target": "concept_bulkimport_workflow",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "WEB-INF/resources/query-forms/list.txt",
+      "source_location": null,
+      "weight": 0.65
+    },
+    {
+      "source": "search_search_quicksearchwidget",
+      "target": "participant_register_participantregisterform",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "www/app/modules/common/search/search.html",
+      "source_location": null,
+      "weight": 0.65
+    },
+    {
+      "source": "delete_modal_deleteconfirmmodal",
+      "target": "participant_register_participantregisterform",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.55,
+      "source_file": "www/app/modules/common/delete/modal.html",
+      "source_location": null,
+      "weight": 0.55
+    },
+    {
+      "source": "export_add_exportform",
+      "target": "import_add_importjobform",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "www/app/modules/common/export/add.html",
+      "source_location": null,
+      "weight": 0.75
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 3200,
+  "output_tokens": 950
+}

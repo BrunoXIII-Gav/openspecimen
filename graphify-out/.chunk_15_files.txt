@@ -1,0 +1,13 @@
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/query/list.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/query/parameters.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/query/query-expr.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/query/results.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/query/save.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/query/search.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/user/new-stuff.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/user/signin.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/user/signup.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/user/welcome-sign-in.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/user/welcome-video-player.html
+/mnt/c/Users/Eliu/openspecimen/www/app/modules/user/welcome.html
+/mnt/c/Users/Eliu/openspecimen/www/external_components/select2/css/select2.png

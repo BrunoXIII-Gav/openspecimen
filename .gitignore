@@ -232,4 +232,5 @@ pip-log.txt
 .mr.developer.cfg
 
 
-.gradle/
+.gradle/graphify-out/
+grep

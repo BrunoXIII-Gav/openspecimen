@@ -31,7 +31,7 @@ public class Query<R> {
 
 	@SuppressWarnings("unchecked")
 	public static <R> Query<R> createNamedQuery(Session session, String name) {
-		return new Query<R>(session.createNamedQuery(name, (Class<R>) Object.class));
+		return new Query<R>(session.createNamedQuery(name));
 	}
 
 	public static <R> Query<R> createQuery(Session session, String hql, Class<R> returnType) {

@@ -44,7 +44,15 @@ export default {
   methods: {
     _setupCpr: async function() {
       if (!this.cprId || this.cprId <= 0) {
-        this.cpr = {participant: {pmis: [], source: 'OpenSpecimen'}};
+        const cp = this.cpViewCtx.getCp();
+        this.cpr = {
+          id: -1,
+          cpId: cp.id,
+          cpShortTitle: cp.shortTitle,
+          ppid: null,
+          hasConsented: true,
+          participant: {pmis: [], source: 'OpenSpecimen'}
+        };
         return;
       }
 

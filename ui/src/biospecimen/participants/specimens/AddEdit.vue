@@ -180,7 +180,7 @@ export default {
         return;
       }
 
-      const toSave = util.clone(this.dataCtx.specimen);
+      const toSave = this._getSavePayload();
       specimenSvc.saveOrUpdate(toSave).then(saved => this._navToOverview(saved));
     },
 
@@ -194,6 +194,28 @@ export default {
       } else {
         routerSvc.back();
       }
+    },
+
+    _getSavePayload: function() {
+      const toSave = util.clone(this.dataCtx.specimen);
+      const cp = this.dataCtx.cp || {};
+      if (!toSave.id && cp.specimenCentric) {
+        if (!toSave.cprId || toSave.cprId <= 0) {
+          delete toSave.cprId;
+          delete toSave.ppid;
+        }
+
+        if (!toSave.visitId || toSave.visitId <= 0) {
+          delete toSave.visitId;
+          delete toSave.visitName;
+          delete toSave.visitStatus;
+          delete toSave.visitDate;
+          delete toSave.eventId;
+          delete toSave.eventLabel;
+        }
+      }
+
+      return toSave;
     }
   }
 }

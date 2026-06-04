@@ -17,12 +17,19 @@ class Workflow {
 
   async addSpecimen(cp, visit) {
     const cpId = (visit && visit.cpId) || (cp && cp.id);
-    const cprId = visit && visit.cprId;
-    const visitId = (visit && visit.id > 0) ? visit.id : -1;
+    let cprId = visit && visit.cprId;
+    let visitId = (visit && visit.id > 0) ? visit.id : -1;
+
+    if (cp?.specimenCentric && (!cprId || cprId <= 0)) {
+      routerSvc.goto('SpecimenAddEdit', {cpId, cprId: -1, visitId, specimenId: -1});
+      return;
+    }
+
     if (!cprId) {
       routerSvc.goto('ParticipantAddEdit', {cpId, cprId: -1});
       return;
     }
+
     if (visitId === -1) {
       routerSvc.goto('VisitAddEdit', {cpId, cprId, visitId: -1}, {eventId: visit && visit.eventId});
     } else {

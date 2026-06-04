@@ -28,6 +28,8 @@ export default {
       this._loadVisit(this.visitId);
     } else if (this.eventId > 0) {
       this._loadEvent(this.eventId);
+    } else {
+      this._loadBlank();
     }
   },
 
@@ -39,7 +41,7 @@ export default {
         return 'e-' + this.cpr.cpId + '-' + this.eventId;
       }
 
-      return '';
+      return 'new-' + this.cpr.cpId + '-' + (this.cpr.id || -1);
     }
   },
 
@@ -90,6 +92,19 @@ export default {
           this.loaded = true;
         }
       );
+    },
+
+    _loadBlank: function() {
+      this.visit = {
+        id: -1,
+        cpId: this.cpr.cpId,
+        eventId: null,
+        name: null,
+        status: null,
+        visitDate: null,
+        eventLabel: null
+      };
+      this.loaded = true;
     }
   }
 }

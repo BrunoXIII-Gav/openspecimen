@@ -1101,7 +1101,7 @@ public class CollectionProtocol extends BaseExtensionEntity {
 			cpReg = cprFactory.createCpr(cprInput);
 
 			daoFactory.getParticipantDao().saveOrUpdate(cpReg.getParticipant());
-			daoFactory.getCprDao().saveOrUpdate(cpReg);
+			daoFactory.getCprDao().save(cpReg);
 		}
 
 		VisitDetail visitInput = new VisitDetail();

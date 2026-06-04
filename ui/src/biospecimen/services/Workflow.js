@@ -16,7 +16,13 @@ class Workflow {
   }
 
   async addSpecimen(cp, visit) {
-    const {cpId, cprId, id: visitId} = visit;
+    let {cpId, cprId, id: visitId} = visit;
+    cpId = cpId || cp?.id;
+    if (cp?.specimenCentric && (!cprId || cprId <= 0)) {
+      cprId = -1;
+      visitId = visitId || -1;
+    }
+
     routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1});
   }
 

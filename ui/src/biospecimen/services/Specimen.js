@@ -38,7 +38,7 @@ class Specimen {
     if (specimen.id > 0) {
       return http.put('specimens/' + specimen.id, specimen);
     } else {
-      return http.post('specimens/', specimen);
+      return http.post('specimens', specimen);
     }
   }
 

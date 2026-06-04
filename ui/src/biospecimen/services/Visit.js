@@ -41,7 +41,7 @@ class Visit {
     if (visit.id > 0) {
       return http.put('visits/' + visit.id, visit);
     } else {
-      return http.post('visits/', visit);
+      return http.post('visits', visit);
     }
   }
 

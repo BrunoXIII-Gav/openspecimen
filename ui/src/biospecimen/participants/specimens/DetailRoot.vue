@@ -1,4 +1,3 @@
-
 <template>
   <router-view :cpr="cpr" :visit="visit" :specimen="specimen" :key="viewKey" v-if="viewKey && loaded" />
 </template>
@@ -27,6 +26,8 @@ export default {
       this._loadSpecimen(this.specimenId);
     } else if (this.reqId > 0) {
       this._loadRequirement(this.reqId);
+    } else {
+      this._loadBlank();
     }
   },
 
@@ -38,7 +39,8 @@ export default {
         return 'sr-' + this.cpr.cpId + '-' + this.visit.eventId + '-' + this.reqId;
       }
 
-      return 'unknown';
+      const parentId = this.$route && this.$route.query && this.$route.query.parentId;
+      return 'new-' + this.cpr.id + '-' + this.visit.id + '-' + (parentId || '0');
     }
   },
 
@@ -74,6 +76,44 @@ export default {
       this.specimen = {};
       const req = await cpSvc.getSpecimenRequirement(reqId);
       this.specimen = this._toSpecimen(req);
+      this.loaded = true;
+    },
+
+    _loadBlank: async function() {
+      const cp = await cpSvc.getCpById(this.cpr.cpId);
+      
+      // Leer query params directamente del hash para mayor compatibilidad
+      const hash = window.location.hash;
+      const queryStr = hash.split('?')[1] || '';
+      const params = new URLSearchParams(queryStr);
+      const parentId = params.get('parentId') ? parseInt(params.get('parentId')) : null;
+      const lineage = params.get('lineage') || 'New';
+      console.log('_loadBlank lineage:', lineage, 'parentId:', parentId);
+
+      let labelFmt = cp.specimenLabelFmt || '';
+      if (lineage === 'Aliquot') {
+        labelFmt = cp.aliquotLabelFmt || cp.aliquotLabelFmtToUse || '';
+      } else if (lineage === 'Derived') {
+        labelFmt = cp.derivativeLabelFmt || '';
+      }
+
+      this.specimen = {
+        cpId: this.cpr.cpId,
+        cprId: this.cpr.id,
+        ppid: this.cpr.ppid,
+        cpShortTitle: this.cpr.cpShortTitle,
+        visitId: this.visit.id,
+        visitName: this.visit.name,
+        visitStatus: this.visit.status,
+        visitDate: this.visit.visitDate,
+        eventId: this.visit.eventId,
+        eventLabel: this.visit.eventLabel,
+        lineage,
+        parentId,
+        status: 'Collected',
+        labelFmt,
+        children: []
+      };
       this.loaded = true;
     },
 

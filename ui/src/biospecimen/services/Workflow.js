@@ -16,8 +16,18 @@ class Workflow {
   }
 
   async addSpecimen(cp, visit) {
-    const {cpId, cprId, id: visitId} = visit;
-    routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1});
+    const cpId = (visit && visit.cpId) || (cp && cp.id);
+    const cprId = visit && visit.cprId;
+    const visitId = (visit && visit.id > 0) ? visit.id : -1;
+    if (!cprId) {
+      routerSvc.goto('ParticipantAddEdit', {cpId, cprId: -1});
+      return;
+    }
+    if (visitId === -1) {
+      routerSvc.goto('VisitAddEdit', {cpId, cprId, visitId: -1}, {eventId: visit && visit.eventId});
+    } else {
+      routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1});
+    }
   }
 
   async createAliquots(specimens) {

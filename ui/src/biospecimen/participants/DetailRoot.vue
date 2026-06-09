@@ -46,7 +46,7 @@ export default {
       if (!this.cprId || this.cprId <= 0) {
         const cp = this.cpViewCtx.getCp();
         this.cpr = {
-          id: -1,
+          id: null,
           cpId: cp.id,
           cpShortTitle: cp.shortTitle,
           ppid: null,

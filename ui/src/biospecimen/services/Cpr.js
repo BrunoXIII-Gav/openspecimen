@@ -94,7 +94,7 @@ class CollectionProtocolRegistration {
     cpr = cpr || {};
 
     let name = '';
-    const participant = cpr.participant;
+    const participant = cpr.participant || {};
     if (participant.firstName && participant.firstName.indexOf('###') != 0) {
       name = participant.firstName;
     }
@@ -115,7 +115,7 @@ class CollectionProtocolRegistration {
       name += participant.lastName;
     }
 
-    name = cpr.ppid + (name ? ' (' + name + ')' : '');
+    name = (cpr.ppid || '') + (name ? ' (' + name + ')' : '');
     return name;
   }
 

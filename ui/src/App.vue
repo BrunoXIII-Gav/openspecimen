@@ -171,6 +171,14 @@ export default {
         },
 
         {
+          showIf: 'admin',
+          route: {name: 'PvsList', params: {attribute: '-'}},
+          icon: 'fa fa-list-ul',
+          title: t('common.home.pvs'),
+          description: t('common.home.pvs_desc')
+        },
+
+        {
           showIf: {resource: 'StorageContainer', operations: ['Read']},
           route: {name: 'ContainersList'},
           icon: 'fa fa-dropbox',

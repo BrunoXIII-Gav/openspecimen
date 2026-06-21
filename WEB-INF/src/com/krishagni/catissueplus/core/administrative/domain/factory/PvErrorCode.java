@@ -11,10 +11,12 @@ public enum PvErrorCode implements ErrorCode {
 	
 	NOT_FOUND,
 
-	IN_USE;
+	IN_USE,
+
+	DUP_VALUE;
 
 	@Override
-	public String code() {		
+	public String code() {
 		return "PV_" + this.name();
-	}	
+	}
 }

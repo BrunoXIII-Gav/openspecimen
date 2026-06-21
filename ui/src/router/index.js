@@ -473,6 +473,32 @@ const routes = [
 
       /*****************************
        *****************************
+       * Permissible Values module *
+       *****************************
+       *****************************/
+      {
+        path: 'pvs/:attribute',
+        name: 'PvsList',
+        component: () => import(/* webpackChunkName: "pvs" */ '../administrative/pvs/List.vue'),
+        props: (route) => ({attribute: route.params && route.params.attribute, filters: route.query.filters}),
+        children: [
+          {
+            path: '',
+            name: 'PvsListItemValues',
+            component: () => import(/* webpackChunkName: "pvs" */ '../administrative/pvs/Values.vue'),
+            props: (route) => ({attribute: route.params && route.params.attribute})
+          }
+        ]
+      },
+      {
+        path: 'pv-addedit/:pvId',
+        name: 'PvAddEdit',
+        component: () => import(/* webpackChunkName: "pvs" */ '../administrative/pvs/AddEdit.vue'),
+        props: (route) => ({pvId: route.params && route.params.pvId, attribute: route.query.attribute})
+      },
+
+      /*****************************
+       *****************************
        * Institutes module         *
        *****************************
        *****************************/

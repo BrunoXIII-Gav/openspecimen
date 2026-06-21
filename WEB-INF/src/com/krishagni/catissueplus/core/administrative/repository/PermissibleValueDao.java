@@ -6,9 +6,12 @@ import java.util.List;
 
 import com.krishagni.catissueplus.core.administrative.domain.PermissibleValue;
 import com.krishagni.catissueplus.core.administrative.events.ListPvCriteria;
+import com.krishagni.catissueplus.core.administrative.events.PvAttributeSummary;
 import com.krishagni.catissueplus.core.common.repository.Dao;
 
 public interface PermissibleValueDao extends Dao<PermissibleValue>{
+	List<PvAttributeSummary> getAttributes(String activityStatus);
+
 	public List<PermissibleValue> getPvs(ListPvCriteria crit);
 
 	Long getPvsCount(ListPvCriteria crit);

@@ -283,6 +283,8 @@
       "settings_desc": "Gestionar la configuración de la aplicación",
       "shipments": "Envíos",
       "shipments_desc": "Crear, enviar, rastrear y recibir envíos de muestras",
+      "pvs": "Valores Permisibles",
+      "pvs_desc": "Administrar valores permisibles para los menús desplegables",
       "sites": "Sitios",
       "sites_desc": "Agregar y actualizar sitios",
       "training": "Capacitación",
@@ -1734,7 +1736,21 @@
       "dead": "Fallecido",
       "unknown": "Desconocido",
       "unspecified": "No Especificado"
-    }
+    },
+    "attribute": "Atributo",
+    "attribute_req": "El atributo es obligatorio",
+    "concept_code": "Código de Concepto",
+    "confirm_delete_selected": "¿Está seguro de que desea eliminar los valores permisibles seleccionados?",
+    "create": "Crear Valor Permisible",
+    "deleted": "Un valor permisible eliminado. | {count} valores permisibles eliminados.",
+    "label_code": "Código de Etiqueta",
+    "list": "Valores Permisibles",
+    "saved": "Valor permisible guardado.",
+    "status": "Estado",
+    "value": "Valor",
+    "attributes": "Atributos",
+    "value_count": "Valores",
+    "value_req": "El valor es obligatorio"
   },
   "roles": {
     "create_role": "Crear rol",

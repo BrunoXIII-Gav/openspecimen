@@ -295,6 +295,8 @@
       "settings_desc": "Manage application configuration settings",
       "shipments": "Shipments",
       "shipments_desc": "Create, ship, track, and receive specimen shipments",
+      "pvs": "Permissible Values",
+      "pvs_desc": "Manage permissible values for dropdowns",
       "sites": "Sites",
       "sites_desc": "Add and update sites",
       "training": "Training",
@@ -1786,7 +1788,21 @@
       "dead": "Dead",
       "unknown": "Unknown",
       "unspecified": "Unspecified"
-    }
+    },
+    "attribute": "Attribute",
+    "attribute_req": "Attribute is mandatory",
+    "concept_code": "Concept Code",
+    "confirm_delete_selected": "Are you sure you want to delete the selected permissible values?",
+    "create": "Create Permissible Value",
+    "deleted": "One permissible value deleted. | {count} permissible values deleted.",
+    "label_code": "Label Code",
+    "list": "Permissible Values",
+    "saved": "Permissible value saved.",
+    "status": "Status",
+    "value": "Value",
+    "attributes": "Attributes",
+    "value_count": "Values",
+    "value_req": "Value is mandatory"
   },
 
   "roles": {

@@ -76,7 +76,7 @@ export default {
             return pv;
           }
 
-          let result = pv.value;
+          let result = pv.labelCode ? this.$t(pv.labelCode) : pv.value;
           if (pv.conceptCode) {
             result += ' (' + pv.conceptCode + ')';
           }

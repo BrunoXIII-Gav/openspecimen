@@ -23,6 +23,8 @@ public class PvDetail {
 	
 	private String conceptCode;
 
+	private String labelCode;
+
 	private String attribute;
 
 	private Map<String, String> props;
@@ -73,6 +75,14 @@ public class PvDetail {
 		this.conceptCode = conceptCode;
 	}
 
+	public String getLabelCode() {
+		return labelCode;
+	}
+
+	public void setLabelCode(String labelCode) {
+		this.labelCode = labelCode;
+	}
+
 	public String getAttribute() {
 		return attribute;
 	}
@@ -106,6 +116,7 @@ public class PvDetail {
 		result.setId(pv.getId());
 		result.setValue(pv.getValue());
 		result.setConceptCode(pv.getConceptCode());
+		result.setLabelCode(pv.getLabelCode());
 		result.setAttribute(pv.getAttribute());
 		result.setActivityStatus(pv.getActivityStatus());
 

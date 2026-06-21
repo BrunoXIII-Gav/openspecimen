@@ -1004,6 +1004,7 @@
     "laterality_req": "Laterality is mandatory",
     "lineage": "Lineage",
     "loading_form": "Loading form... Please wait for a moment...",
+    "long_title": "Long Title",
     "many_deleted": "One collection protocol deleted. | {count} collection protocols deleted.",
     "misc_settings": "Miscellaneous Settings",
     "months": "Months",
@@ -1047,6 +1048,7 @@
     "record_ids": "Record IDs",
     "record_labels": "Record Names/Labels",
     "registration_forms": "Registration Forms",
+    "repos": "Repository",
     "req_closed": "Specimen requirement {type} closed.",
     "req_copy_created": "Specimen requirement {type} created.",
     "req_deleted": "Specimen requirement {type} deleted.",
@@ -1089,6 +1091,7 @@
     "sort_visit_forms": "Sort Visit Forms",
     "source_from_another_cp": "Do you want to source consents from another collection protocol?",
     "start_date": "Start Date",
+    "status": "Status",
     "storage_site_based_access": "Storage Site Based Access",
     "storage_type": "Stored in Repository?",
     "storage_type_req": "Choose the appropriate option",
@@ -1124,9 +1127,12 @@
   },
 
   "cprs": {
+    "age": "Age",
     "cp": "Collection Protocol",
+    "empi": "Master Patient Index",
     "participant_name": "Name",
     "ppid": "PPID",
+    "reg_date": "Registration Date",
     "registration_date": "Registration Date"
   },
 
@@ -1699,7 +1705,88 @@
   },
 
   "pvs": {
-    "not_specified": "Not Specified"
+    "clinical_status": {
+      "follow_up": "Follow-up",
+      "new_diagnosis": "New Diagnosis",
+      "no_diagnosis_control": "No Diagnosis / Control",
+      "not_specified": "Not Specified",
+      "on_therapy": "On-Therapy",
+      "operative": "Operative",
+      "palliative_care": "Palliative Care",
+      "post_operative": "Post-Operative",
+      "post_therapy": "Post-Therapy",
+      "pre_operative": "Pre-Operative",
+      "pre_therapy": "Pre-Therapy",
+      "relapse_distant_site": "Relapse, Distant Site",
+      "relapse_not_specified": "Relapse, Not Specified",
+      "relapse_primary_site": "Relapse, Primary Site",
+      "remission": "Remission"
+    },
+    "collection_procedure": {
+      "cavitron_ultrasonic_surgical_aspirator": "Cavitron Ultrasonic Surgical Aspirator",
+      "indwelling_catheter": "Indwelling Catheter",
+      "lavage": "Lavage",
+      "needle_aspirate": "Needle Aspirate",
+      "needle_core_biopsy": "Needle Core Biopsy",
+      "not_specified": "Not Specified",
+      "surgical_resection": "Surgical Resection",
+      "venipuncture": "Venipuncture"
+    },
+    "gender": {
+      "female": "Female",
+      "male": "Male",
+      "undifferentiated": "Undifferentiated",
+      "unknown": "Unknown"
+    },
+    "laterality": {
+      "bilateral": "Bilateral",
+      "left": "Left",
+      "not_applicable": "Not Applicable",
+      "not_specified": "Not Specified",
+      "right": "Right"
+    },
+    "not_specified": "Not Specified",
+    "pathology_status": {
+      "malignant": "Malignant",
+      "malignant_invasive": "Malignant, Invasive",
+      "malignant_pre_invasive": "Malignant, Pre-Invasive",
+      "metastatic": "Metastatic",
+      "non_malignant": "Non-Malignant",
+      "non_malignant_diseased": "Non-Malignant, Diseased",
+      "not_specified": "Not Specified",
+      "pre_malignant": "Pre-Malignant"
+    },
+    "race": {
+      "american_indian_or_alaska_native": "American Indian or Alaska Native",
+      "asian": "Asian",
+      "black_or_african_american": "Black or African American",
+      "native_hawaiian_or_other_pacific_islander": "Native Hawaiian or Other Pacific Islander",
+      "not_reported": "Not Reported",
+      "unknown": "Unknown",
+      "white": "White"
+    },
+    "receive_quality": {
+      "acceptable": "Acceptable",
+      "cauterized": "Cauterized",
+      "clotted": "Clotted",
+      "damaged": "Damaged",
+      "frozen": "Frozen",
+      "hemolyzed": "Hemolyzed",
+      "hemorrhagic": "Hemorrhagic",
+      "lipemic": "Lipemic",
+      "necrotic": "Necrotic",
+      "not_specified": "Not Specified",
+      "quantity_not_sufficient": "Quantity Not Sufficient",
+      "thawed": "Thawed",
+      "to_be_received": "To be Received",
+      "unacceptable_not_specified": "Unacceptable, Not Specified"
+    },
+    "vital_status": {
+      "alive": "Alive",
+      "dead": "Dead",
+      "unknown": "Unknown",
+      "unspecified": "Unspecified"
+    }
   },
 
   "roles": {

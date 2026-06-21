@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+  http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+  <changeSet author="custom" id="PV: Set label codes for gender">
+    <sql>
+      UPDATE catissue_permissible_value SET label_code = 'pvs.gender.male'            WHERE public_id = 'gender' AND value = 'Male';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.gender.female'          WHERE public_id = 'gender' AND value = 'Female';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.gender.undifferentiated' WHERE public_id = 'gender' AND value = 'Undifferentiated';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.gender.unknown'         WHERE public_id = 'gender' AND value = 'Unknown';
+    </sql>
+  </changeSet>
+
+  <changeSet author="custom" id="PV: Set label codes for vital_status">
+    <sql>
+      UPDATE catissue_permissible_value SET label_code = 'pvs.vital_status.dead'        WHERE public_id = 'vital_status' AND value = 'Dead';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.vital_status.alive'       WHERE public_id = 'vital_status' AND value = 'Alive';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.vital_status.unknown'     WHERE public_id = 'vital_status' AND value = 'Unknown';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.vital_status.unspecified' WHERE public_id = 'vital_status' AND value = 'Unspecified';
+    </sql>
+  </changeSet>
+
+  <changeSet author="custom" id="PV: Set label codes for race">
+    <sql>
+      UPDATE catissue_permissible_value SET label_code = 'pvs.race.white'                                        WHERE public_id = 'race' AND value = 'White';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.race.black_or_african_american'                   WHERE public_id = 'race' AND value = 'Black or African American';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.race.asian'                                       WHERE public_id = 'race' AND value = 'Asian';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.race.american_indian_or_alaska_native'            WHERE public_id = 'race' AND value = 'American Indian or Alaska Native';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.race.native_hawaiian_or_other_pacific_islander'  WHERE public_id = 'race' AND value = 'Native Hawaiian or Other Pacific Islander';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.race.not_reported'                               WHERE public_id = 'race' AND value = 'Not Reported';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.race.unknown'                                    WHERE public_id = 'race' AND value = 'Unknown';
+    </sql>
+  </changeSet>
+
+  <changeSet author="custom" id="PV: Set label codes for laterality">
+    <sql>
+      UPDATE catissue_permissible_value SET label_code = 'pvs.laterality.not_applicable' WHERE public_id = 'laterality' AND value = 'Not Applicable';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.laterality.right'          WHERE public_id = 'laterality' AND value = 'Right';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.laterality.left'           WHERE public_id = 'laterality' AND value = 'Left';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.laterality.not_specified'  WHERE public_id = 'laterality' AND value = 'Not Specified';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.laterality.bilateral'      WHERE public_id = 'laterality' AND value = 'Bilateral';
+    </sql>
+  </changeSet>
+
+  <changeSet author="custom" id="PV: Set label codes for pathology_status">
+    <sql>
+      UPDATE catissue_permissible_value SET label_code = 'pvs.pathology_status.malignant_invasive'     WHERE public_id = 'pathology_status' AND value = 'Malignant, Invasive';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.pathology_status.malignant_pre_invasive' WHERE public_id = 'pathology_status' AND value = 'Malignant, Pre-Invasive';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.pathology_status.non_malignant'          WHERE public_id = 'pathology_status' AND value = 'Non-Malignant';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.pathology_status.non_malignant_diseased' WHERE public_id = 'pathology_status' AND value = 'Non-Malignant, Diseased';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.pathology_status.pre_malignant'          WHERE public_id = 'pathology_status' AND value = 'Pre-Malignant';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.pathology_status.not_specified'          WHERE public_id = 'pathology_status' AND value = 'Not Specified';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.pathology_status.malignant'              WHERE public_id = 'pathology_status' AND value = 'Malignant';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.pathology_status.metastatic'             WHERE public_id = 'pathology_status' AND value = 'Metastatic';
+    </sql>
+  </changeSet>
+
+  <changeSet author="custom" id="PV: Set label codes for clinical_status">
+    <sql>
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.follow_up'              WHERE public_id = 'clinical_status' AND value = 'Follow-up';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.new_diagnosis'          WHERE public_id = 'clinical_status' AND value = 'New Diagnosis';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.no_diagnosis_control'   WHERE public_id = 'clinical_status' AND value = 'No Diagnosis / Control';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.not_specified'          WHERE public_id = 'clinical_status' AND value = 'Not Specified';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.on_therapy'             WHERE public_id = 'clinical_status' AND value = 'On-Therapy';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.operative'              WHERE public_id = 'clinical_status' AND value = 'Operative';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.palliative_care'        WHERE public_id = 'clinical_status' AND value = 'Palliative Care';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.post_operative'         WHERE public_id = 'clinical_status' AND value = 'Post-Operative';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.post_therapy'           WHERE public_id = 'clinical_status' AND value = 'Post-Therapy';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.pre_operative'          WHERE public_id = 'clinical_status' AND value = 'Pre-Operative';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.pre_therapy'            WHERE public_id = 'clinical_status' AND value = 'Pre-Therapy';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.relapse_distant_site'   WHERE public_id = 'clinical_status' AND value = 'Relapse, Distant Site';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.relapse_not_specified'  WHERE public_id = 'clinical_status' AND value = 'Relapse, Not Specified';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.relapse_primary_site'   WHERE public_id = 'clinical_status' AND value = 'Relapse, Primary Site';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.clinical_status.remission'              WHERE public_id = 'clinical_status' AND value = 'Remission';
+    </sql>
+  </changeSet>
+
+  <changeSet author="custom" id="PV: Set label codes for collection_procedure">
+    <sql>
+      UPDATE catissue_permissible_value SET label_code = 'pvs.collection_procedure.cavitron_ultrasonic_surgical_aspirator' WHERE public_id = 'collection_procedure' AND value = 'Cavitron Ultrasonic Surgical Aspirator';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.collection_procedure.indwelling_catheter'                    WHERE public_id = 'collection_procedure' AND value = 'Indwelling Catheter';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.collection_procedure.lavage'                                 WHERE public_id = 'collection_procedure' AND value = 'Lavage';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.collection_procedure.needle_aspirate'                       WHERE public_id = 'collection_procedure' AND value = 'Needle Aspirate';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.collection_procedure.needle_core_biopsy'                    WHERE public_id = 'collection_procedure' AND value = 'Needle Core Biopsy';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.collection_procedure.not_specified'                         WHERE public_id = 'collection_procedure' AND value = 'Not Specified';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.collection_procedure.surgical_resection'                    WHERE public_id = 'collection_procedure' AND value = 'Surgical Resection';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.collection_procedure.venipuncture'                          WHERE public_id = 'collection_procedure' AND value = 'Venipuncture';
+    </sql>
+  </changeSet>
+
+  <changeSet author="custom" id="PV: Set label codes for receive_quality">
+    <sql>
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.acceptable'               WHERE public_id = 'receive_quality' AND value = 'Acceptable';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.cauterized'               WHERE public_id = 'receive_quality' AND value = 'Cauterized';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.clotted'                  WHERE public_id = 'receive_quality' AND value = 'Clotted';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.damaged'                  WHERE public_id = 'receive_quality' AND value = 'Damaged';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.frozen'                   WHERE public_id = 'receive_quality' AND value = 'Frozen';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.hemolyzed'                WHERE public_id = 'receive_quality' AND value = 'Hemolyzed';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.hemorrhagic'              WHERE public_id = 'receive_quality' AND value = 'Hemorrhagic';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.lipemic'                  WHERE public_id = 'receive_quality' AND value = 'Lipemic';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.necrotic'                 WHERE public_id = 'receive_quality' AND value = 'Necrotic';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.not_specified'            WHERE public_id = 'receive_quality' AND value = 'Not Specified';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.quantity_not_sufficient'  WHERE public_id = 'receive_quality' AND value = 'Quantity Not Sufficient';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.thawed'                   WHERE public_id = 'receive_quality' AND value = 'Thawed';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.to_be_received'           WHERE public_id = 'receive_quality' AND value = 'To be Received';
+      UPDATE catissue_permissible_value SET label_code = 'pvs.receive_quality.unacceptable_not_specified' WHERE public_id = 'receive_quality' AND value = 'Unacceptable, Not Specified';
+    </sql>
+  </changeSet>
+
+</databaseChangeLog>

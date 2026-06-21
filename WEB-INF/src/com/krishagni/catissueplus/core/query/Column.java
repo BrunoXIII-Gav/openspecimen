@@ -11,6 +11,8 @@ public class Column {
 
 	private String caption;
 
+	private String captionCode;
+
 	//
 	// Used in order by
 	//
@@ -52,6 +54,14 @@ public class Column {
 
 	public void setCaption(String caption) {
 		this.caption = caption;
+	}
+
+	public String getCaptionCode() {
+		return captionCode;
+	}
+
+	public void setCaptionCode(String captionCode) {
+		this.captionCode = captionCode;
 	}
 
 	public String getDirection() {

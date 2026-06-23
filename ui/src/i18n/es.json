@@ -283,6 +283,8 @@
       "settings_desc": "Gestionar la configuración de la aplicación",
       "shipments": "Envíos",
       "shipments_desc": "Crear, enviar, rastrear y recibir envíos de muestras",
+      "pvs": "Valores Permisibles",
+      "pvs_desc": "Administrar valores permisibles para los menús desplegables",
       "sites": "Sitios",
       "sites_desc": "Agregar y actualizar sitios",
       "training": "Capacitación",
@@ -971,6 +973,7 @@
     "laterality_req": "La Lateralidad es obligatoria",
     "lineage": "Linaje",
     "loading_form": "Cargando formulario... Por favor, espere un momento...",
+    "long_title": "Título Largo",
     "many_deleted": "Un protocolo de colección eliminado. | {count} protocolos de colección eliminados.",
     "misc_settings": "Configuración Miscelánea",
     "months": "Meses",
@@ -1014,6 +1017,7 @@
     "record_ids": "IDs de Registro",
     "record_labels": "Nombres/Etiquetas de Registro",
     "registration_forms": "Formularios de Registro",
+    "repos": "Repositorio",
     "req_closed": "Requisito de muestra {type} cerrado.",
     "req_copy_created": "Requisito de muestra {type} creado.",
     "req_deleted": "Requisito de muestra {type} eliminado.",
@@ -1056,6 +1060,7 @@
     "sort_visit_forms": "Ordenar formularios de visitas",
     "source_from_another_cp": "¿Desea obtener los consentimientos de otro protocolo de recolección?",
     "start_date": "Fecha de inicio",
+    "status": "Estado",
     "storage_site_based_access": "Acceso basado en sitio de almacenamiento",
     "storage_type": "¿Almacenado en repositorio?",
     "storage_type_req": "Seleccione la opción apropiada",
@@ -1090,9 +1095,12 @@
     "zero_out_specimen_qty": "Establecer en cero la cantidad del espécimen"
   },
   "cprs": {
+    "age": "Edad",
     "cp": "Protocolo de Recolección",
+    "empi": "Índice Maestro de Paciente",
     "participant_name": "Nombre",
     "ppid": "PPID",
+    "reg_date": "Fecha de Registro",
     "registration_date": "Fecha de Registro"
   },
   "dps": {
@@ -1647,7 +1655,102 @@
     "vital_status": "Estado Vital"
   },
   "pvs": {
-    "not_specified": "No Especificado"
+    "clinical_status": {
+      "follow_up": "Seguimiento",
+      "new_diagnosis": "Nuevo Diagnóstico",
+      "no_diagnosis_control": "Sin Diagnóstico / Control",
+      "not_specified": "No Especificado",
+      "on_therapy": "En Terapia",
+      "operative": "Operatorio",
+      "palliative_care": "Cuidados Paliativos",
+      "post_operative": "Post-Operatorio",
+      "post_therapy": "Post-Terapia",
+      "pre_operative": "Pre-Operatorio",
+      "pre_therapy": "Pre-Terapia",
+      "relapse_distant_site": "Recaída, Sitio Distante",
+      "relapse_not_specified": "Recaída, No Especificado",
+      "relapse_primary_site": "Recaída, Sitio Primario",
+      "remission": "Remisión"
+    },
+    "collection_procedure": {
+      "cavitron_ultrasonic_surgical_aspirator": "Aspirador Quirúrgico Ultrasónico Cavitron",
+      "indwelling_catheter": "Catéter Permanente",
+      "lavage": "Lavado",
+      "needle_aspirate": "Aspirado con Aguja",
+      "needle_core_biopsy": "Biopsia de Núcleo con Aguja",
+      "not_specified": "No Especificado",
+      "surgical_resection": "Resección Quirúrgica",
+      "venipuncture": "Venopunción"
+    },
+    "gender": {
+      "female": "Femenino",
+      "male": "Masculino",
+      "undifferentiated": "Indiferenciado",
+      "unknown": "Desconocido"
+    },
+    "laterality": {
+      "bilateral": "Bilateral",
+      "left": "Izquierdo",
+      "not_applicable": "No Aplica",
+      "not_specified": "No Especificado",
+      "right": "Derecho"
+    },
+    "not_specified": "No Especificado",
+    "pathology_status": {
+      "malignant": "Maligno",
+      "malignant_invasive": "Maligno, Invasivo",
+      "malignant_pre_invasive": "Maligno, Pre-Invasivo",
+      "metastatic": "Metastásico",
+      "non_malignant": "No Maligno",
+      "non_malignant_diseased": "No Maligno, con Enfermedad",
+      "not_specified": "No Especificado",
+      "pre_malignant": "Pre-Maligno"
+    },
+    "race": {
+      "american_indian_or_alaska_native": "Indio Americano o Nativo de Alaska",
+      "asian": "Asiático",
+      "black_or_african_american": "Negro o Afroamericano",
+      "native_hawaiian_or_other_pacific_islander": "Nativo de Hawái u Otro Isleño del Pacífico",
+      "not_reported": "No Reportado",
+      "unknown": "Desconocido",
+      "white": "Blanco"
+    },
+    "receive_quality": {
+      "acceptable": "Aceptable",
+      "cauterized": "Cauterizado",
+      "clotted": "Coagulado",
+      "damaged": "Dañado",
+      "frozen": "Congelado",
+      "hemolyzed": "Hemolizado",
+      "hemorrhagic": "Hemorrágico",
+      "lipemic": "Lipémico",
+      "necrotic": "Necrótico",
+      "not_specified": "No Especificado",
+      "quantity_not_sufficient": "Cantidad Insuficiente",
+      "thawed": "Descongelado",
+      "to_be_received": "Por Recibir",
+      "unacceptable_not_specified": "Inaceptable, No Especificado"
+    },
+    "vital_status": {
+      "alive": "Vivo",
+      "dead": "Fallecido",
+      "unknown": "Desconocido",
+      "unspecified": "No Especificado"
+    },
+    "attribute": "Atributo",
+    "attribute_req": "El atributo es obligatorio",
+    "concept_code": "Código de Concepto",
+    "confirm_delete_selected": "¿Está seguro de que desea eliminar los valores permisibles seleccionados?",
+    "create": "Crear Valor Permisible",
+    "deleted": "Un valor permisible eliminado. | {count} valores permisibles eliminados.",
+    "label_code": "Código de Etiqueta",
+    "list": "Valores Permisibles",
+    "saved": "Valor permisible guardado.",
+    "status": "Estado",
+    "value": "Valor",
+    "attributes": "Atributos",
+    "value_count": "Valores",
+    "value_req": "El valor es obligatorio"
   },
   "roles": {
     "create_role": "Crear rol",

@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.krishagni.catissueplus.core.administrative.domain.PermissibleValue;
 import com.krishagni.catissueplus.core.administrative.events.ListPvCriteria;
+import com.krishagni.catissueplus.core.administrative.events.PvAttributeSummary;
 import com.krishagni.catissueplus.core.administrative.repository.PermissibleValueDao;
 import com.krishagni.catissueplus.core.common.repository.AbstractCriteria;
 import com.krishagni.catissueplus.core.common.repository.AbstractDao;
@@ -28,6 +29,27 @@ public class PermissibleValueDaoImpl extends AbstractDao<PermissibleValue> imple
 	@Override
 	public PermissibleValue getById(Long id) {
 		return getCurrentSession().find(PermissibleValue.class, id);
+	}
+
+	@Override
+	public List<PvAttributeSummary> getAttributes(String activityStatus) {
+		Criteria<Object[]> query = createCriteria(PermissibleValue.class, Object[].class, "pv");
+
+		if (StringUtils.isBlank(activityStatus)) {
+			query.add(query.eq("pv.activityStatus", Status.ACTIVITY_STATUS_ACTIVE.getStatus()));
+		} else if (!activityStatus.equalsIgnoreCase("all")) {
+			query.add(query.eq("pv.activityStatus", activityStatus));
+		}
+
+		List<Object[]> rows = query
+			.select(query.column("pv.attribute"), query.count("pv.id"))
+			.groupBy("pv.attribute")
+			.addOrder(query.asc("pv.attribute"))
+			.list();
+
+		return rows.stream()
+			.map(row -> new PvAttributeSummary((String) row[0], (Long) row[1]))
+			.collect(Collectors.toList());
 	}
 
 	@Override

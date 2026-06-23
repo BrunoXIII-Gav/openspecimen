@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.krishagni.catissueplus.core.administrative.events.ListPvCriteria;
+import com.krishagni.catissueplus.core.administrative.events.PvAttributeSummary;
 import com.krishagni.catissueplus.core.administrative.events.PvDetail;
 import com.krishagni.catissueplus.core.common.errors.CommonErrorCode;
 import com.krishagni.catissueplus.core.common.errors.OpenSpecimenException;
@@ -38,6 +40,17 @@ public class PermissibleValueController {
 
 	@Autowired
 	private HttpServletRequest httpServletRequest;
+
+	@RequestMapping(method = RequestMethod.GET, value = "/attributes")
+	@ResponseBody
+	@ResponseStatus(HttpStatus.OK)
+	public List<PvAttributeSummary> getPvAttributes(
+		@RequestParam(value = "activityStatus", required = false)
+		String activityStatus) {
+
+		ListPvCriteria crit = new ListPvCriteria().activityStatus(activityStatus);
+		return ResponseEvent.unwrap(pvSvc.getPvAttributes(RequestEvent.wrap(crit)));
+	}
 
 	@RequestMapping(method = RequestMethod.GET)
 	@ResponseBody
@@ -235,5 +248,36 @@ public class PermissibleValueController {
 
 		criteria.setParams(props);
 		return ResponseEvent.unwrap(pvSvc.getPermissibleValue(RequestEvent.wrap(criteria)));
+	}
+
+	@RequestMapping(method = RequestMethod.POST, value = "/v")
+	@ResponseBody
+	@ResponseStatus(HttpStatus.OK)
+	public PvDetail createPv(@RequestBody PvDetail pvDetail) {
+		return ResponseEvent.unwrap(pvSvc.createPv(RequestEvent.wrap(pvDetail)));
+	}
+
+	@RequestMapping(method = RequestMethod.PUT, value = "/v/{id}")
+	@ResponseBody
+	@ResponseStatus(HttpStatus.OK)
+	public PvDetail updatePv(
+		@PathVariable("id")
+		Long id,
+
+		@RequestBody
+		PvDetail pvDetail) {
+
+		pvDetail.setId(id);
+		return ResponseEvent.unwrap(pvSvc.updatePv(RequestEvent.wrap(pvDetail)));
+	}
+
+	@RequestMapping(method = RequestMethod.DELETE, value = "/v/{id}")
+	@ResponseBody
+	@ResponseStatus(HttpStatus.OK)
+	public PvDetail deletePv(
+		@PathVariable("id")
+		Long id) {
+
+		return ResponseEvent.unwrap(pvSvc.deletePv(RequestEvent.wrap(id)));
 	}
 }

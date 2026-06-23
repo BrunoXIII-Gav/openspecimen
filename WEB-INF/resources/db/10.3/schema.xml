@@ -860,4 +860,11 @@
       //
     </sql>
   </changeSet>
+
+  <changeSet author="custom" id="PV: Add label code column">
+    <addColumn tableName="CATISSUE_PERMISSIBLE_VALUE">
+      <column name="LABEL_CODE" type="${text.type}(255)" />
+    </addColumn>
+  </changeSet>
+
 </databaseChangeLog>

@@ -5,18 +5,18 @@
             "columns": [
                 {
                     "expr": "CollectionProtocol.shortTitle",
-                    "caption": "Title",
+                    "captionCode": "cps.title",
                     "metainfo": {
                         "showLink": "true"
                     }
                 },
                 {
                     "expr": "CollectionProtocol.principalInvestigator.investigatorName",
-                    "caption": "Principal Investigator"
+                    "captionCode": "cps.pi"
                 },
                 {
                     "expr": "CollectionProtocol.startDate",
-                    "caption": "Start Date"
+                    "captionCode": "cps.start_date"
                 }
             ],
             "criteria": "CollectionProtocol.id exists",
@@ -29,25 +29,25 @@
             "filters": [
                 {
                     "expr": "CollectionProtocol.shortTitle",
-                    "caption": "Title",
+                    "captionCode": "cps.title",
                     "searchType": "contains"
                 },
                 {
                     "expr": "CollectionProtocol.Title",
-                    "caption": "Long Title",
+                    "captionCode": "cps.long_title",
                     "searchType": "contains"
                 },
                 {
                     "expr": "CollectionProtocol.principalInvestigator.investigatorName",
-                    "caption": "Principal Investigator"
+                    "captionCode": "cps.pi"
                 },
                 {
                     "expr": "CollectionProtocol.cpSites.siteName",
-                    "caption": "Repository"
+                    "captionCode": "cps.repos"
                 },
                 {
                     "expr": "CollectionProtocol.activityStatus",
-                    "caption": "Status"
+                    "captionCode": "cps.status"
                 }
             ]
         }
@@ -58,26 +58,26 @@
             "columns": [
                 {
                     "expr": "Participant.ppid",
-                    "caption": "Participant Protocol ID",
+                    "captionCode": "cprs.ppid",
                     "metainfo": {
                         "showLink": "true"
                     }
                 },
                 {
                     "expr": "concat_ws(\" \", Participant.firstName, Participant.lastName)",
-                    "caption": "Name"
+                    "captionCode": "participants.name"
                 },
                 {
                     "expr": "Participant.empi",
-                    "caption": "Master Patient Index"
+                    "captionCode": "cprs.empi"
                 },
                 {
                     "expr": "Participant.regDate",
-                    "caption": "Registration Date"
+                    "captionCode": "cprs.reg_date"
                 },
                 {
                     "expr": "concat(years_between(current_date(), Participant.dateOfBirth), \" yrs\")",
-                    "caption": "Age"
+                    "captionCode": "cprs.age"
                 }
             ],
             "criteria": "Participant.id exists",
@@ -94,19 +94,19 @@
             "filters": [
                 {
                     "expr": "Participant.ppid",
-                    "caption": "Participant Protocol ID",
+                    "captionCode": "cprs.ppid",
                     "searchType": "contains"
                 },
                 {
                     "expr": "concat_ws(\" \", Participant.firstName, Participant.lastName)",
-                    "caption": "Name",
+                    "captionCode": "participants.name",
                     "metainfo": {
                         "phi": "true"
                     }
                 },
                 {
                     "expr": "Participant.empi",
-                    "caption": "Master Patient Index",
+                    "captionCode": "cprs.empi",
                     "searchType": "contains",
                     "metainfo": {
                         "phi": "true"
@@ -114,11 +114,11 @@
                 },
                 {
                     "expr": "Participant.regDate",
-                    "caption": "Registration Date"
+                    "captionCode": "cprs.reg_date"
                 },
                 {
                     "expr": "years_between(current_date(), Participant.dateOfBirth)",
-                    "caption": "Age",
+                    "captionCode": "cprs.age",
                     "temporal": "true",
                     "metainfo": {
                         "phi": "true"

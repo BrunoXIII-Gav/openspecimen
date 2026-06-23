@@ -361,6 +361,7 @@ export default {
       const result = {
         name: 'column.a_' + idx,
         caption: column.caption,
+            captionCode: column.captionCode,
         $column: column,
         sortable: sortable != false && sortable != 'false'
       };

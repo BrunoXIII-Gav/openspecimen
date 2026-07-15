@@ -439,6 +439,21 @@ angular.module('os.biospecimen.cp',
         },
         controller: 'CpFormSettingsCtrl'
       })
+      .state('cp-detail.settings.field-settings', {
+        url: '/field-settings',
+        templateUrl: 'modules/biospecimen/cp/field-settings.html',
+        parent: 'cp-detail.settings',
+        resolve: {
+          sysDictData: function(CpConfigSvc) {
+            return CpConfigSvc.getWorkflowData(-1, 'dictionary', {});
+          },
+
+          cpDictData: function(cp, CpConfigSvc) {
+            return CpConfigSvc.getWorkflowData(cp.id, 'dictionary', {});
+          }
+        },
+        controller: 'CpFieldSettingsCtrl'
+      })
       .state('cp-detail.settings.container', {
         url: '/container',
         templateUrl: 'modules/biospecimen/cp/container-settings.html',

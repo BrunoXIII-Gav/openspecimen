@@ -28,6 +28,13 @@
         </template>
       </os-card>
     </router-link>
+    <router-link :to="{name: 'CpDetail.Settings.FieldSettings', params: {cpId: cp.id}}">
+      <os-card>
+        <template #body>
+          <span v-t="'cps.field_settings'">Field Settings</span>
+        </template>
+      </os-card>
+    </router-link>
 
     <os-plugin-views page="cp-detail" view="settings" :viewProps="{cp}" />
   </div>
@@ -82,7 +89,8 @@ export default {
 .os-cp-settings > a,
 .os-cp-settings :deep(> a) {
   margin: 0.75rem;
-  width: calc(25% - 1.5rem);
+  flex: 1 1 calc(20% - 1.5rem);
+  min-width: 220px;
   text-align: center;
   font-size: 1rem;
   cursor: pointer;

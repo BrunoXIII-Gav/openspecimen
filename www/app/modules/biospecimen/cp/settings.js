@@ -18,6 +18,13 @@ angular.module('os.biospecimen.cp')
     });
 
     settings.addItem({
+      name: 'FieldSettings',
+      state: 'cp-detail.settings.field-settings',
+      key: 'cp.field_settings.title',
+      caption: ''
+    });
+
+    settings.addItem({
       name: 'ContainerSettings',
       state: 'cp-detail.settings.container',
       key: 'cp.container.title',

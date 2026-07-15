@@ -54,7 +54,7 @@ export default {
 
   data() {
     const visit = this.visit ? util.clone(this.visit) : {};
-    if (!visit.id) {
+    if (!visit.id || visit.id <= 0) {
       Object.assign(visit, {visitDate: new Date(), cpId: this.cpr.cpId, cprId: this.cpr.id, status: 'Complete'});
     }
 

@@ -96,8 +96,9 @@ export default {
 
     _loadBlank: function() {
       this.visit = {
-        id: -1,
+        id: null,
         cpId: this.cpr.cpId,
+        cprId: this.cpr.id,
         eventId: null,
         name: null,
         status: null,

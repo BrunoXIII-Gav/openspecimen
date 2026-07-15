@@ -14,8 +14,8 @@ class PermissibleValueAdmin {
     return http.get('permissible-values/count', opts || {});
   }
 
-  async getPv(id) {
-    return http.get('permissible-values/v/' + id);
+  async getPv(id, opts) {
+    return http.get('permissible-values/v/' + id, opts || {});
   }
 
   async saveOrUpdate(pv) {

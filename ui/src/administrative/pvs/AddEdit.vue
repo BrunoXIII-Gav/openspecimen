@@ -44,11 +44,28 @@ export default {
       bcrumb: [
         {url: routerSvc.getUrl('PvsList', {attribute: '-'}), label: i18n.msg('pvs.list')}
       ],
-      pv: {activityStatus: 'Active', attribute: props.attribute || undefined}
+      pv: {activityStatus: 'Active', attribute: props.attribute || undefined},
+      specimenClasses: []
     });
 
+    pvAdminSvc.getPvs({
+      attribute: 'specimen_type',
+      includeOnlyRootValue: true,
+      activityStatus: 'all',
+      maxResults: 1000
+    }).then(
+      pvs => {
+        ctx.specimenClasses.splice(
+          0,
+          ctx.specimenClasses.length,
+          {name: 'No Parent (Root Class)', value: null},
+          ...pvs.map(pv => ({name: pv.value, value: pv.value}))
+        );
+      }
+    );
+
     if (props.pvId && +props.pvId > 0) {
-      pvAdminSvc.getPv(+props.pvId).then(pv => {
+      pvAdminSvc.getPv(+props.pvId, {includeProps: true}).then(pv => {
         ctx.pv = pv;
       });
     }
@@ -79,6 +96,21 @@ export default {
               labelCode: 'pvs.value',
               type: 'text',
               validations: {required: {messageCode: 'pvs.value_req'}}
+            }
+          ]
+        },
+        {
+          fields: [
+            {
+              name: 'pv.parentValue',
+              label: 'Parent Specimen Class',
+              type: 'dropdown',
+              showWhen: "pv.attribute == 'specimen_type'",
+              listSource: {
+                options: ctx.specimenClasses,
+                displayProp: 'name',
+                selectProp: 'value'
+              }
             }
           ]
         },
@@ -126,6 +158,9 @@ export default {
   methods: {
     handleInput(event) {
       Object.assign(this.ctx, event.data);
+      if (this.ctx.pv.attribute != 'specimen_type') {
+        this.ctx.pv.parentValue = null;
+      }
     },
 
     async saveOrUpdate() {

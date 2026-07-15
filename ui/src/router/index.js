@@ -1428,6 +1428,11 @@ const routes = [
                 path: 'forms',
                 name: 'CpDetail.Settings.Forms',
                 component: () => import(/* webpackChunkName: "cps" */ '../biospecimen/cps/Forms.vue')
+              },
+              {
+                path: 'field-settings',
+                name: 'CpDetail.Settings.FieldSettings',
+                component: () => import(/* webpackChunkName: "cps" */ '../biospecimen/cps/FieldSettings.vue')
               }
             ]
           }
@@ -1888,6 +1893,12 @@ const routes = [
         name: 'UserResetOtpSecretCode',
         component: () => import(/* webpackChunkName: "login" */ '../users/views/ResetOtpSecretCode.vue'),
         props: (route) => ({token: route.query.resetToken})
+      },
+      {
+        path: 'portal-logout',
+        name: 'UserPortalLogout',
+        component: () => import(/* webpackChunkName: "login" */ '../users/views/PortalLogout.vue'),
+        props: route => ({target: route.query.target})
       }
     ]
   },

@@ -2,6 +2,8 @@
 import http from '@/common/services/HttpClient.js';
 import ui   from '@/global.js';
 
+const PORTAL_LOGOUT_MARKER = 'openspecimen.loggedOutToPortal';
+
 class Login {
   signInState = {};
 
@@ -25,6 +27,7 @@ class Login {
     return http.post('sessions', loginDetail).then(
       resp => {
         if (resp.token) {
+          sessionStorage.removeItem(PORTAL_LOGOUT_MARKER);
           localStorage.osAuthToken = http.headers['X-OS-API-TOKEN'] = resp.token;
         } else {
           localStorage.removeItem('osAuthToken');

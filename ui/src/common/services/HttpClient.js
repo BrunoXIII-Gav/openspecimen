@@ -2,6 +2,9 @@
 import axios from 'axios';
 import alertSvc from './Alerts.js';
 import routerSvc from './Router.js';
+import ui from '@/global.js';
+
+const PORTAL_LOGOUT_MARKER = 'openspecimen.loggedOutToPortal';
 
 class HttpClient {
   protocol = '';
@@ -160,13 +163,66 @@ class HttpClient {
     this.listeners.forEach(listener => listener.callFailed({method, response}));
   }
 
-  handleError(resp) {
+  buildPortalReturnUrl(baseUrl, source, reason) {
+    const url = new URL(baseUrl, window.location.origin);
+    url.searchParams.set('source', source);
+    if (reason) {
+      url.searchParams.set(reason, '1');
+    }
+
+    return url.toString();
+  }
+
+  buildPortalBounceUrl(baseUrl, source, reason) {
+    const targetUrl = this.buildPortalReturnUrl(baseUrl, source, reason);
+    return (
+      window.location.origin +
+      window.location.pathname +
+      '#/portal-logout?target=' +
+      encodeURIComponent(targetUrl)
+    );
+  }
+
+  async redirectToPortalOnSamlExpiry(currentDomain) {
+    const appProps = (ui && ui.global && ui.global.appProps) || {};
+    const portalLogoutUrl = (appProps.portal_logout_url || '').trim();
+    if (!portalLogoutUrl || !currentDomain) {
+      return false;
+    }
+
+    try {
+      const resp = await axios.get(this.getUrl('auth-domains'), {
+        headers: {'X-OS-API-CLIENT': 'webui'}
+      });
+      const domains = resp?.data || [];
+      const domain = domains.find(domain => domain.name == currentDomain);
+      if (domain?.type != 'saml') {
+        return false;
+      }
+
+      sessionStorage.setItem(PORTAL_LOGOUT_MARKER, '1');
+      window.location.replace(this.buildPortalBounceUrl(portalLogoutUrl, 'openspecimen', 'session_expired'));
+      return true;
+    } catch (error) {
+      console.error('Error determining SAML domain for portal timeout redirect', error);
+      return false;
+    }
+  }
+
+  async handleError(resp) {
     if (typeof resp == 'string') {
       alertSvc.error(resp);
     } else if (resp && typeof resp == 'object') {
       if (resp.status == 401) {
+        const currentDomain = ui?.currentUser?.domain;
         localStorage.removeItem('osAuthToken');
         delete this.headers['X-OS-API-TOKEN'];
+
+        if (await this.redirectToPortalOnSamlExpiry(currentDomain)) {
+          return;
+        }
+
+        delete ui.currentUser;
 
         const {name, params, query} = routerSvc.getCurrentRoute();
         if (this._canSaveReqState(name)) {
@@ -230,7 +286,7 @@ class HttpClient {
             return;
           }
 
-          this.handleError(e.response || e.message);
+          void this.handleError(e.response || e.message);
         });
     });
   }

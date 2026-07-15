@@ -42,10 +42,12 @@ services:
       DB_PASS: ${MYSQL_PASSWORD:-os_password}
       DATASOURCE_TYPE: ${DATASOURCE_TYPE:-fresh}
       DATASOURCE_JNDI: ${DATASOURCE_JNDI:-jdbc/openspecimen}
+      SAML_PORTAL_LOGOUT_URL: ${SAML_PORTAL_LOGOUT_URL:-https://portal.jellbru.lat/}
     ports:
       - "${OS_HTTP_PORT:-8085}:8080"
     volumes:
       - os_app_data:/opt/openspecimen
+      - ./security:/opt/openspecimen/security:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/openspecimen/ui-app/ >/dev/null || exit 1"]
       interval: 20s

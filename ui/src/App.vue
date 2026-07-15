@@ -75,9 +75,21 @@ export default {
 
   mounted() {
     util.setMask(this.$refs.mask);
+    this._handlePageShow = (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('pageshow', this._handlePageShow);
   },
 
   unmounted() {
+    if (this._handlePageShow) {
+      window.removeEventListener('pageshow', this._handlePageShow);
+      this._handlePageShow = null;
+    }
+
     //
     // Look for _setLogoutUrl method
     // we remove the timers when the view is unmounted / destroyed

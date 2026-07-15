@@ -71,6 +71,77 @@ import queryRoutes from '@/queries/routes.js';
 
 import Layout from '@/administrative/containers/Layout.vue';
 
+const PORTAL_LOGOUT_MARKER = 'openspecimen.loggedOutToPortal';
+
+function buildPortalReturnUrl(reason) {
+  const portalLogoutUrl = (((ui || {}).global || {}).appProps || {}).portal_logout_url || '';
+  if (!portalLogoutUrl.trim()) {
+    return '';
+  }
+
+  try {
+    const url = new URL(portalLogoutUrl, window.location.origin);
+    url.searchParams.set('source', 'openspecimen');
+    if (reason) {
+      url.searchParams.set(reason, '1');
+    }
+
+    return url.toString();
+  } catch (error) {
+    console.error('Invalid portal logout URL', error);
+    return '';
+  }
+}
+
+function buildPortalBounceUrl(reason) {
+  const targetUrl = buildPortalReturnUrl(reason);
+  if (!targetUrl) {
+    return '';
+  }
+
+  return (
+    window.location.origin +
+    window.location.pathname +
+    '#/portal-logout?target=' +
+    encodeURIComponent(targetUrl)
+  );
+}
+
+function handlePortalLogoutRestore() {
+  if (sessionStorage.getItem(PORTAL_LOGOUT_MARKER) != '1') {
+    return false;
+  }
+
+  if (localStorage.osAuthToken) {
+    sessionStorage.removeItem(PORTAL_LOGOUT_MARKER);
+    return false;
+  }
+
+  const currentHash = window.location.hash || '';
+  const noLoginView =
+    !currentHash ||
+    currentHash == '#' ||
+    currentHash == '#/' ||
+    currentHash.startsWith('#/portal-logout') ||
+    currentHash.startsWith('#/login') ||
+    currentHash.startsWith('#/forgot-password') ||
+    currentHash.startsWith('#/reset-password') ||
+    currentHash.startsWith('#/sign-up') ||
+    currentHash.startsWith('#/reset-otp-secret-code');
+
+  if (!noLoginView) {
+    return false;
+  }
+
+  const targetUrl = buildPortalBounceUrl('logged_out');
+  if (!targetUrl) {
+    return false;
+  }
+
+  window.location.replace(targetUrl);
+  return true;
+}
+
 window['Vue'] = Vue;
 const app = createApp(Root)
   .use(ConfirmationService)
@@ -176,6 +247,12 @@ Promise.all([appPropsQ, localeQ, messagesQ, siteAssetsQ]).then(
       },
       siteAssets: resp[3]
     };
+
+    handlePortalLogoutRestore();
+    window.addEventListener('pageshow', handlePortalLogoutRestore);
+    window.addEventListener('popstate', handlePortalLogoutRestore);
+    window.addEventListener('hashchange', handlePortalLogoutRestore);
+    document.addEventListener('visibilitychange', handlePortalLogoutRestore);
 
     let osSvc = window.osSvc = app.config.globalProperties.$osSvc;
     app.provide('ui', ui);

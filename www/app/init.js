@@ -12,6 +12,60 @@ ui.os.appProps = {
   plugins: []
 };
 
+ui.os.getPortalLogoutUrl = function() {
+  var portalUrl = ui.os.appProps && ui.os.appProps.portal_logout_url;
+  return typeof portalUrl == 'string' ? portalUrl.trim() : '';
+};
+
+ui.os.buildPortalRedirectUrl = function(source, reason) {
+  var portalUrl = ui.os.getPortalLogoutUrl();
+  if (!portalUrl) {
+    return '';
+  }
+
+  try {
+    var url = new URL(portalUrl, window.location.origin);
+    url.searchParams.set('source', source || 'openspecimen');
+    if (reason) {
+      url.searchParams.set(reason, '1');
+    }
+
+    return url.toString();
+  } catch (error) {
+    console.log('Invalid portal logout URL', error);
+    return '';
+  }
+};
+
+ui.os.buildPortalBounceUrl = function(source, reason) {
+  var targetUrl = ui.os.buildPortalRedirectUrl(source, reason);
+  if (!targetUrl) {
+    return '';
+  }
+
+  try {
+    return (
+      window.location.origin +
+      window.location.pathname +
+      '#/portal-logout?target=' +
+      encodeURIComponent(targetUrl)
+    );
+  } catch (error) {
+    console.log('Invalid portal bounce URL', error);
+    return targetUrl;
+  }
+};
+
+ui.os.redirectToPortal = function(source, reason) {
+  var targetUrl = ui.os.buildPortalBounceUrl(source, reason);
+  if (!targetUrl) {
+    return false;
+  }
+
+  window.location.replace(targetUrl);
+  return true;
+};
+
 (function($) {
   var pluginScriptsCnt = 0;
 
@@ -35,6 +89,7 @@ ui.os.appProps = {
           appProps.plugins = appProps.plugins || [];
 
           ui.os.appProps = appProps;
+          handlePortalRestore();
           if (appProps.plugins.length > 0) {
             var qp = '_buildVersion=' + appProps.build_version +
               '&_buildDate=' + appProps.build_date;
@@ -66,6 +121,19 @@ ui.os.appProps = {
           }
         }
       );
+  }
+
+  function handlePortalRestore() {
+    if (sessionStorage.getItem('openspecimen.loggedOutToPortal') != '1') {
+      return;
+    }
+
+    if (localStorage.getItem('osAuthToken')) {
+      sessionStorage.removeItem('openspecimen.loggedOutToPortal');
+      return;
+    }
+
+    ui.os.redirectToPortal('openspecimen', 'logged_out');
   }
 
   function loadPluginResources(qp, plugin) {
@@ -155,4 +223,13 @@ ui.os.appProps = {
   }
 
   init();
+
+  function handlePortalRestoreEvent() {
+    handlePortalRestore();
+  }
+
+  window.addEventListener('pageshow', handlePortalRestoreEvent);
+  window.addEventListener('popstate', handlePortalRestoreEvent);
+  window.addEventListener('hashchange', handlePortalRestoreEvent);
+  document.addEventListener('visibilitychange', handlePortalRestoreEvent);
 })(jQuery);

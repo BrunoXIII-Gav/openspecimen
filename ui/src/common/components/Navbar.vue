@@ -78,6 +78,8 @@ import NewStuff       from '@/common/components/NewStuff';
 import NotifsOverlay  from '@/common/components/NotifsOverlay';
 import Search         from '@/common/components/Search';
 
+const PORTAL_LOGOUT_MARKER = 'openspecimen.loggedOutToPortal';
+
 export default {
   props: ['noLogin', 'hideButtons'],
 
@@ -177,6 +179,23 @@ export default {
   },
 
   methods: {
+    buildPortalLogoutUrl: function(baseUrl) {
+      const url = new URL(baseUrl, window.location.origin);
+      url.searchParams.set('logged_out', '1');
+      url.searchParams.set('source', 'openspecimen');
+      return url.toString();
+    },
+
+    buildPortalBounceUrl: function(baseUrl) {
+      const targetUrl = this.buildPortalLogoutUrl(baseUrl);
+      return (
+        window.location.origin +
+        window.location.pathname +
+        '#/portal-logout?target=' +
+        encodeURIComponent(targetUrl)
+      );
+    },
+
     toggleProfileMenu: function(event) {
       this.$refs.userProfileMenu.toggle(event);
     },
@@ -194,6 +213,23 @@ export default {
     },
 
     logout: async function() {
+      const currentDomain = this.$ui?.currentUser?.domain;
+      const portalLogoutUrl = (this.appProps.portal_logout_url || '').trim();
+      if (currentDomain && portalLogoutUrl) {
+        try {
+          const domains = await loginSvc.getAuthDomains();
+          const domain = domains && domains.find(domain => domain.name == currentDomain);
+          if (domain?.type == 'saml') {
+            await loginSvc.logout();
+            sessionStorage.setItem(PORTAL_LOGOUT_MARKER, '1');
+            window.location.replace(this.buildPortalBounceUrl(portalLogoutUrl));
+            return;
+          }
+        } catch (error) {
+          console.error('Error performing portal redirect logout', error);
+        }
+      }
+
       const [{value: sloEnabled}]  = await settingSvc.getSetting('auth', 'single_logout');
       if (sloEnabled) {
         loginSvc.getIdpLogoutUrl(this.$ui.currentUser.domain).then(

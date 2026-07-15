@@ -1,0 +1,84 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <span translate="cp.field_settings.title">Field Settings</span>
+  </div>
+  <div class="panel-body">
+    <div class="os-alert-container inline show">
+      <div class="alert alert-info">
+        <span translate="cp.field_settings.help">
+          Configure which fixed fields are visible, required, and how they are ordered for this collection protocol.
+        </span>
+      </div>
+    </div>
+
+    <div class="os-alert-container inline show">
+      <div class="alert alert-warning">
+        <span translate="cp.field_settings.required_locked_help">
+          Fields required by the system stay visible and required here to avoid breaking participant, visit, and specimen workflows.
+        </span>
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs" ng-if="fctx.activeModule">
+      <li ng-repeat="module in fctx.modules" ng-class="{active: fctx.activeModule == module.name}" ng-if="module.fields.length > 0">
+        <a class="os-pointer-cursor" ng-click="setActiveModule(module.name)">
+          <span>{{module.title | translate}}</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="table-responsive" ng-repeat="module in fctx.modules" ng-if="fctx.activeModule == module.name">
+      <table class="table table-bordered table-hover">
+        <thead>
+          <tr>
+            <th style="width: 44px;"></th>
+            <th style="width: 120px;" translate="cp.field_settings.visible">Visible</th>
+            <th style="width: 130px;" translate="cp.field_settings.required">Required</th>
+            <th translate="cp.field_settings.field">Field</th>
+            <th style="width: 220px;" translate="cp.field_settings.name">Technical Name</th>
+          </tr>
+        </thead>
+        <tbody ui-sortable="fctx.sortOpts" ng-model="module.fields">
+          <tr ng-repeat="field in module.fields" ng-class="{'text-muted': !field.visible}">
+            <td class="text-center">
+              <span class="fa fa-bars os-drag-handle os-pointer-cursor" title="Drag to reorder"></span>
+            </td>
+            <td>
+              <label class="checkbox-inline">
+                <input type="checkbox" ng-model="field.visible" ng-disabled="!field.canHide" ng-change="onFieldChange()">
+              </label>
+            </td>
+            <td>
+              <label class="checkbox-inline">
+                <input type="checkbox" ng-model="field.required" ng-disabled="!field.canToggleRequired" ng-change="onFieldChange()">
+              </label>
+              <span class="text-muted" ng-if="field.requiredBySystem" translate="cp.field_settings.locked">Locked</span>
+            </td>
+            <td>
+              <strong>{{field.caption}}</strong>
+              <div class="text-muted">{{field.type}}</div>
+            </td>
+            <td>
+              <code>{{field.name}}</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="text-muted" ng-if="!fctx.activeModule" translate="cp.field_settings.none">
+      No fixed fields available for configuration.
+    </div>
+
+    <div class="os-divider"></div>
+
+    <div class="clearfix">
+      <button class="btn btn-primary pull-right" ng-disabled="!fctx.modified || !cpsCtx.cpUpdateAllowed" ng-click="save()">
+        <span translate="common.buttons.save">Save</span>
+      </button>
+      <button class="btn os-btn-text pull-right" ng-disabled="!fctx.modified" ng-click="reset()">
+        <span translate="common.buttons.cancel">Discard</span>
+      </button>
+    </div>
+  </div>
+</div>

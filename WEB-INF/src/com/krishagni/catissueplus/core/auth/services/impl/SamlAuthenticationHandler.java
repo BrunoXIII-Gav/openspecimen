@@ -12,6 +12,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -46,6 +47,7 @@ import com.krishagni.catissueplus.core.auth.domain.AuthCredential;
 import com.krishagni.catissueplus.core.auth.domain.AuthDomain;
 import com.krishagni.catissueplus.core.auth.domain.AuthErrorCode;
 import com.krishagni.catissueplus.core.auth.domain.AuthProvider;
+import com.krishagni.catissueplus.core.common.OpenSpecimenAppCtxProvider;
 import com.krishagni.catissueplus.core.auth.events.LoginDetail;
 import com.krishagni.catissueplus.core.auth.services.UserAuthenticationService;
 import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
@@ -185,6 +187,9 @@ public class SamlAuthenticationHandler implements AuthenticationSuccessHandler, 
 		}
 
 		if (user == null) {
+			if (redirectAccessDeniedToPortal(httpResp, "openspecimen")) {
+				return null;
+			}
 			httpResp.sendRedirect(errorUrl(UserErrorCode.ONE_OR_MORE_NOT_FOUND, key));
 		} else if (user.isLocked()) {
 			httpResp.sendRedirect(errorUrl(AuthErrorCode.USER_LOCKED, key));
@@ -327,6 +332,30 @@ public class SamlAuthenticationHandler implements AuthenticationSuccessHandler, 
 		deflaterStream.write(inputString.getBytes(StandardCharsets.UTF_8));
 		deflaterStream.close();
 		return byteStream.toByteArray();
+	}
+
+	private boolean redirectAccessDeniedToPortal(HttpServletResponse httpResp, String appKey)
+	throws IOException {
+		String portalUrl = getPortalLogoutUrl();
+		if (StringUtils.isBlank(portalUrl)) {
+			return false;
+		}
+
+		String redirectUrl = UriComponentsBuilder.fromUriString(portalUrl)
+			.queryParam("access_denied", appKey)
+			.build(true)
+			.toUriString();
+		httpResp.sendRedirect(redirectUrl);
+		return true;
+	}
+
+	private String getPortalLogoutUrl() {
+		try {
+			Properties appProps = OpenSpecimenAppCtxProvider.getBean("appProps");
+			return StringUtils.trimToEmpty(appProps.getProperty("app.saml.portal_logout_url"));
+		} catch (Exception e) {
+			return "";
+		}
 	}
 
 	private String errorUrl(ErrorCode code, Object... args) {

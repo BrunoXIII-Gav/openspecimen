@@ -10,6 +10,9 @@
       <os-button left-icon="trash" :label="$t('common.buttons.delete')"
         @click="deleteCpr" v-if="isDeleteAllowed" />
 
+      <os-button left-icon="plus" :label="$t('visits.add_visit')"
+        @click="addVisit" v-if="isCreateOrUpdateVisitAllowed" />
+
       <os-menu :label="$t('common.buttons.more')" :options="ctx.moreOptions" />
     </template>
   </os-page-toolbar>
@@ -193,6 +196,10 @@ export default {
       return this.cpViewCtx.isDeleteParticipantAllowed(this.cpr);
     },
 
+    isCreateOrUpdateVisitAllowed: function() {
+      return this.cpViewCtx.isCreateOrUpdateVisitAllowed(this.cpr);
+    },
+
     isPrintSpecimenLabelsAllowed: function() {
       return this.cpViewCtx.isPrintSpecimenAllowed(this.cpr) && !this.cpViewCtx.isCoordinator();
     }
@@ -228,6 +235,11 @@ export default {
           }
         }
       );
+    },
+
+    addVisit: function() {
+      const cpr = this.ctx.cpr;
+      routerSvc.goto('VisitAddEdit', {cpId: cpr.cpId, cprId: cpr.id, visitId: -1});
     },
 
     addToAnother: function() {

@@ -20,7 +20,20 @@ angular.module('openspecimen')
       .state('login', {
         url: '/?logout&directVisit',
         templateUrl: 'modules/user/signin.html',
-        controller: function (VueApp) { VueApp.setVueView('home'); }, // 'LoginCtrl',
+        controller: function($window, VueApp) {
+          if (
+            sessionStorage.getItem('openspecimen.loggedOutToPortal') == '1' &&
+            !$window.localStorage['osAuthToken'] &&
+            ui.os.redirectToPortal &&
+            ui.os.getPortalLogoutUrl &&
+            ui.os.getPortalLogoutUrl()
+          ) {
+            ui.os.redirectToPortal('openspecimen', 'logged_out');
+            return;
+          }
+
+          VueApp.setVueView('home');
+        }, // 'LoginCtrl',
         parent: 'default-nav-buttons',
         data: {
           redirect: false
@@ -94,5 +107,22 @@ angular.module('openspecimen')
         },
         controller: 'WelcomeCtrl',
         parent: 'default-nav-buttons'
+      })
+      .state('portal-logout', {
+        url: '/portal-logout?target',
+        templateUrl: 'modules/common/blank.html',
+        controller: function($stateParams, $window) {
+          var target = $stateParams.target || '';
+          if (!target) {
+            $window.location.replace($window.location.origin + '/openspecimen/ui-app/#/login');
+            return;
+          }
+
+          $window.location.replace(target);
+        },
+        parent: 'default-nav-buttons',
+        data: {
+          redirect: false
+        }
       });
   });

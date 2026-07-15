@@ -65,7 +65,7 @@ public class DomainRegistrationServiceImpl implements DomainRegistrationService 
 
 			AuthDomain authDomain = domainRegFactory.createDomain(req.getPayload());
 			ensureUniqueDomainName(null, authDomain);
-			daoFactory.getAuthDao().saveOrUpdate(authDomain);
+			daoFactory.getAuthDao().save(authDomain);
 
 			OpenSpecimenAppCtxProvider.getAppCtx().publishEvent(new AuthDomainSavedEvent(authDomain));
 			return ResponseEvent.response(AuthDomainDetail.from(authDomain));

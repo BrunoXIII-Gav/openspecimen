@@ -338,6 +338,13 @@ osApp.config(function(
           delete $window.localStorage['osAuthToken'];
           delete $injector.get("$http").defaults.headers.common['X-OS-API-TOKEN'];
 
+          if (ui.os.redirectToPortal && ui.os.getPortalLogoutUrl && ui.os.getPortalLogoutUrl()) {
+            sessionStorage.removeItem('openspecimen.loggedOutToPortal');
+            if (ui.os.redirectToPortal('openspecimen', 'session_expired')) {
+              return $q.reject(rejection);
+            }
+          }
+
           if (fourNotOneTimer) {
             clearTimeout(fourNotOneTimer);
           }

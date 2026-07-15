@@ -4,6 +4,27 @@ angular.module('openspecimen')
     $http, $rootScope, $window, $q, $sce, $timeout,
     ApiUtil, ApiUrls, SettingUtil, User) {
 
+    function getPortalLogoutUrl() {
+      return ui.os.getPortalLogoutUrl ? ui.os.getPortalLogoutUrl() : '';
+    }
+
+    function buildPortalLogoutUrl(reason) {
+      return ui.os.buildPortalRedirectUrl
+        ? ui.os.buildPortalRedirectUrl('openspecimen', reason)
+        : '';
+    }
+
+    function redirectToPortal(reason) {
+      var targetUrl = buildPortalLogoutUrl(reason);
+      if (!targetUrl) {
+        return false;
+      }
+
+      sessionStorage.setItem('openspecimen.loggedOutToPortal', '1');
+      $window.location.replace(targetUrl);
+      return true;
+    }
+
     var url = function() {
       return ApiUrls.getUrl('sessions');
     };
@@ -59,6 +80,7 @@ angular.module('openspecimen')
           return qp.promise;
         }
 
+        var portalLogoutUrl = getPortalLogoutUrl();
         var samlEnabled = SettingUtil.getSetting('auth', 'saml_enable');
         var sloEnabled  = SettingUtil.getSetting('auth', 'single_logout');
         var that = this;
@@ -66,7 +88,13 @@ angular.module('openspecimen')
         return $q.all([samlEnabled, sloEnabled]).then(
           function(resp) {
             var q;
-            if (resp[0].value == 'true' && resp[1].value == 'true') {
+            if (portalLogoutUrl) {
+              q = $http.delete(url()).then(
+                function(resp) {
+                  return resp;
+                }
+              );
+            } else if (resp[0].value == 'true' && resp[1].value == 'true') {
               $rootScope.logoutUrl = $sce.trustAsResourceUrl(ApiUrls.getServerUrl() + 'saml/logout?_nonce='+Date.now());
               $rootScope.logout = true;
               q = $q.defer();
@@ -88,6 +116,10 @@ angular.module('openspecimen')
                     delete $rootScope.currentUser;
                     if ($window.localStorage['osReqState']) {
                       delete $window.localStorage['osReqState'];
+                    }
+
+                    if (portalLogoutUrl) {
+                      redirectToPortal('logged_out');
                     }
 
                     r.resolve({});
@@ -130,6 +162,15 @@ angular.module('openspecimen')
       $scope.loginData  = {'$$otpReq': false};
       $scope.samlDomain = '';
       $scope.showSignIn = true;
+
+      if (
+        sessionStorage.getItem('openspecimen.loggedOutToPortal') == '1' &&
+        !$http.defaults.headers.common['X-OS-API-TOKEN'] &&
+        !$window.localStorage['osAuthToken']
+      ) {
+        redirectToPortal('logged_out');
+        return;
+      }
       
       var logoutQ;
       if ($location.search().logout) {
@@ -214,6 +255,7 @@ angular.module('openspecimen')
       if (result.status == "ok" && result.data && result.data.resetPasswordToken) {
         $state.go('reset-password', {token: result.data.resetPasswordToken, loginName: loginReq.loginName});
       } else if (result.status == "ok" && result.data) {
+        sessionStorage.removeItem('openspecimen.loggedOutToPortal');
         $rootScope.currentUser = {
           id: result.data.id,
           firstName: result.data.firstName,

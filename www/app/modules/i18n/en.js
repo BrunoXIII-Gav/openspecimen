@@ -430,6 +430,19 @@
       "help": "Drag and drop items in below lists to reorder the form data entry sequence."
     },
 
+    "field_settings": {
+      "title": "Field Settings",
+      "help": "Configure which fixed fields are visible, required, and how they are ordered for this collection protocol.",
+      "required_locked_help": "Fields required by the system stay visible and required here to avoid breaking participant, visit, and specimen workflows.",
+      "visible": "Visible",
+      "required": "Required",
+      "field": "Field",
+      "name": "Technical Name",
+      "locked": "Locked",
+      "none": "No fixed fields available for configuration.",
+      "updated": "Field settings updated."
+    },
+
     "catalog": {
       "title": "Catalog",
       "query": "Query",

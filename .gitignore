@@ -26,10 +26,14 @@ print*.jar
 label*.jar
 tmp/
 *.tmp
+security/*.p12
+security/*.crt
+security/*.pem
 *.bak
 *.swp
 *~.nib
 local.properties
+.env
 .classpath
 .settings/
 .loadpath

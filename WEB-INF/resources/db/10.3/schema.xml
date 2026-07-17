@@ -867,11 +867,4 @@
     </addColumn>
   </changeSet>
 
-  <changeSet author="custom" id="PV: Add label code audit column">
-    <addColumn tableName="CATISSUE_PERMISSIBLE_VALUE_AUD">
-      <column name="LABEL_CODE" type="${text.type}(255)" />
-      <column name="labelCode_MOD" type="${boolean.type}" />
-    </addColumn>
-  </changeSet>
-
 </databaseChangeLog>

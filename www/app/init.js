@@ -66,6 +66,56 @@ ui.os.redirectToPortal = function(source, reason) {
   return true;
 };
 
+ui.os.isSamlSessionActive = function() {
+  return !!localStorage.getItem('osAuthToken') && !!ui.os.getPortalLogoutUrl();
+};
+
+ui.os.installBackGuard = function() {
+  if (!ui.os.isSamlSessionActive() || sessionStorage.getItem('openspecimen.loggedOutToPortal') == '1') {
+    sessionStorage.removeItem('openspecimen.samlBackGuardArmed');
+    return;
+  }
+
+  if (sessionStorage.getItem('openspecimen.samlBackGuardArmed') != '1') {
+    history.replaceState(
+      Object.assign({}, history.state || {}, { openspecimenSamlBackGuard: 'root' }),
+      '',
+      window.location.href
+    );
+    history.pushState(
+      Object.assign({}, history.state || {}, { openspecimenSamlBackGuard: 'trap' }),
+      '',
+      window.location.href
+    );
+    sessionStorage.setItem('openspecimen.samlBackGuardArmed', '1');
+  }
+};
+
+ui.os.rearmBackGuard = function() {
+  if (!ui.os.isSamlSessionActive() || sessionStorage.getItem('openspecimen.loggedOutToPortal') == '1') {
+    sessionStorage.removeItem('openspecimen.samlBackGuardArmed');
+    return;
+  }
+
+  if (((history.state || {}).openspecimenSamlBackGuard) != 'trap') {
+    history.pushState(
+      Object.assign({}, history.state || {}, { openspecimenSamlBackGuard: 'trap' }),
+      '',
+      window.location.href
+    );
+  }
+};
+
+ui.os.blockBrowserBack = function() {
+  if (!ui.os.isSamlSessionActive() || sessionStorage.getItem('openspecimen.loggedOutToPortal') == '1') {
+    sessionStorage.removeItem('openspecimen.samlBackGuardArmed');
+    return;
+  }
+
+  history.go(1);
+  setTimeout(ui.os.rearmBackGuard, 0);
+};
+
 (function($) {
   var pluginScriptsCnt = 0;
 
@@ -90,6 +140,7 @@ ui.os.redirectToPortal = function(source, reason) {
 
           ui.os.appProps = appProps;
           handlePortalRestore();
+          ui.os.installBackGuard();
           if (appProps.plugins.length > 0) {
             var qp = '_buildVersion=' + appProps.build_version +
               '&_buildDate=' + appProps.build_date;
@@ -135,6 +186,10 @@ ui.os.redirectToPortal = function(source, reason) {
 
     ui.os.redirectToPortal('openspecimen', 'logged_out');
   }
+
+  window.addEventListener('pageshow', ui.os.rearmBackGuard);
+  window.addEventListener('hashchange', ui.os.rearmBackGuard);
+  window.addEventListener('popstate', ui.os.blockBrowserBack);
 
   function loadPluginResources(qp, plugin) {
     var url = 'plugin-ui-resources/' + plugin + '/def.json?' + qp;

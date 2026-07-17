@@ -72,6 +72,8 @@ import queryRoutes from '@/queries/routes.js';
 import Layout from '@/administrative/containers/Layout.vue';
 
 const PORTAL_LOGOUT_MARKER = 'openspecimen.loggedOutToPortal';
+const BACK_GUARD_MARKER = 'openspecimen.samlBackGuardArmed';
+const BACK_GUARD_SOURCE = 'openspecimen.samlBackGuard';
 
 function buildPortalReturnUrl(reason) {
   const portalLogoutUrl = (((ui || {}).global || {}).appProps || {}).portal_logout_url || '';
@@ -140,6 +142,56 @@ function handlePortalLogoutRestore() {
 
   window.location.replace(targetUrl);
   return true;
+}
+
+function isSamlSessionActive() {
+  return !!localStorage.osAuthToken && !!buildPortalReturnUrl();
+}
+
+function installBackGuard() {
+  if (!isSamlSessionActive() || sessionStorage.getItem(PORTAL_LOGOUT_MARKER) == '1') {
+    sessionStorage.removeItem(BACK_GUARD_MARKER);
+    return;
+  }
+
+  if (sessionStorage.getItem(BACK_GUARD_MARKER) != '1') {
+    window.history.replaceState(
+      Object.assign({}, window.history.state || {}, { [BACK_GUARD_SOURCE]: 'root' }),
+      '',
+      window.location.href
+    );
+    window.history.pushState(
+      Object.assign({}, window.history.state || {}, { [BACK_GUARD_SOURCE]: 'trap' }),
+      '',
+      window.location.href
+    );
+    sessionStorage.setItem(BACK_GUARD_MARKER, '1');
+  }
+}
+
+function rearmBackGuard() {
+  if (!isSamlSessionActive() || sessionStorage.getItem(PORTAL_LOGOUT_MARKER) == '1') {
+    sessionStorage.removeItem(BACK_GUARD_MARKER);
+    return;
+  }
+
+  if ((window.history.state || {})[BACK_GUARD_SOURCE] != 'trap') {
+    window.history.pushState(
+      Object.assign({}, window.history.state || {}, { [BACK_GUARD_SOURCE]: 'trap' }),
+      '',
+      window.location.href
+    );
+  }
+}
+
+function blockBrowserBack() {
+  if (!isSamlSessionActive() || sessionStorage.getItem(PORTAL_LOGOUT_MARKER) == '1') {
+    sessionStorage.removeItem(BACK_GUARD_MARKER);
+    return;
+  }
+
+  window.history.go(1);
+  window.setTimeout(rearmBackGuard, 0);
 }
 
 window['Vue'] = Vue;
@@ -249,10 +301,14 @@ Promise.all([appPropsQ, localeQ, messagesQ, siteAssetsQ]).then(
     };
 
     handlePortalLogoutRestore();
+    installBackGuard();
     window.addEventListener('pageshow', handlePortalLogoutRestore);
     window.addEventListener('popstate', handlePortalLogoutRestore);
     window.addEventListener('hashchange', handlePortalLogoutRestore);
     document.addEventListener('visibilitychange', handlePortalLogoutRestore);
+    window.addEventListener('pageshow', rearmBackGuard);
+    window.addEventListener('hashchange', rearmBackGuard);
+    window.addEventListener('popstate', blockBrowserBack);
 
     let osSvc = window.osSvc = app.config.globalProperties.$osSvc;
     app.provide('ui', ui);

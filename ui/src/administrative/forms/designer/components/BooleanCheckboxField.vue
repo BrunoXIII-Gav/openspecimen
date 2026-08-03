@@ -3,7 +3,7 @@
     <CommonFieldProps :field="fm">
       <div class="p-field-checkbox">
         <Checkbox v-model="fm.checked" :binary="true" />
-        <label> Default Checked </label>
+        <label>{{ $t('forms.designer.default_checked') }}</label>
       </div>
     </CommonFieldProps>
   </div>

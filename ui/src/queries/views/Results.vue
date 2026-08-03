@@ -120,6 +120,7 @@ import authSvc   from '@/common/services/Authorization.js';
 import i18n      from '@/common/services/I18n.js';
 import querySvc  from '@/queries/services/Query.js';
 import routerSvc from '@/common/services/Router.js';
+import savedQuerySvc from '@/queries/services/SavedQuery.js';
 
 import queryResources from './Resources.js';
 
@@ -252,12 +253,17 @@ export default {
 
     showDefineViewDialog: function() {
       this.$refs.defineViewDialog.open(this.query).then(
-        resp => {
+        async resp => {
           if (resp == 'cancel') {
             return;
           }
 
-          this.$emit('query-saved', {...this.query, ...resp});
+          let query = {...this.query, ...resp};
+          if (query.id > 0 && authSvc.isAllowed(queryResources.updateOpts)) {
+            query = await savedQuerySvc.saveOrUpdate(query);
+          }
+
+          this.$emit('query-saved', query);
           setTimeout(() => this._loadRecords(this._getSelectedFacets())); // to allow the query to be updated
         }
       );

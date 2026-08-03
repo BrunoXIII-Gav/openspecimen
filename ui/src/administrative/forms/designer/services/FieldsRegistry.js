@@ -1,4 +1,6 @@
 
+import i18n from "@/common/services/I18n.js";
+
 class FieldsRegistry {
     fields = {};
 
@@ -17,70 +19,75 @@ class FieldsRegistry {
     getField(type) {
         return this.fields[type];
     }
+
+    getDisplayLabel(type) {
+        const field = this.getField(type) || {};
+        return field.labelCode ? i18n.msg(field.labelCode) : field.label;
+    }
 }
 
 const fields = [
     {
         type: "stringTextField",
-        label: "Text Field",
+        labelCode: "forms.designer.field_types.text_field",
     },
     {
         type: "textArea",
-        label: "Text Area",
+        labelCode: "forms.designer.field_types.text_area",
     },
     {
         type: "numberField",
-        label: "Number Field",
+        labelCode: "forms.designer.field_types.number_field",
     },
     {
         type: "radiobutton",
-        label: "Radio Button",
+        labelCode: "forms.designer.field_types.radio_button",
         allowedInSubForm: false
     },
     {
         type: "checkbox",
-        label: "Checkbox",
+        labelCode: "forms.designer.field_types.checkbox",
         allowedInSubForm: false
     },
     {
         type: "booleanCheckbox",
-        label: "Yes/No Checkbox",
+        labelCode: "forms.designer.field_types.yes_no_checkbox",
     },
     {
         type: "combobox",
-        label: "Dropdown",
+        labelCode: "forms.designer.field_types.dropdown",
     },
     {
         type: "multiSelectListbox",
-        label: "Multiselect Dropdown",
+        labelCode: "forms.designer.field_types.multiselect_dropdown",
     },
     {
         type: "datePicker",
-        label: "Date Picker",
+        labelCode: "forms.designer.field_types.date_picker",
     },
     {
         type: "fileUpload",
-        label: "File Upload",
+        labelCode: "forms.designer.field_types.file_upload",
     },
     {
         type: "signature",
-        label: "Signature",
+        labelCode: "forms.designer.field_types.signature",
     },
     {
         type: "label",
-        label: "Note",
+        labelCode: "forms.designer.field_types.note",
         allowedInSubForm: false
     },
     {
         type: "userField",
-        label: "User",
+        labelCode: "forms.designer.field_types.user",
     },
     {
         type: "pvField",
-        label: "Permissible Value",
+        labelCode: "forms.designer.field_types.permissible_value",
         validate: function (field) {
             if (!field.attribute) {
-                return { status: false, error: 'PV attribute is required' };
+                return { status: false, error: i18n.msg('forms.designer.pv_attribute_required') };
             }
 
             return { status: true };
@@ -88,15 +95,15 @@ const fields = [
     },
     {
         type: "siteField",
-        label: "Site",
+        labelCode: "forms.designer.field_types.site",
     },
     {
         type: "storageContainer",
-        label: "Storage Container",
+        labelCode: "forms.designer.field_types.storage_container",
     },
     {
         type: "subForm",
-        label: "Subform",
+        labelCode: "forms.designer.field_types.subform",
         allowedInSubForm: false
     },
 ];

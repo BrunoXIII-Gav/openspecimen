@@ -3,20 +3,20 @@
     <CommonFieldProps :field="fm">
       <div class="p-fluid p-grid">
         <div class="p-field p-col-12">
-          <label> Dropdown </label>
+          <label>{{ $t('forms.designer.dropdown') }}</label>
           <Dropdown v-model="fm.attribute"
             :options="pvAttrsList" option-label="name" option-value="attribute"
             :filter="true" />
         </div>
 
         <div class="p-field p-col-4">
-          <label> Only Leaf Values </label>
+          <label>{{ $t('forms.designer.only_leaf_values') }}</label>
           <br />
           <InputSwitch v-model="fm.leafValue" />
         </div>
 
         <div class="p-field p-col-4">
-          <label> Numeric Values </label>
+          <label>{{ $t('forms.designer.numeric_values') }}</label>
           <br />
           <InputSwitch v-model="fm.numericValues" />
         </div>
@@ -115,4 +115,3 @@ export default {
   },
 };
 </script>
-

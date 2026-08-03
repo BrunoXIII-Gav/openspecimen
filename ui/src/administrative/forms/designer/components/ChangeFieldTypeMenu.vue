@@ -4,7 +4,7 @@
     <Button
       icon="pi pi-sort-alt"
       class="p-button-text p-button-plain"
-      v-tooltip.bottom="'Change Field Type'"
+      v-tooltip.bottom="$t('forms.designer.change_field_type')"
       @click="toggleShowTypes"
     />
 
@@ -20,6 +20,7 @@
 import Button from 'primevue/button';
 import Menu from 'primevue/menu';
 
+import i18n from "@/common/services/I18n.js";
 import utility from "../services/Utility.js";
 
 export default {
@@ -48,7 +49,7 @@ export default {
 
       return types.map(type => {
         return {
-          label: type.caption,
+          label: type.labelCode ? i18n.msg(type.labelCode) : type.caption,
           command: () => this.$emit('changeTo', type)
         }
       });

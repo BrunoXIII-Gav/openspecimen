@@ -14,6 +14,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -507,13 +508,21 @@ public class Utility {
 	}
 
 	public static String getContentType(String filename) {
-		if (fileTypesMap == null) {
-			synchronized (Utility.class) {
-				fileTypesMap = new ConfigurableMimeFileTypeMap();
+		try {
+			if (fileTypesMap == null) {
+				synchronized (Utility.class) {
+					if (fileTypesMap == null) {
+						fileTypesMap = new ConfigurableMimeFileTypeMap();
+					}
+				}
 			}
-		}
 
-		return fileTypesMap.getContentType(filename);
+			return fileTypesMap.getContentType(filename);
+		} catch (Throwable t) {
+			logger.warn("Error determining content type using activation provider. Falling back to JDK detection: " + filename, t);
+			String contentType = URLConnection.guessContentTypeFromName(filename);
+			return StringUtils.defaultIfBlank(contentType, "application/octet-stream");
+		}
 	}
 
 	public static String getContentType(File file) {

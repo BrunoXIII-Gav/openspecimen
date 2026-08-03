@@ -3,7 +3,7 @@
     <CommonFieldProps :field="fm">
       <div class="p-fluid p-grid">
       <div class="p-field p-col-12">
-        <label> Format </label>
+        <label>{{ $t('forms.designer.format') }}</label>
         <Dropdown
           v-model="fm.format"
           :options="formats"
@@ -12,7 +12,7 @@
         />
       </div>
       <div class="p-field p-col-12">
-        <label> Default Date </label>
+        <label>{{ $t('forms.designer.default_date') }}</label>
         <div class="p-grid">
           <div class="p-field p-col-3 ">
             <div class="p-field-radiobutton">
@@ -22,7 +22,7 @@
                 :value="'NONE'"
                 v-model="fm.defaultType"
               />
-              <span> None </span>
+              <span>{{ $t('forms.designer.none') }}</span>
             </label>
             </div>
           </div>
@@ -34,7 +34,7 @@
                 :value="'CURRENT_DATE'"
                 v-model="fm.defaultType"
               />
-              <span> Current Date </span>
+              <span>{{ $t('forms.designer.current_date') }}</span>
             </label>
             </div>
           </div>
@@ -63,6 +63,7 @@ import { computed, reactive } from "vue";
 import Calendar from "primevue/calendar";
 import Dropdown from "primevue/dropdown";
 import RadioButton from "primevue/radiobutton";
+import i18n from "@/common/services/I18n.js";
 import CommonFieldProps from "./CommonFieldProps.vue";
 
 export default {
@@ -92,11 +93,11 @@ export default {
 
     let formats = [
       {
-        label: "Date Only",
+        label: i18n.msg("forms.designer.date_only"),
         value: "dd-MM-yyyy",
       },
       {
-        label: "Date and Time",
+        label: i18n.msg("forms.designer.date_and_time"),
         value: "dd-MM-yyyy HH:mm",
       },
     ];

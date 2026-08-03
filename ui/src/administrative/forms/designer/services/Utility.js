@@ -51,21 +51,21 @@ class Utility {
     getInterchangeableTypes(field) {
         if (field.type == 'radiobutton') {
           return [
-            { name: 'combobox', caption: 'Dropdown' },
-            { name: 'stringTextField', caption: 'Text Field' }
+            { name: 'combobox', labelCode: 'forms.designer.field_types.dropdown' },
+            { name: 'stringTextField', labelCode: 'forms.designer.field_types.text_field' }
           ]
         } else if (field.type == 'combobox') {
           return [
-            { name: 'radiobutton', caption: 'Radio Button' },
-            { name: 'stringTextField', caption: 'Text Field' }
+            { name: 'radiobutton', labelCode: 'forms.designer.field_types.radio_button' },
+            { name: 'stringTextField', labelCode: 'forms.designer.field_types.text_field' }
           ]
         } else if (field.type == 'checkbox') {
           return [
-            { name: 'multiSelectListbox', caption: 'Multiselect Dropdown' }
+            { name: 'multiSelectListbox', labelCode: 'forms.designer.field_types.multiselect_dropdown' }
           ]
         } else if (field.type == 'multiSelectListbox') {
           return [
-            { name: 'checkbox', caption: 'Checkbox' }
+            { name: 'checkbox', labelCode: 'forms.designer.field_types.checkbox' }
           ]
         }
 

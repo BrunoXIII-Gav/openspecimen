@@ -1,12 +1,12 @@
 <template>
   <div class="p-fluid p-grid" v-if="!preview">
     <div class="p-field p-col-12">
-      <label> Label </label>
+      <label>{{ $t('forms.designer.display_label') }}</label>
       <InputText type="text" v-model="fm.caption" />
     </div>
 
     <div class="p-field p-col-12">
-      <label> Name </label>
+      <label>{{ $t('forms.designer.name') }}</label>
       <InputText type="text" v-model="fm.udn" />
     </div>
   </div>

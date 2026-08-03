@@ -13,12 +13,12 @@
       <template #content>
         <div class="p-fluid p-grid" v-if="ctx.selectedCard == form">
           <div class="p-field p-col-12">
-            <label> Title </label>
+            <label>{{ $t('forms.designer.title') }}</label>
             <InputText type="text" v-model="form.caption" ref="titleRef" />
           </div>
 
           <div class="p-field p-col-12">
-            <label> Name </label>
+            <label>{{ $t('forms.designer.name') }}</label>
             <InputText
               type="text"
               v-model="form.name"
@@ -38,16 +38,16 @@
             <Button
               icon="pi pi-pencil"
               class="p-button-text p-button-plain"
-              v-tooltip.bottom="'Edit'"
+              v-tooltip.bottom="$t('common.buttons.edit')"
               @click="edit(form)"
             />
           </div>
 
           <div v-else-if="ctx.selectedCard == form">
-            <Button icon="pi pi-check" label="Save" @click="save" />
+            <Button icon="pi pi-check" :label="$t('common.buttons.save')" @click="save" />
             <Button
               icon="pi pi-times"
-              label="Cancel"
+              :label="$t('common.buttons.cancel')"
               class="p-button-secondary"
               @click="cancel(form)"
               v-if="form['$saved'] != false"
@@ -64,7 +64,7 @@
         :key="idx"
       >
         <template #content>
-          <div class="grip" v-if="ctx.selectedCard == null" v-tooltip.bottom="'Press and hold to move the field'">
+          <div class="grip" v-if="ctx.selectedCard == null" v-tooltip.bottom="$t('forms.designer.press_and_hold_to_move')">
             <span>:::</span>
           </div>
 
@@ -82,28 +82,28 @@
               <Button
                 icon="pi pi-pencil"
                 class="p-button-text p-button-plain"
-                v-tooltip.bottom="'Edit'"
+                v-tooltip.bottom="$t('common.buttons.edit')"
                 @click="edit(field)"
               />
               <Button
                 icon="pi pi-copy"
                 class="p-button-text p-button-plain"
-                v-tooltip.bottom="'Clone'"
+                v-tooltip.bottom="$t('common.buttons.clone')"
                 @click="copyField(field, idx)"
               />
               <Button
                 icon="pi pi-trash"
                 class="p-button-text p-button-plain"
-                v-tooltip.bottom="'Delete'"
+                v-tooltip.bottom="$t('common.buttons.delete')"
                 @click="remove(field)"
               />
             </div>
 
             <div v-else-if="ctx.selectedCard == field">
-              <Button icon="pi pi-check" label="Save" @click="save()" />
+              <Button icon="pi pi-check" :label="$t('common.buttons.save')" @click="save()" />
               <Button
                 icon="pi pi-times"
-                label="Cancel"
+                :label="$t('common.buttons.cancel')"
                 class="p-button-secondary"
                 @click="cancel(field)"
               />
@@ -116,7 +116,7 @@
     <div class="p-col p-mb-4" v-if="ctx.selectedCard == null">
       <span class="add-field">
         <Button
-          label="Add Field"
+          :label="$t('forms.designer.add_field')"
           icon="pi pi-plus"
           @click="toggleAddFieldMenu"
         />
@@ -127,7 +127,7 @@
       <Button
         v-if="form.type == 'subForm'"
         icon="pi pi-arrow-left"
-        label="Go Back"
+        :label="$t('forms.designer.go_back')"
         class="p-button-secondary"
         style="margin-left: 0.5em"
         @click="goBackToMainForm()"
@@ -157,6 +157,7 @@ import Breadcrumb from "primevue/breadcrumb";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
 import { VueDraggableNext } from "vue-draggable-next";
+import i18n from "@/common/services/I18n.js";
 
 import ChangeFieldTypeMenu from "./ChangeFieldTypeMenu.vue"
 import fieldsRegistry from "../services/FieldsRegistry.js";
@@ -244,7 +245,7 @@ export default {
       hierarchy = computed(() => {
         return {
           main: { label: props.main.caption },
-          subForm: [{ label: form.caption || "New Subform" }],
+          subForm: [{ label: form.caption || i18n.msg("forms.designer.new_subform") }],
         };
       });
     } else {
@@ -275,6 +276,7 @@ export default {
         }
 
         let field = { ...types[type] };
+        field["label"] = fieldsRegistry.getDisplayLabel(field.type);
         field["command"] = () => addField(field.type);
         result.push(field);
       }
@@ -372,29 +374,29 @@ export default {
       let valid = true;
       if (ctx.selectedCard == form) {
         if (!form.caption || form.caption.trim().length == 0) {
-          addError("Form title is required");
+          addError(i18n.msg("forms.designer.form_title_required"));
           valid = false;
         }
 
         if (!form.name || form.name.trim().length == 0) {
-          addError("Form name is required");
+          addError(i18n.msg("forms.designer.form_name_required"));
           valid = false;
         }
       } else {
         let field = ctx.selectedCard;
         if (!field.caption || field.caption.trim().length == 0) {
-          addError("Field label is required");
+          addError(i18n.msg("forms.designer.field_label_required"));
           valid = false;
         }
 
         if (!field.udn || field.udn.trim().length == 0) {
-          addError("Field name is required");
+          addError(i18n.msg("forms.designer.field_name_required"));
           valid = false;
         }
 
         let fmd = fieldsRegistry.getField(field.type);
         if (!fmd) {
-          addError("Unknown field type: " + field.type);
+          addError(i18n.msg("forms.designer.unknown_field_type", { type: field.type }));
           valid = false;
         } else if (typeof fmd.validate == "function") {
           let result = fmd.validate(field);
@@ -484,8 +486,8 @@ export default {
 
     let remove = function (field) {
       confirm.require({
-        message: "Are you sure you want to delete the field?",
-        header: "Confirm Delete",
+        message: i18n.msg("forms.designer.confirm_delete_field"),
+        header: i18n.msg("forms.designer.confirm_delete_title"),
         icon: "pi pi-exclamation-triangle",
         acceptClass: "p-button-danger",
         accept: () => {

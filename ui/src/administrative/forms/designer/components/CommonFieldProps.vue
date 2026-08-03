@@ -1,45 +1,45 @@
 <template>
   <div class="p-fluid p-grid">
     <div class="p-field p-col-12">
-      <label> Type </label>
+      <label>{{ $t('forms.designer.type') }}</label>
       <InputText type="text" disabled v-model="fieldTitle" />
     </div>
 
     <div class="p-field p-col-12">
-      <label> Display Label </label>
+      <label>{{ $t('forms.designer.display_label') }}</label>
       <InputText type="text" v-model="fm.caption" ref="labelRef" />
     </div>
 
     <div class="p-field p-col-12">
-      <label> Variable Name </label>
+      <label>{{ $t('forms.designer.variable_name') }}</label>
       <InputText type="text" v-model="fm.udn" disabled v-if="fm.$saved" />
       <InputText type="text" v-model="fm.udn" v-else />
-      <span class="hint" v-if="!fm.$saved"> Ensure variable name is unique within the form. </span>
+      <span class="hint" v-if="!fm.$saved">{{ $t('forms.designer.variable_name_hint') }}</span>
     </div>
 
     <div class="p-field p-col-12">
-      <label> Tooltip </label>
+      <label>{{ $t('forms.designer.tooltip') }}</label>
       <InputText type="text" v-model="fm.toolTip" />
     </div>
 
     <div class="p-field p-col-4">
-      <label> PHI </label>
+      <label>{{ $t('forms.designer.phi') }}</label>
       <br />
       <InputSwitch v-model="fm.phi" />
     </div>
     <div class="p-field p-col-4">
-      <label> Required </label>
+      <label>{{ $t('forms.designer.required') }}</label>
       <br />
       <InputSwitch v-model="fm.mandatory" />
     </div>
     <div class="p-field p-col-4">
-      <label> Show in Grid </label>
+      <label>{{ $t('forms.designer.show_in_grid') }}</label>
       <br />
       <InputSwitch v-model="fm.showInGrid" />
     </div>
 
     <div class="p-field p-col-12" v-if="showDefaultValue">
-      <label> Default Value </label>
+      <label>{{ $t('forms.designer.default_value') }}</label>
       <InputText type="text" v-model="fm.defaultValue" />
     </div>
   </div>
@@ -53,7 +53,7 @@
           v-model="fm.$sameRowAsLastField"
           :binary="true"
         />
-        <label> Display on the same row as the last field </label>
+        <label>{{ $t('forms.designer.same_row_as_last') }}</label>
       </div>
     </div>
   </div>
@@ -83,7 +83,7 @@ export default {
 
   setup(props) {
     let fm = reactive(props.field);
-    let fieldTitle = computed(() => fieldsRegistry.getField(fm.type).label);
+    let fieldTitle = computed(() => fieldsRegistry.getDisplayLabel(fm.type));
     if (!fm.$saved) {
       watch(
         () => fm.caption,

@@ -142,7 +142,7 @@ export default {
               { "captionCode": "common.no",  "value": false }
             ],
             "optionsPerRow": 2,
-            "showWhen": "!container.id && createType != 'hierarchy'"
+            "showWhen": "createType != 'hierarchy'"
           }
         ]
       },

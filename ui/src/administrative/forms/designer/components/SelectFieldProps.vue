@@ -1,7 +1,7 @@
 <template>
   <div class="p-fluid p-grid">
     <div class="p-field p-col-12">
-      <label> Options </label>
+      <label>{{ $t('forms.designer.options') }}</label>
       <draggable :list="fm.pvs" handle=".grip">
         <div v-for="(pv, idx) in fm.pvs" :key="idx">
           <div class="sortable-option">
@@ -18,7 +18,7 @@
             </div>
             <div class="option-container" v-else>
               <div class="value" @click="editOption(idx)">
-                {{ pv.value || "Empty Option" }}
+                {{ pv.value || $t('forms.designer.empty_option') }}
               </div>
               <Button
                 icon="pi pi-times"
@@ -33,7 +33,7 @@
     <div class="p-field p-col-3">
       <Button
         class="p-button-text opt-add"
-        label="Add Option"
+        :label="$t('forms.designer.add_option')"
         @click="addOption"
       />
     </div>
@@ -44,7 +44,7 @@
         mode="basic"
         :customUpload="true"
         :auto="true"
-        chooseLabel="Upload Options"
+        :chooseLabel="$t('forms.designer.upload_options')"
         accept="text/plain"
         @uploader="optionsFileReader"
       />
@@ -60,7 +60,7 @@
     </div>
 
     <div class="p-field p-col-12">
-      <label> Default Option </label>
+      <label>{{ $t('forms.designer.default_option') }}</label>
       <Dropdown
         v-model="fm.defaultValue.value"
         :options="fm.pvs"
@@ -71,7 +71,7 @@
     </div>
 
     <div class="p-field p-col-12" v-if="showOptionsLayout">
-      <label> Options Per Row </label>
+      <label>{{ $t('forms.designer.options_per_row') }}</label>
       <InputNumber v-model="fm.optionsPerRow" />
     </div>
   </div>
@@ -86,6 +86,7 @@ import Button from "primevue/button";
 import FileUpload from "primevue/fileupload";
 import { useToast } from "primevue/usetoast";
 import { VueDraggableNext } from "vue-draggable-next";
+import i18n from "@/common/services/I18n.js";
 
 export default {
   name: "SelectFieldProps",
@@ -123,9 +124,9 @@ export default {
       editIdx: fm.pvs.length - 1,
       processingOptions: false,
       sortOptions: [
-        { name: "ASC", value: "Ascending" },
-        { name: "DESC", value: "Descending" },
-        { name: "NONE", value: "None" },
+        { name: "ASC", value: i18n.msg("forms.designer.ascending") },
+        { name: "DESC", value: i18n.msg("forms.designer.descending") },
+        { name: "NONE", value: i18n.msg("forms.designer.none") },
       ],
     });
 
@@ -165,7 +166,7 @@ export default {
 
       let file = event.files[0];
       if (file.type != 'text/plain' && file.type != 'text/csv') {
-        toast.add({severity: 'error', detail: 'Input file should be either in plain text or CSV format', life: 5000});
+        toast.add({severity: 'error', detail: i18n.msg('forms.designer.options_file_type_error'), life: 5000});
         setTimeout(() => fctx.processingOptions = false, 100);
         return;
       }

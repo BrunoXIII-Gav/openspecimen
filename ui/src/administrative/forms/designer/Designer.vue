@@ -3,7 +3,7 @@
     <ConfirmDialog />
     <div class="spinner" v-if="loading">
       <ProgressSpinner />
-      <div class="hint">Loading...</div>
+      <div class="hint">{{ $t('common.loading') }}</div>
     </div>
     <div class="designer" v-else>
       <form-canvas :main="form" @save="onSave" @done="onDone"/>

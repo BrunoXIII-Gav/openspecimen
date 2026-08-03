@@ -3,7 +3,7 @@
     <CommonFieldProps :field="fm" :showDefaultValue="true">
       <div class="p-fluid p-grid">
         <div class="p-field p-col-12">
-          <label> Rows </label>
+          <label>{{ $t('forms.designer.rows') }}</label>
           <InputText type="text" v-model="fm.noOfRows" />
         </div>
       </div>

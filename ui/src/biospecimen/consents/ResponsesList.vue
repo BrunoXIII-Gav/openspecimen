@@ -46,7 +46,7 @@
                 <span>{{response.statement}}</span>
                 <span v-if="response.code">&nbsp; ({{response.code}})</span>
               </div>
-              <div class="answer">{{response.response || '-'}}</div>
+              <div class="answer">{{translatedResponse(response.response) || '-'}}</div>
             </div>
           </div>
         </template>
@@ -166,12 +166,17 @@ export default {
   },
 
   methods: {
+    translatedResponse: function(response) {
+      const pvKey = this._getConsentResponseKey(response);
+      return pvKey ? this.$t('pvs.consent_response.' + pvKey) : response;
+    },
+
     editResponses: function() {
       this.editMode = true;
       this.dataCtx = {consent: util.clone(this.consent || {})};
       if (!this.responsePvs) {
         pvSvc.getPvs('consent_response').then(
-          responses => this.responsePvs = responses.map(({value}) => ({caption: value, value}))
+          responses => this.responsePvs = responses.map(({value}) => ({caption: this.translatedResponse(value), value}))
         );
       }
     },
@@ -226,6 +231,18 @@ export default {
 
     _loadConsent: function() {
       cprSvc.getConsents(this.cpr).then(consent => this.consent = consent);
+    },
+
+    _getConsentResponseKey: function(response) {
+      const responseMap = {
+        'Yes': 'yes',
+        'No': 'no',
+        'None': 'none',
+        'Withdrawn': 'withdrawn',
+        'Not Specified': 'not_specified'
+      };
+
+      return responseMap[response];
     }
   }
 }

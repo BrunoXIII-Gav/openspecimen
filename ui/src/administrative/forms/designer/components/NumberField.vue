@@ -3,26 +3,26 @@
     <CommonFieldProps :field="fm" :showDefaultValue="true">
       <div class="p-fluid p-grid">
         <div class="p-field p-col-12">
-          <label> Number of Fraction Digits </label>
+          <label>{{ $t('forms.designer.number_of_fraction_digits') }}</label>
           <InputNumber type="text" v-model="fm.noOfDigitsAfterDecimal" />
         </div>
 
         <div class="p-field p-col-12">
-          <label> Range </label>
+          <label>{{ $t('forms.designer.range') }}</label>
           <div class="p-formgroup-inline">
             <div class="p-field">
-              <label class="p-sr-only">Min.</label>
+              <label class="p-sr-only">{{ $t('forms.designer.min') }}</label>
               <InputNumber
                 type="text"
-                placeholder="Min."
+                :placeholder="$t('forms.designer.min')"
                 v-model="fm.minValue"
               />
             </div>
             <div class="p-field">
-              <label class="p-sr-only">Max.</label>
+              <label class="p-sr-only">{{ $t('forms.designer.max') }}</label>
               <InputNumber
                 type="text"
-                placeholder="Max."
+                :placeholder="$t('forms.designer.max')"
                 v-model="fm.maxValue"
               />
             </div>

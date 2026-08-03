@@ -1,17 +1,17 @@
 <template>
   <div class="p-fluid p-grid" v-if="!preview">
     <div class="p-field p-col-12">
-      <label> Type </label>
+      <label>{{ $t('forms.designer.type') }}</label>
       <InputText type="text" disabled v-model="fieldTitle" />
     </div>
 
     <div class="p-field p-col-12">
-      <label> Note </label>
+      <label>{{ $t('forms.designer.note') }}</label>
       <Textarea rows="2" v-model="fm.caption" />
     </div>
 
     <div class="p-field p-col-12">
-      <label> Name </label>
+      <label>{{ $t('forms.designer.name') }}</label>
       <InputText type="text" v-model="fm.udn" disabled v-if="fm.$saved" />
       <InputText type="text" v-model="fm.udn" v-else />
     </div>
@@ -44,7 +44,7 @@ export default {
     let fm = reactive(props.field);
     fm.note = true;
 
-    let fieldTitle = computed(() => fieldsRegistry.getField(fm.type).label);
+    let fieldTitle = computed(() => fieldsRegistry.getDisplayLabel(fm.type));
     watch(
       () => fm.udn,
       () => (fm.name = fm.udn)

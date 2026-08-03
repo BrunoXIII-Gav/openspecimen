@@ -2,12 +2,12 @@
   <canvas ref="canvasEl" v-show="editMode"></canvas>
   <img :src="data" v-show="!editMode" />
   <div v-if="editMode">
-    <input type="button" value="Save" @click="save" />
-    <input type="button" value="Clear" @click="clear" />
-    <input type="button" value="Cancel" @click="cancel" />
+    <input type="button" :value="$t('common.buttons.save')" @click="save" />
+    <input type="button" :value="$t('common.buttons.clear')" @click="clear" />
+    <input type="button" :value="$t('common.buttons.cancel')" @click="cancel" />
   </div>
   <div v-else>
-    <input type="button" value="Edit" @click="edit" />
+    <input type="button" :value="$t('common.buttons.edit')" @click="edit" />
   </div>
 </template>
 

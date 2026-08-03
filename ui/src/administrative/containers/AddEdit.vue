@@ -232,6 +232,31 @@ export default {
         container.storageLocation = {};
       } else if (field.name == 'container.siteName') {
         container.storageLocation = {};
+      } else if (field.name == 'dimensionLess') {
+        if (value == true) {
+          container.noOfRows = null;
+          container.noOfColumns = null;
+          container.positionLabelingMode = 'NONE';
+          container.rowLabelingScheme = null;
+          container.columnLabelingScheme = null;
+          container.positionAssignment = null;
+        } else {
+          if (!container.positionLabelingMode || container.positionLabelingMode == 'NONE') {
+            container.positionLabelingMode = 'TWO_D';
+          }
+
+          if (!container.rowLabelingScheme) {
+            container.rowLabelingScheme = 'Numbers';
+          }
+
+          if (!container.columnLabelingScheme) {
+            container.columnLabelingScheme = 'Numbers';
+          }
+
+          if (!container.positionAssignment) {
+            container.positionAssignment = 'HZ_TOP_DOWN_LEFT_RIGHT';
+          }
+        }
       }
 
       Object.assign(this.dataCtx, data);

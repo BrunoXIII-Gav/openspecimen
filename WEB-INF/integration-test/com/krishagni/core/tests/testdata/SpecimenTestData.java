@@ -61,4 +61,21 @@ public class SpecimenTestData {
 		}
 		return childrens;
 	}
+
+	public static SpecimenDetail getPendingPrimarySpecimen() {
+		SpecimenDetail detail = new SpecimenDetail();
+		detail.setActivityStatus("Active");
+		detail.setAnatomicSite("Head");
+		detail.setAvailableQty(0.5);
+		detail.setInitialQty(0.5);
+		detail.setLabel("pending-primary-spm");
+		detail.setStatus(Specimen.PENDING);
+		detail.setLaterality("Right");
+		detail.setPathology("Metastatic");
+		detail.setLineage(Specimen.NEW);
+		detail.setSpecimenClass("Molecular");
+		detail.setType("DNA");
+		detail.setVisitId(1L);
+		return detail;
+	}
 }

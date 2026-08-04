@@ -1561,6 +1561,7 @@ public class Specimen extends BaseExtensionEntity {
 			return;
 		}
 
+		boolean pendingWithoutCollectionEvent = isPendingPrimaryWithoutCollectionEvent(input);
 		if (input == null) {
 			input = new CollectionEventDetail();
 		}
@@ -1606,14 +1607,18 @@ public class Specimen extends BaseExtensionEntity {
 			setCollectionComments(existing.getCollectionComments());
 		}
 
-		if (existing == null || input.isAttrModified("user")) {
+		if (pendingWithoutCollectionEvent) {
+			setCollectionUser(null);
+		} else if (existing == null || input.isAttrModified("user")) {
 			User user = getUser(input.getUser());
 			setCollectionUser(user != null ? user : AuthUtil.getCurrentUser());
 		} else {
 			setCollectionUser(existing.getCollectionUser());
 		}
 
-		if (existing == null || input.isAttrModified("time")) {
+		if (pendingWithoutCollectionEvent) {
+			setCollectionTime(null);
+		} else if (existing == null || input.isAttrModified("time")) {
 			if (input.getTime() != null) {
 				setCollectionTime(input.getTime());
 			} else {
@@ -1655,6 +1660,15 @@ public class Specimen extends BaseExtensionEntity {
 
 	public void setReceivedDetails(Specimen existing, ReceivedEventDetail input) {
 		if (isAliquot() || isDerivative()) {
+			return;
+		}
+
+		if (isPendingPrimaryWithoutReceivedEvent(input)) {
+			setReceivedQuality(null);
+			setReceivedUser(null);
+			setReceivedTime(null);
+			setReceivedComments(null);
+			setNewLabel(null);
 			return;
 		}
 
@@ -1731,6 +1745,28 @@ public class Specimen extends BaseExtensionEntity {
 		} else {
 			setNewLabel(existing.getNewLabel());
 		}
+	}
+
+	private boolean isPendingPrimaryWithoutCollectionEvent(CollectionEventDetail input) {
+		return isPrimary() && isPending() &&
+			(input == null || (
+				StringUtils.isBlank(input.getProcedure()) &&
+				StringUtils.isBlank(input.getContainer()) &&
+				StringUtils.isBlank(input.getComments()) &&
+				input.getUser() == null &&
+				input.getTime() == null
+			));
+	}
+
+	private boolean isPendingPrimaryWithoutReceivedEvent(ReceivedEventDetail input) {
+		return isPrimary() && isPending() &&
+			(input == null || (
+				StringUtils.isBlank(input.getReceivedQuality()) &&
+				StringUtils.isBlank(input.getNewLabel()) &&
+				StringUtils.isBlank(input.getComments()) &&
+				input.getUser() == null &&
+				input.getTime() == null
+			));
 	}
 
 	public void updateReceivedDetails(Specimen other) {

@@ -677,6 +677,25 @@ public class SpecimenTest {
 		TestUtils.recordResponse(resp);
 		
 	}
+
+	@Test
+	@DatabaseSetup("specimen-test/collect-specimens-initial.xml")
+	@DatabaseTearDown("specimen-test/generic-teardown.xml")
+	public void createPendingPrimarySpecimenWithoutEventsKeepsCollectionAndReceivedDatesNull() {
+		ResponseEvent<SpecimenDetail> resp = specimenSvc.createSpecimen(getRequest(SpecimenTestData.getPendingPrimarySpecimen()));
+		TestUtils.recordResponse(resp);
+
+		Assert.assertTrue(resp.isSuccessful());
+		Assert.assertNotNull(resp.getPayload());
+		Assert.assertEquals(Specimen.PENDING, resp.getPayload().getStatus());
+		Assert.assertNotNull(resp.getPayload().getCollectionEvent());
+		Assert.assertNull(resp.getPayload().getCollectionEvent().getTime());
+		Assert.assertNull(resp.getPayload().getCollectionEvent().getUser());
+		Assert.assertNotNull(resp.getPayload().getReceivedEvent());
+		Assert.assertNull(resp.getPayload().getReceivedEvent().getReceivedQuality());
+		Assert.assertNull(resp.getPayload().getReceivedEvent().getTime());
+		Assert.assertNull(resp.getPayload().getReceivedEvent().getUser());
+	}
 	
 	public void AssertSpecimenDetails(SpecimenDetail detail, int index) {
 		Assert.assertEquals("Activity status mismatch", "Active", detail.getActivityStatus());
@@ -716,4 +735,4 @@ public class SpecimenTest {
 			children--;
 		}
 	}
-}	
+}

@@ -610,8 +610,15 @@ public class Visit extends BaseExtensionEntity {
 
 	@Override
 	public boolean saveOrUpdateRecordEntry(boolean insert, Long formId, Long formCtxtId, Long recordId) {
-		if (insert && recordId != null) {
-			daoFactory.getVisitsDao().insertCustomFieldRecordId(getId(), formId, formCtxtId, recordId);
+		if (recordId == null) {
+			return true;
+		}
+
+		String status = getDataEntryStatus() != null ? getDataEntryStatus().name() : "COMPLETE";
+		if (insert) {
+			daoFactory.getVisitsDao().insertCustomFieldRecordId(getId(), formId, formCtxtId, recordId, status);
+		} else {
+			daoFactory.getVisitsDao().updateCustomFieldRecStatus(getId(), formId, recordId, status);
 		}
 
 		return true;

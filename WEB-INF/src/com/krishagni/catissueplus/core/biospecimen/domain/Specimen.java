@@ -848,8 +848,15 @@ public class Specimen extends BaseExtensionEntity {
 
 	@Override
 	public boolean saveOrUpdateRecordEntry(boolean insert, Long formId, Long formCtxtId, Long recordId) {
-		if (insert && recordId != null) {
-			daoFactory.getSpecimenDao().insertCustomFieldRecordId(getId(), formId, formCtxtId, recordId);
+		if (recordId == null) {
+			return true;
+		}
+
+		String status = getDataEntryStatus() != null ? getDataEntryStatus().name() : "COMPLETE";
+		if (insert) {
+			daoFactory.getSpecimenDao().insertCustomFieldRecordId(getId(), formId, formCtxtId, recordId, status);
+		} else {
+			daoFactory.getSpecimenDao().updateCustomFieldRecStatus(getId(), formId, recordId, status);
 		}
 
 		return true;

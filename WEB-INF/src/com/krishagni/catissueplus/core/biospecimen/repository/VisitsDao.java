@@ -40,5 +40,7 @@ public interface VisitsDao extends Dao<Visit> {
 
 	Map<Long, Long> getCustomFieldRecordIds(Collection<Long> visitIds, Long formId, Long formCtxtId);
 
-	int insertCustomFieldRecordId(Long visitId, Long formId, Long formCtxtId, Long recordId);
+	int insertCustomFieldRecordId(Long visitId, Long formId, Long formCtxtId, Long recordId, String formStatus);
+
+	int updateCustomFieldRecStatus(Long visitId, Long formId, Long recordId, String formStatus);
 }

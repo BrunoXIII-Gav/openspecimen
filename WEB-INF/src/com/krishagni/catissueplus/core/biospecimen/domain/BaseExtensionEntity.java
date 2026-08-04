@@ -103,7 +103,11 @@ public abstract class BaseExtensionEntity extends BaseEntity {
 
 			@Override
 			public DataEntryStatus getDataEntryStatus() {
-				DataEntryStatus status = BaseExtensionEntity.this.getDataEntryStatus();
+				DataEntryStatus status = dataEntryStatus;
+				if (status == null) {
+					status = BaseExtensionEntity.this.getDataEntryStatus();
+				}
+
 				return status != null ? status : DataEntryStatus.COMPLETE;
 			}
 

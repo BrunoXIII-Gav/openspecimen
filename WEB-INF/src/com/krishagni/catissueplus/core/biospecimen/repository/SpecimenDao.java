@@ -105,5 +105,7 @@ public interface SpecimenDao extends Dao<Specimen> {
 
 	Map<Long, Long> getCustomFieldRecordIds(Collection<Long> specimenIds, Long formId, Long formCtxtId);
 
-	int insertCustomFieldRecordId(Long specimenId, Long formId, Long formCtxtId, Long recordId);
+	int insertCustomFieldRecordId(Long specimenId, Long formId, Long formCtxtId, Long recordId, String formStatus);
+
+	int updateCustomFieldRecStatus(Long specimenId, Long formId, Long recordId, String formStatus);
 }

@@ -75,6 +75,8 @@ public abstract class DeObject {
 	
 	private List<Attr> attrs = new ArrayList<>();
 
+	protected BaseEntity.DataEntryStatus dataEntryStatus;
+
 	public DeObject() { }
 	
 	public DeObject(boolean useUdn) {
@@ -289,7 +291,11 @@ public abstract class DeObject {
 	public abstract void setAttrValues(Map<String, Object> attrValues);
 
 	public BaseEntity.DataEntryStatus getDataEntryStatus() {
-		return BaseEntity.DataEntryStatus.COMPLETE;
+		return dataEntryStatus != null ? dataEntryStatus : BaseEntity.DataEntryStatus.COMPLETE;
+	}
+
+	public void setDataEntryStatus(BaseEntity.DataEntryStatus dataEntryStatus) {
+		this.dataEntryStatus = dataEntryStatus;
 	}
 
 	public Map<String, Object> getAttrValues() {
@@ -501,6 +507,14 @@ public abstract class DeObject {
 		DeObject extension = entity.createExtension();
 		if (extension == null) {
 			return null;
+		}
+
+		if (StringUtils.isNotBlank(detail.getDataEntryStatus())) {
+			try {
+				extension.setDataEntryStatus(BaseEntity.DataEntryStatus.valueOf(detail.getDataEntryStatus()));
+			} catch (IllegalArgumentException iae) {
+				throw OpenSpecimenException.userError(FormErrorCode.INV_DATA_STATUS, detail.getDataEntryStatus());
+			}
 		}
 		
 		Map<String, Attr> existingAttrs = new HashMap<>();

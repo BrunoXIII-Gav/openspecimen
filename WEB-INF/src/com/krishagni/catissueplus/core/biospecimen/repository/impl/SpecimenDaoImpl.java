@@ -558,7 +558,7 @@ public class SpecimenDaoImpl extends AbstractDao<Specimen> implements SpecimenDa
 	}
 
 	@Override
-	public int insertCustomFieldRecordId(Long specimenId, Long formId, Long formCtxtId, Long recordId) {
+	public int insertCustomFieldRecordId(Long specimenId, Long formId, Long formCtxtId, Long recordId, String formStatus) {
 		int rows = getCurrentSession().createNamedMutationQuery(INSERT_CUSTOM_FIELD_RECORD)
 			.setParameter("specimenId", specimenId)
 			.setParameter("formId", formId)
@@ -570,9 +570,20 @@ public class SpecimenDaoImpl extends AbstractDao<Specimen> implements SpecimenDa
 			.setParameter("specimenId", specimenId)
 			.setParameter("formId", formId)
 			.setParameter("recordId", recordId)
+			.setParameter("formStatus", formStatus)
 			.executeUpdate();
 
 		return rows;
+	}
+
+	@Override
+	public int updateCustomFieldRecStatus(Long specimenId, Long formId, Long recordId, String formStatus) {
+		return getCurrentSession().createNamedMutationQuery(UPDATE_CUSTOM_FIELD_REC_STATUS)
+			.setParameter("specimenId", specimenId)
+			.setParameter("formId", formId)
+			.setParameter("recordId", recordId)
+			.setParameter("formStatus", formStatus)
+			.executeUpdate();
 	}
 
 	private void addIdsCond(AbstractCriteria<?, ?> query, List<Long> ids) {
@@ -998,4 +1009,6 @@ public class SpecimenDaoImpl extends AbstractDao<Specimen> implements SpecimenDa
 	private static final String INSERT_CUSTOM_FIELD_RECORD = FQN + ".insertCustomFieldRecord";
 
 	private static final String INSERT_CUSTOM_FIELD_REC_STATUS = FQN + ".insertCustomFieldRecordStatus";
+
+	private static final String UPDATE_CUSTOM_FIELD_REC_STATUS = FQN + ".updateCustomFieldRecordStatus";
 }

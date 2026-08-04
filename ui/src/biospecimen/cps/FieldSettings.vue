@@ -95,6 +95,15 @@ const MODULES = [
   {name: 'specimen',    title: 'specimen.title',    prefixes: ['specimen.']}
 ];
 
+const MANAGED_SCHEMA_FIELDS = [...cprSchema.fields, ...visitSchema.fields, ...specimenSchema.fields]
+  .reduce(
+    (accumulator, field) => {
+      accumulator[field.name] = field;
+      return accumulator;
+    },
+    {}
+  );
+
 export default {
   props: ['cp'],
 
@@ -285,14 +294,18 @@ export default {
     },
 
     _toEditableField: function(field, current) {
+      const schemaField = MANAGED_SCHEMA_FIELDS[field.name];
       const sysField = (this.systemWorkflowData.fields || []).find(sysField => sysField.name == field.name);
       const currentField = current ? current.field : field;
       const requiredBySystem = !!(sysField && sysField.optional === false);
+      const labelField = schemaField || currentField || field;
+      const captionCode = labelField.labelCode || labelField.captionCode || labelField.inlineLabelCode;
+      const caption = labelField.caption || (captionCode ? i18n.msg(captionCode) : null) || currentField.caption || field.caption || field.name;
 
       return {
         name: field.name,
-        caption: currentField.caption || field.caption || field.name,
-        type: currentField.type || field.type,
+        caption,
+        type: (schemaField && schemaField.type) || currentField.type || field.type,
         visible: requiredBySystem || !current || current.visible !== false,
         required: requiredBySystem || currentField.optional === false,
         requiredBySystem,

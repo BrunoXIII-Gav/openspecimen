@@ -80,7 +80,7 @@
             <span v-t="'queries.loading_records'">Loading records...</span>
           </os-message>
 
-          <os-message type="warn" v-if="!ctx.loadingRecords && ctx.dbHasMoreRecords">
+          <os-message type="warn" v-if="!ctx.loadingRecords && !pagingEnabled && ctx.dbHasMoreRecords">
             <span v-t="'queries.export_to_get_all'"></span>
             <a href="https://openspecimen.atlassian.net/wiki/x/ogYR" target="_blank">
               <span>&nbsp;</span>
@@ -92,8 +92,14 @@
             :row-data="ctx.records" :column-defs="ctx.columns" :suppressFieldDotNotation="true"
             :rowSelection="rowSelection" :pinnedBottomRowData="ctx.footerRow" :enableCellTextSelection="true"
             :tooltipShowMode="'whenTruncated'" :tooltipShowDelay="500"
-            @gridReady="onGridReady" @selectionChanged="onRowSelection"
+            @gridReady="onGridReady" @selectionChanged="onRowSelection" @sortChanged="onSortChanged"
             v-if="!ctx.loadingRecords" />
+
+          <div class="query-pager" v-if="pagingEnabled && (ctx.startAt > 0 || ctx.haveMoreRecords)">
+            <span>{{$t('queries.page', {page: ctx.pageNo + 1})}}</span>
+            <os-pager :start-at="ctx.startAt" :have-more="ctx.haveMoreRecords"
+              @previous="previousPage" @next="nextPage" />
+          </div>
         </os-grid-column>
       </os-grid>
       <div v-else>
@@ -128,6 +134,8 @@ import ColumnUrl from './ColumnUrl.vue';
 import DefineView from './DefineView.vue';
 import Facets from './Facets.vue';
 import SaveQuery from './SaveQuery.vue';
+
+const PAGE_SIZE = 10;
 
 export default {
   props: ['query'],
@@ -171,13 +179,24 @@ export default {
 
         selectedRows: [],
 
-        hasFacets: false
+        hasFacets: false,
+
+        startAt: 0,
+
+        pageNo: 0,
+
+        haveMoreRecords: false,
+
+        sortBy: [],
+
+        dbHasMoreRecords: false
       }
     }
   },
 
   mounted() {
     this._loadCounters();
+    this.ctx.sortBy = this._getDefaultSortBy();
 
     if (!this.query.selectList || this.query.selectList.length == 0) {
       this.showDefineViewDialog();
@@ -217,6 +236,12 @@ export default {
 
     selectedSpecimens: function() {
       return this.ctx.selectedRows.map(row => ({id: +row['$specimenId'], cpId: +row['$cpId']}));
+    },
+
+    pagingEnabled: function() {
+      const {type} = this.query.reporting || {};
+      return (!type || type == 'none') && !this.query.havingClause &&
+        !(this.query.selectList || []).some(field => field.aggFns && field.aggFns.length > 0);
     }
   },
 
@@ -248,7 +273,7 @@ export default {
 
     rerun: function() {
       this._loadCounters();
-      this._loadRecords();
+      this._resetRecords();
     },
 
     showDefineViewDialog: function() {
@@ -264,13 +289,18 @@ export default {
           }
 
           this.$emit('query-saved', query);
-          setTimeout(() => this._loadRecords(this._getSelectedFacets())); // to allow the query to be updated
+          setTimeout(
+            () => {
+              this.ctx.sortBy = this._getDefaultSortBy();
+              this._resetRecords(this._getSelectedFacets());
+            }
+          ); // to allow the query to be updated
         }
       );
     },
 
     exportQueryData: function() {
-      querySvc.exportData(this.query, this._getSelectedFacets());
+      querySvc.exportData(this.query, this._getSelectedFacets(), this.ctx.sortBy);
     },
 
     onGridReady: function({api}) {
@@ -281,6 +311,31 @@ export default {
       const {ctx} = this;
       ctx.selectedRows = api.getSelectedRows();
       ctx.allRowsSelected = (ctx.selectedRows.length == ctx.records.length)
+    },
+
+    onSortChanged: function({api}) {
+      if (!this.pagingEnabled || !this.ctx.columns) {
+        return;
+      }
+
+      const sortBy = api.getColumnState()
+        .filter(column => !!column.sort)
+        .sort((column1, column2) => (column1.sortIndex || 0) - (column2.sortIndex || 0))
+        .map(
+          column => {
+            const columnDef = this.ctx.columns.find(def => def.field == column.colId);
+            return columnDef && {expr: columnDef.name, direction: column.sort};
+          }
+        )
+        .filter(sort => !!sort);
+
+      const nextSortBy = sortBy.length > 0 ? sortBy : this._getDefaultSortBy();
+      if (this._isSameSortBy(nextSortBy, this.ctx.sortBy)) {
+        return;
+      }
+
+      this.ctx.sortBy = nextSortBy;
+      this._resetRecords();
     },
 
     selectAllRows: function() {
@@ -300,7 +355,15 @@ export default {
     onFacetsSelection: function(selectedFacets) {
       const facets = selectedFacets.map(({facet, values}) => ({id: facet.id, type: facet.type, values}));
       this._loadCounters(facets);
-      this._loadRecords(facets);
+      this._resetRecords(facets);
+    },
+
+    previousPage: function() {
+      this._loadRecords(this._getSelectedFacets(), Math.max(0, this.ctx.startAt - PAGE_SIZE));
+    },
+
+    nextPage: function() {
+      this._loadRecords(this._getSelectedFacets(), this.ctx.startAt + PAGE_SIZE);
     },
 
     _loadCounters: async function(facets) {
@@ -316,9 +379,16 @@ export default {
       };
     },
 
-    _loadRecords: async function(facets) {
+    _resetRecords: function(facets) {
+      this._loadRecords(facets, 0);
+    },
+
+    _loadRecords: async function(facets, startAt = this.ctx.startAt) {
       this.ctx.loadingRecords = true;
-      const {columnLabels, columnMetadata, columnTypes, columnUrls, rows, dbRowsCount} = await this._getData(facets);
+      const {
+        columnLabels, columnMetadata, columnTypes, columnUrls, rows, dbRowsCount,
+        rootIds, haveMoreRecords
+      } = await this._getData(facets, startAt);
 
       const {type, params} = this.query.reporting || {type: 'none', params: {}};
       let pinnedColumns = 0;
@@ -326,7 +396,13 @@ export default {
         pinnedColumns = (params.groupRowsBy || []).length;
       }
 
-      this.ctx.dbHasMoreRecords = dbRowsCount >= 1000;
+      const pagedRows = rows.slice();
+      this.ctx.haveMoreRecords = this.pagingEnabled && haveMoreRecords;
+
+      this.ctx.dbHasMoreRecords = !this.pagingEnabled && dbRowsCount >= 1000;
+
+      this.ctx.startAt = startAt;
+      this.ctx.pageNo = Math.floor(startAt / PAGE_SIZE);
       this.ctx.columns = columnLabels
         .map((label, idx) => {
           const column = {
@@ -339,8 +415,15 @@ export default {
             headerName: label.substring(label.lastIndexOf('#') + 1),
             wrapText: true,
             autoHeight: true,
-            url: columnUrls[idx]
+            url: columnUrls[idx],
+            sortable: this.pagingEnabled
           };
+          const sortIndex = this.ctx.sortBy.findIndex(sort => sort.expr == column.name);
+          if (sortIndex >= 0) {
+            column.sort = this.ctx.sortBy[sortIndex].direction;
+            column.sortIndex = sortIndex;
+          }
+
           if (columnTypes[idx] == 'INTEGER' || columnTypes[idx] == 'FLOAT') {
             column.comparator = (valueA, valueB) => this._compareNum(valueA, valueB);
           }
@@ -355,7 +438,7 @@ export default {
         })
         .filter(column => column.field.indexOf('$') != 0);
 
-      this.ctx.records = rows.map(
+      this.ctx.records = pagedRows.map(
         row =>
           row.reduce(
             (record, value, idx) => {
@@ -365,6 +448,13 @@ export default {
             {}
           )
       );
+
+      if (this.pagingEnabled && rootIds) {
+        const positions = new Map(rootIds.map((id, index) => [String(id), index]));
+        this.ctx.records.sort(
+          (record1, record2) => positions.get(String(record1.$cprId)) - positions.get(String(record2.$cprId))
+        );
+      }
 
       this.ctx.allRowsSelected = false;
       this.ctx.selectedRows = [];
@@ -388,8 +478,28 @@ export default {
       this.ctx.loadingRecords = false;
     },
 
-    _getData: function(facets) {
-      return querySvc.getData(this.query, facets, true, true);
+    _getData: async function(facets, startAt) {
+      if (!this.pagingEnabled) {
+        return querySvc.getData(this.query, facets, {addPropIds: true, maxResults: 1000});
+      }
+
+      // First fetch just one stable, globally-sorted list of participant IDs. Then
+      // fetch the wide rows for that page; otherwise DEEP/SHALLOW rows override the
+      // AQL sort with ID ordering before the limit is applied.
+      const page = await querySvc.getPageIds(this.query, facets, {
+        startAt,
+        maxResults: PAGE_SIZE + 1,
+        orderBy: this.ctx.sortBy
+      });
+
+      const rootIds = page.rows.map(row => row[0]);
+      const haveMoreRecords = rootIds.length > PAGE_SIZE;
+      if (haveMoreRecords) {
+        rootIds.pop();
+      }
+
+      const result = await querySvc.getData(this.query, facets, {addPropIds: true, rootIds});
+      return {...result, rootIds, haveMoreRecords};
     },
 
     _formatDate: function(params) {
@@ -433,6 +543,23 @@ export default {
 
     _isBlank: function(value) {
       return value == null || value == undefined || value == '';
+    },
+
+    _getDefaultSortBy: function() {
+      const selectedFields = (this.query.selectList || []).map(field => typeof field == 'string' ? field : field.name);
+      return selectedFields.indexOf('Participant.creationTime') >= 0 ?
+        [{expr: 'Participant.creationTime', direction: 'desc'}] :
+        [{expr: 'Participant.id', direction: 'desc'}];
+    },
+
+    _isSameSortBy: function(sortBy1, sortBy2) {
+      if (sortBy1.length != sortBy2.length) {
+        return false;
+      }
+
+      return sortBy1.every(
+        (sort, index) => sort.expr == sortBy2[index].expr && sort.direction == sortBy2[index].direction
+      );
     },
 
     _getSelectedFacets: function() {
@@ -482,6 +609,13 @@ export default {
 .results-grid :deep(.ag-header),
 .results-grid :deep(.ag-root-wrapper) {
   font-family: Arial;
+}
+
+.query-pager {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
 .selected-rows-msg {

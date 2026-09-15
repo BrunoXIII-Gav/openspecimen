@@ -50,7 +50,7 @@ class Util {
         whereClause;
   }
 
-  async getDataAql(query, facets, addPropIds, addLimit) {
+  async getDataAql(query, facets, addPropIds, {startAt, maxResults, orderBy, rootIds} = {}) {
     if (!query.filters || !query.queryExpression) {
       return '';
     }
@@ -58,17 +58,62 @@ class Util {
     const filtersMap = this._getFiltersMap(query);
     addPropIds = addPropIds && (!query.reporting || query.reporting.type != 'crosstab');
 
-    const selectClause = this._getSelectClause(query, filtersMap, addPropIds);
+    const selectClause = this._getSelectClause(query, filtersMap, addPropIds, rootIds);
     const whereClause  = await this._getWhereClause('', query, filtersMap, facets);
     const havingClause = this._getHavingClause(query);
     const reportClause = this._getRptExpr(query);
 
-    let aql = 'select ' + selectClause + ' where ' + whereClause + ' ' + havingClause;
-    if (addLimit) {
-      aql += ' limit 0, 1000';
+    let aql = 'select ' + selectClause + ' where (' + whereClause + ')';
+    if (rootIds) {
+      aql += ' and Participant.id in (' + (rootIds.length > 0 ? rootIds.join(', ') : '-1') + ')';
+    }
+
+    aql += ' ' + havingClause;
+
+    const orderByClause = this._getOrderByClause(orderBy);
+    if (orderByClause) {
+      aql += ' ' + orderByClause;
+    }
+
+    if (maxResults > 0) {
+      aql += ' limit ' + (startAt || 0) + ', ' + maxResults;
     }
 
     return aql + ' ' + reportClause;
+  }
+
+  async getPageIdsAql(query, facets, {startAt, maxResults, orderBy} = {}) {
+    if (!query.filters || !query.queryExpression) {
+      return '';
+    }
+
+    const filtersMap = this._getFiltersMap(query);
+    const whereClause = await this._getWhereClause('', query, filtersMap, facets);
+    const orderByExprs = this._getOrderByExprs(orderBy);
+
+    let selectClause = 'Participant.id';
+    const orderExprs = [];
+    for (const {expr, direction} of orderByExprs) {
+      if (expr == 'Participant.id') {
+        orderExprs.push({expr, direction});
+      } else {
+        const aggregateExpr = 'min(' + expr + ')';
+        selectClause += ', ' + aggregateExpr + ' as "__sort_' + orderExprs.length + '"';
+        orderExprs.push({expr: aggregateExpr, direction});
+      }
+    }
+
+    let aql = 'select ' + selectClause + ' where (' + whereClause + ')';
+    const orderByClause = this._getOrderByClause(orderExprs, false);
+    if (orderByClause) {
+      aql += ' ' + orderByClause;
+    }
+
+    if (maxResults > 0) {
+      aql += ' limit ' + (startAt || 0) + ', ' + maxResults;
+    }
+
+    return aql;
   }
 
   async getWhereAql(query) {
@@ -151,7 +196,7 @@ class Util {
     return parenCnt == 0 && last == 'FILTER';
   }
 
-  _getSelectClause(query, filtersMap, addPropIds) {
+  _getSelectClause(query, filtersMap, addPropIds, forceCprId) {
     const addedIds = {};
 
     let result = '';
@@ -215,7 +260,29 @@ class Util {
       result += ', ' + propIdsList.join(', ');
     }
 
+    if (forceCprId && !addedIds['Participant.id']) {
+      result += ', Participant.id as "$cprId"';
+    }
+
     return result;
+  }
+
+  _getOrderByExprs(orderBy) {
+    const orderByExprs = (orderBy || [])
+      .filter(({expr, direction}) => expr && ['asc', 'desc'].indexOf(direction) >= 0)
+      .map(({expr, direction}) => ({expr, direction}));
+
+    if (orderByExprs.length > 0 && !orderByExprs.some(({expr}) => expr == 'Participant.id')) {
+      orderByExprs.push({expr: 'Participant.id', direction: 'desc'});
+    }
+
+    return orderByExprs;
+  }
+
+  _getOrderByClause(orderBy, addTieBreaker = true) {
+    const orderByExprs = addTieBreaker ? this._getOrderByExprs(orderBy) : orderBy;
+    return orderByExprs && orderByExprs.length > 0 ?
+      'order by ' + orderByExprs.map(({expr, direction}) => expr + ' ' + direction).join(', ') : '';
   }
 
   _getFiltersMap(query) {

@@ -29,14 +29,15 @@ class Query {
     );
   }
 
-  async getData(query, facets, addPropIds, addLimit) {
+  async getData(query, facets, options = {}) {
+    const {addPropIds, startAt, maxResults, orderBy, rootIds} = options;
     const payload = {
       savedQueryId: query.id,
       cpId: query.cpId,
       cpGroupId: query.cpGroupId,
       drivingForm: 'Participant',
       runType: 'Data',
-      aql: await util.getDataAql(query, facets, addPropIds, addLimit),
+      aql: await util.getDataAql(query, facets, addPropIds, {startAt, maxResults, orderBy, rootIds}),
       wideRowMode: query.wideRowMode || 'OFF',
       outputIsoDateTime: true, // TODO: (outputIsoFmt || false),
       outputColumnExprs: query.outputColumnExprs || false,
@@ -46,14 +47,34 @@ class Query {
     return http.post('query', payload);
   }
 
-  async exportData(query, facets) {
+  async getPageIds(query, facets, options = {}) {
+    const {startAt, maxResults, orderBy} = options;
+    const payload = {
+      savedQueryId: query.id,
+      cpId: query.cpId,
+      cpGroupId: query.cpGroupId,
+      drivingForm: 'Participant',
+      runType: 'Data',
+      // This query must not use wide rows: wide-row output internally orders by
+      // participant ID, which would discard the user's requested sort before paging.
+      wideRowMode: 'OFF',
+      aql: await util.getPageIdsAql(query, facets, {startAt, maxResults, orderBy}),
+      outputIsoDateTime: true,
+      outputColumnExprs: false,
+      caseSensitive: (query.caseSensitive == undefined || query.caseSensitive == null || query.caseSensitive)
+    };
+
+    return http.post('query', payload);
+  }
+
+  async exportData(query, facets, orderBy) {
     const payload = {
       savedQueryId: query.id,
       cpId: query.cpId,
       cpGroupId: query.cpGroupId,
       drivingForm: 'Participant',
       runType: 'Export',
-      aql: await util.getDataAql(query, facets, false, false),
+      aql: await util.getDataAql(query, facets, false, {orderBy}),
       wideRowMode: query.wideRowMode || 'OFF',
       outputIsoDateTime: false, // TODO: (outputIsoFmt || false),
       outputColumnExprs: query.outputColumnExprs || false,

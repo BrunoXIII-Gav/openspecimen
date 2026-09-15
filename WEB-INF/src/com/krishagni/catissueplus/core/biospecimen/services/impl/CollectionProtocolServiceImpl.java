@@ -557,6 +557,26 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 
 	@Override
 	@PlusTransactional
+	public ResponseEvent<CollectionProtocolDetail> updateSpecimenConsentsEnabled(RequestEvent<CollectionProtocolDetail> req) {
+		try {
+			CollectionProtocolDetail detail = req.getPayload();
+			CollectionProtocol existingCp = daoFactory.getCollectionProtocolDao().getById(detail.getId());
+			if (existingCp == null) {
+				return ResponseEvent.userError(CpErrorCode.NOT_FOUND);
+			}
+
+			AccessCtrlMgr.getInstance().ensureUpdateCpRights(existingCp);
+			existingCp.setSpecimenConsentsEnabled(Boolean.TRUE.equals(detail.getSpecimenConsentsEnabled()));
+			return ResponseEvent.response(CollectionProtocolDetail.from(existingCp));
+		} catch (OpenSpecimenException ose) {
+			return ResponseEvent.error(ose);
+		} catch (Exception e) {
+			return ResponseEvent.serverError(e);
+		}
+	}
+
+	@Override
+	@PlusTransactional
 	public ResponseEvent<CollectionProtocolDetail> updateConsentsSource(RequestEvent<CollectionProtocolDetail> req) {
 		try {
 			CollectionProtocolDetail detail = req.getPayload();

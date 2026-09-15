@@ -178,6 +178,12 @@ public class CollectionProtocol extends BaseExtensionEntity {
 
 	private Boolean visitLevelConsents;
 
+	/*
+	 * This is intentionally independent of the existing participant / CPR consent
+	 * setting.  A CP can collect both a protocol consent and specimen consents.
+	 */
+	private Boolean specimenConsentsEnabled;
+
 	private CollectionProtocol consentsSource;
 
 	private Set<CpConsentTier> consentTier = new LinkedHashSet<>();
@@ -642,6 +648,14 @@ public class CollectionProtocol extends BaseExtensionEntity {
 
 	public void setVisitLevelConsents(Boolean visitLevelConsents) {
 		this.visitLevelConsents = visitLevelConsents;
+	}
+
+	public boolean isSpecimenConsentsEnabled() {
+		return specimenConsentsEnabled != null && specimenConsentsEnabled;
+	}
+
+	public void setSpecimenConsentsEnabled(Boolean specimenConsentsEnabled) {
+		this.specimenConsentsEnabled = specimenConsentsEnabled;
 	}
 
 	public CollectionProtocol getConsentsSource() {

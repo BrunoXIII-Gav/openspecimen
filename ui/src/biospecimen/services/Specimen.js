@@ -34,6 +34,44 @@ class Specimen {
     return http.get('specimens/' + id);
   }
 
+  getConsents(specimen) {
+    return http.get('specimens/' + specimen.id + '/consents');
+  }
+
+  getConsent(specimen, consentId) {
+    return http.get('specimens/' + specimen.id + '/consents/' + consentId);
+  }
+
+  saveConsent(specimen, consent) {
+    if (consent.id > 0) {
+      return http.put('specimens/' + specimen.id + '/consents/' + consent.id, consent);
+    }
+
+    return http.post('specimens/' + specimen.id + '/consents', consent);
+  }
+
+  deleteConsent(specimen, consent) {
+    return http.delete('specimens/' + specimen.id + '/consents/' + consent.id);
+  }
+
+  getConsentDocumentUrl(specimen, consent, document) {
+    return http.getUrl('specimens/' + specimen.id + '/consents/' + consent.id + '/documents/' + document.id);
+  }
+
+  getConsentDocumentsUrl(specimen, consent) {
+    return http.getUrl('specimens/' + specimen.id + '/consents/' + consent.id + '/documents');
+  }
+
+  uploadConsentDocument(specimen, consent, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return http.post('specimens/' + specimen.id + '/consents/' + consent.id + '/documents', formData);
+  }
+
+  deleteConsentDocument(specimen, consent, document) {
+    return http.delete('specimens/' + specimen.id + '/consents/' + consent.id + '/documents/' + document.id);
+  }
+
   saveOrUpdate(specimen) {
     if (specimen.id > 0) {
       return http.put('specimens/' + specimen.id, specimen);

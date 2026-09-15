@@ -387,6 +387,11 @@
     <property name="taskExecutor" ref="taskExecutor"/>
   </bean>
 
+  <bean id="specimenConsentSvc" class="com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenConsentServiceImpl">
+    <property name="daoFactory" ref="biospecimenDaoFactory"/>
+    <property name="sessionFactory" ref="sessionFactory"/>
+  </bean>
+
   <bean id="spmnTypePropsSvc" class="com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenTypePropsServiceImpl">
     <property name="sessionFactory" ref="sessionFactory" />
   </bean>

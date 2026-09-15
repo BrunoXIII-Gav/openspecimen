@@ -3319,6 +3319,25 @@
     "user_req": "El usuario es obligatorio",
     "select_visit": "Seleccionar visita..."
   },
+  "specimen_consents": {
+    "complete_consent": "Completar consentimiento de muestra",
+    "default_type": "Consentimiento de muestra",
+    "title": "Consentimientos de muestra",
+    "add": "Agregar consentimiento",
+    "edit": "Editar consentimiento de muestra",
+    "none": "No hay consentimientos registrados para esta muestra.",
+    "untitled": "Consentimiento de muestra",
+    "type": "Tipo de consentimiento",
+    "version": "Versión del consentimiento",
+    "documents": "Documentos firmados",
+    "draft": "Borrador",
+    "complete": "Completo",
+    "saved": "Consentimiento de muestra guardado.",
+    "deleted": "Consentimiento de muestra eliminado.",
+    "cp_setting": "Registrar consentimientos independientes para cada muestra.",
+    "enable": "Habilitar consentimientos por muestra",
+    "disable": "Deshabilitar consentimientos por muestra"
+  },
   "user_groups": {
     "add_to_group": "Agregar al Grupo",
     "create": "Crear Grupo de Usuarios",

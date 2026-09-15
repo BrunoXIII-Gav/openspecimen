@@ -67,6 +67,8 @@ public interface CollectionProtocolService {
 
 	public ResponseEvent<CollectionProtocolDetail> updateConsentsWaived(RequestEvent<CollectionProtocolDetail> req);
 
+	public ResponseEvent<CollectionProtocolDetail> updateSpecimenConsentsEnabled(RequestEvent<CollectionProtocolDetail> req);
+
 	ResponseEvent<CollectionProtocolDetail> updateConsentsSource(RequestEvent<CollectionProtocolDetail> req);
 
 	public ResponseEvent<CollectionProtocolDetail> importCollectionProtocol(RequestEvent<CollectionProtocolDetail> req);

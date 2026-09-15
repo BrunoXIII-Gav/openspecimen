@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping auto-import="false">
+  <class name="com.krishagni.catissueplus.core.biospecimen.domain.SpecimenConsent" table="OS_SPECIMEN_CONSENTS">
+    <id name="id" column="IDENTIFIER" type="long"><generator class="native"><param name="sequence">OS_SPECIMEN_CONSENTS_SEQ</param></generator></id>
+    <many-to-one name="specimen" column="SPECIMEN_ID" fetch="join"/>
+    <many-to-one name="cpr" column="COLL_PROT_REG_ID" fetch="join"/>
+    <property name="consentType" column="CONSENT_TYPE"/>
+    <property name="consentVersion" column="CONSENT_VERSION"/>
+    <property name="consentSignatureDate" column="SIGN_DATE"/>
+    <many-to-one name="witness" column="WITNESS_ID"/>
+    <property name="comments" column="COMMENTS"/>
+    <property name="status" column="STATUS"/>
+    <many-to-one name="creator" column="CREATOR_ID"/>
+    <property name="creationTime" column="CREATION_TIME"/>
+    <many-to-one name="updater" column="UPDATER_ID"/>
+    <property name="updateTime" column="UPDATE_TIME"/>
+    <set name="responses" inverse="true" cascade="all-delete-orphan"><key column="CONSENT_ID"/><one-to-many class="com.krishagni.catissueplus.core.biospecimen.domain.SpecimenConsentResponse"/></set>
+    <set name="documents" inverse="true" cascade="all-delete-orphan"><key column="CONSENT_ID"/><one-to-many class="com.krishagni.catissueplus.core.biospecimen.domain.SpecimenConsentDocument"/></set>
+  </class>
+</hibernate-mapping>

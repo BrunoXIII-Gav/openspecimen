@@ -117,6 +117,8 @@
 
     <property name="visitLevelConsents" column="VISIT_CONSENTS"/>
 
+    <property name="specimenConsentsEnabled" column="SPECIMEN_CONSENTS_ENABLED"/>
+
     <property name="draftMode" column="DRAFT_MODE" />
 
     <many-to-one name="consentsSource" column="CONSENTS_SOURCE_CP_ID" />

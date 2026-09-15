@@ -366,6 +366,16 @@ public class CollectionProtocolsController {
 		return response(cpSvc.updateConsentsWaived(request(cp)));
 	}
 
+	@RequestMapping(method = RequestMethod.PUT, value = "/{id}/specimen-consents-enabled")
+	@ResponseBody
+	@ResponseStatus(HttpStatus.OK)
+	public CollectionProtocolDetail updateSpecimenConsentsEnabled(@PathVariable("id") Long id, @RequestBody Map<String, String> props) {
+		CollectionProtocolDetail cp = new CollectionProtocolDetail();
+		cp.setId(id);
+		cp.setSpecimenConsentsEnabled(Boolean.parseBoolean(props.get("specimenConsentsEnabled")));
+		return response(cpSvc.updateSpecimenConsentsEnabled(request(cp)));
+	}
+
 	@RequestMapping(method = RequestMethod.PUT, value = "/{id}/consents-source")
 	@ResponseBody
 	@ResponseStatus(HttpStatus.OK)

@@ -3391,6 +3391,26 @@
     "select_visit": "Select visit..."
   },
 
+  "specimen_consents": {
+    "complete_consent": "Complete specimen consent",
+    "default_type": "Specimen consent",
+    "title": "Specimen Consents",
+    "add": "Add Consent",
+    "edit": "Edit Specimen Consent",
+    "none": "No specimen consents recorded.",
+    "untitled": "Specimen Consent",
+    "type": "Consent Type",
+    "version": "Consent Version",
+    "documents": "Signed Documents",
+    "draft": "Draft",
+    "complete": "Complete",
+    "saved": "Specimen consent saved.",
+    "deleted": "Specimen consent deleted.",
+    "cp_setting": "Collect independent consents for each specimen.",
+    "enable": "Enable specimen consents",
+    "disable": "Disable specimen consents"
+  },
+
   "user_groups": {
     "add_to_group": "Add to Group",
     "create": "Create User Group",

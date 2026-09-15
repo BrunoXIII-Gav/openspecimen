@@ -3,7 +3,58 @@
   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-  http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+  <changeSet author="codex" id="Specimen consent setting">
+    <addColumn tableName="CAT_COLLECTION_PROTOCOL_AUD">
+      <column name="SPECIMEN_CONSENTS_ENABLED" type="${boolean.type}" />
+      <column name="specimenConsentsEnabled_MOD" type="${boolean.type}" />
+    </addColumn>
+  </changeSet>
+
+  <changeSet author="codex" id="Specimen consents">
+    <createTable tableName="OS_SPECIMEN_CONSENTS_AUD">
+      <column name="IDENTIFIER" type="${int.type}" />
+      <column name="REV" type="${int.type}" />
+      <column name="REVTYPE" type="${smallint.type}" />
+      <column name="SPECIMEN_ID" type="${int.type}" /><column name="specimen_MOD" type="${boolean.type}" />
+      <column name="COLL_PROT_REG_ID" type="${int.type}" /><column name="cpr_MOD" type="${boolean.type}" />
+      <column name="CONSENT_TYPE" type="${text.type}(255)" /><column name="consentType_MOD" type="${boolean.type}" />
+      <column name="CONSENT_VERSION" type="${text.type}(255)" /><column name="consentVersion_MOD" type="${boolean.type}" />
+      <column name="SIGN_DATE" type="${nullable.ts.type}" /><column name="consentSignatureDate_MOD" type="${boolean.type}" />
+      <column name="WITNESS_ID" type="${int.type}" /><column name="witness_MOD" type="${boolean.type}" />
+      <column name="COMMENTS" type="${text.type}(4000)" /><column name="comments_MOD" type="${boolean.type}" />
+      <column name="STATUS" type="${text.type}(32)" /><column name="status_MOD" type="${boolean.type}" />
+      <column name="CREATOR_ID" type="${int.type}" /><column name="creator_MOD" type="${boolean.type}" />
+      <column name="CREATION_TIME" type="${nullable.ts.type}" /><column name="creationTime_MOD" type="${boolean.type}" />
+      <column name="UPDATER_ID" type="${int.type}" /><column name="updater_MOD" type="${boolean.type}" />
+      <column name="UPDATE_TIME" type="${nullable.ts.type}" /><column name="updateTime_MOD" type="${boolean.type}" />
+      <column name="responses_MOD" type="${boolean.type}" /><column name="documents_MOD" type="${boolean.type}" />
+    </createTable>
+  </changeSet>
+
+  <changeSet author="codex" id="Specimen consent responses">
+    <createTable tableName="OS_SPECIMEN_CONSENT_RESPONSES_AUD">
+      <column name="IDENTIFIER" type="${int.type}" /><column name="REV" type="${int.type}" /><column name="REVTYPE" type="${smallint.type}" />
+      <column name="CONSENT_ID" type="${int.type}" /><column name="consent_MOD" type="${boolean.type}" />
+      <column name="CONSENT_TIER_ID" type="${int.type}" /><column name="consentTier_MOD" type="${boolean.type}" />
+      <column name="STATEMENT_CODE" type="${text.type}(255)" /><column name="statementCode_MOD" type="${boolean.type}" />
+      <column name="STATEMENT" type="${text.type}(4000)" /><column name="statement_MOD" type="${boolean.type}" />
+      <column name="RESPONSE" type="${text.type}(255)" /><column name="response_MOD" type="${boolean.type}" />
+    </createTable>
+  </changeSet>
+
+  <changeSet author="codex" id="Specimen consent documents">
+    <createTable tableName="OS_SPECIMEN_CONSENT_DOCUMENTS_AUD">
+      <column name="IDENTIFIER" type="${int.type}" /><column name="REV" type="${int.type}" /><column name="REVTYPE" type="${smallint.type}" />
+      <column name="CONSENT_ID" type="${int.type}" /><column name="consent_MOD" type="${boolean.type}" />
+      <column name="FILE_NAME" type="${text.type}(1024)" /><column name="fileName_MOD" type="${boolean.type}" />
+      <column name="ORIGINAL_FILE_NAME" type="${text.type}(1024)" /><column name="originalFileName_MOD" type="${boolean.type}" />
+      <column name="CONTENT_TYPE" type="${text.type}(255)" /><column name="contentType_MOD" type="${boolean.type}" />
+      <column name="CREATOR_ID" type="${int.type}" /><column name="creator_MOD" type="${boolean.type}" />
+      <column name="CREATION_TIME" type="${nullable.ts.type}" /><column name="creationTime_MOD" type="${boolean.type}" />
+    </createTable>
+  </changeSet>
 
   <changeSet author="vpawar" id="CP request managers">
     <addColumn tableName="CAT_COLLECTION_PROTOCOL_AUD">

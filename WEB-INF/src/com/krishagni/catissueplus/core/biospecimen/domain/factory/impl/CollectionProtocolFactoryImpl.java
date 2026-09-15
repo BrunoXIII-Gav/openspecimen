@@ -144,6 +144,7 @@ public class CollectionProtocolFactoryImpl implements CollectionProtocolFactory 
 		setActivityStatus(input, cp, ose);
 		setCollectionProtocolExtension(input, cp, ose);
 		setConsentsSource(input, cp, ose);
+		cp.setSpecimenConsentsEnabled(input.getSpecimenConsentsEnabled());
 		setCatalogId(input, cp, ose);
 		setReqManagers(input, cp, ose);
 		setCpGroup(input, cp, ose);

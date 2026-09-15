@@ -85,6 +85,16 @@
 
     <os-grid v-if="!ctx.hasEc">
       <os-grid-column :width="12">
+        <os-card v-if="editAllowed">
+          <template #body>
+            <div class="specimen-consents-setting">
+              <span v-t="'specimen_consents.cp_setting'">Collect independent consents for each specimen.</span>
+              <os-button size="small" :label="$t(cp.specimenConsentsEnabled ? 'specimen_consents.disable' : 'specimen_consents.enable')"
+                @click="setSpecimenConsentsEnabled(!cp.specimenConsentsEnabled)" />
+            </div>
+          </template>
+        </os-card>
+
         <os-button left-icon="plus" :label="$t('cps.add_consent_tier')" @click="showAddEditConsentTierDialog({})"
           v-if="!cp.consentsWaived && !cp.consentsSource && ctx.tiers && ctx.tiers.length == 0 && editAllowed" />
 
@@ -260,6 +270,10 @@ export default {
       cpSvc.undoWaiveConsents(this.cp.id).then(savedCp => this.$emit('cp-saved', savedCp));
     },
 
+    setSpecimenConsentsEnabled: function(enabled) {
+      cpSvc.setSpecimenConsentsEnabled(this.cp.id, enabled).then(savedCp => this.$emit('cp-saved', savedCp));
+    },
+
     showSelectCpDialog: function() {
       this.ctx.cp = null;
       this.$refs.selectCpDialog.open();
@@ -315,5 +329,12 @@ export default {
 
 .os-consent-tier .statement {
   flex: 1;
+}
+
+.specimen-consents-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 </style>

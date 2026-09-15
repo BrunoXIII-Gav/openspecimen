@@ -60,6 +60,13 @@
               </router-link>
             </li>
 
+            <li v-if="specimen.id > 0 && ctx.cp.specimenConsentsEnabled">
+              <router-link :to="getRoute('Consents')">
+                <os-icon name="file-signature" />
+                <span class="label" v-t="'specimen_consents.title'">Consents</span>
+              </router-link>
+            </li>
+
             <os-plugin-views page="specimen-detail" view="tab-menu" />
           </ul>
         </os-side-menu>

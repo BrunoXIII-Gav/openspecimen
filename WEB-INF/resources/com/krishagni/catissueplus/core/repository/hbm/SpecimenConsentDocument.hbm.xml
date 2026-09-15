@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping auto-import="false">
+  <class name="com.krishagni.catissueplus.core.biospecimen.domain.SpecimenConsentDocument" table="OS_SPECIMEN_CONSENT_DOCUMENTS">
+    <id name="id" column="IDENTIFIER" type="long"><generator class="native"><param name="sequence">OS_SPECIMEN_CONSENT_DOCUMENTS_SEQ</param></generator></id>
+    <many-to-one name="consent" column="CONSENT_ID"/>
+    <property name="fileName" column="FILE_NAME"/>
+    <property name="originalFileName" column="ORIGINAL_FILE_NAME"/>
+    <property name="contentType" column="CONTENT_TYPE"/>
+    <many-to-one name="creator" column="CREATOR_ID"/>
+    <property name="creationTime" column="CREATION_TIME"/>
+  </class>
+</hibernate-mapping>

@@ -30,6 +30,8 @@ public class CollectionProtocolDetail extends CollectionProtocolSummary {
 
 	private Boolean visitLevelConsents;
 
+	private Boolean specimenConsentsEnabled;
+
 	private CollectionProtocolSummary consentsSource;
 
 	private CollectionProtocolGroupSummary cpg;
@@ -151,6 +153,14 @@ public class CollectionProtocolDetail extends CollectionProtocolSummary {
 
 	public void setVisitLevelConsents(Boolean visitLevelConsents) {
 		this.visitLevelConsents = visitLevelConsents;
+	}
+
+	public Boolean getSpecimenConsentsEnabled() {
+		return specimenConsentsEnabled;
+	}
+
+	public void setSpecimenConsentsEnabled(Boolean specimenConsentsEnabled) {
+		this.specimenConsentsEnabled = specimenConsentsEnabled;
 	}
 
 	public CollectionProtocolSummary getConsentsSource() {
@@ -516,6 +526,7 @@ public class CollectionProtocolDetail extends CollectionProtocolSummary {
 
 		result.setConsentsWaived(cp.isConsentsWaived());
 		result.setVisitLevelConsents(cp.getVisitLevelConsents());
+		result.setSpecimenConsentsEnabled(cp.isSpecimenConsentsEnabled());
 		result.setConsentsSource(cp.getConsentsSource() != null ? CollectionProtocolSummary.from(cp.getConsentsSource()) : null);
 		result.setCpg(cp.getCpGroup() != null ? CollectionProtocolGroupSummary.from(cp.getCpGroup()) : null);
 		result.setIrbId(cp.getIrbIdentifier());

@@ -187,6 +187,10 @@ class CollectionProtocol {
     return http.put('collection-protocols/' + cpId + '/consents-waived', {consentsWaived: false});
   }
 
+  async setSpecimenConsentsEnabled(cpId, specimenConsentsEnabled) {
+    return http.put('collection-protocols/' + cpId + '/specimen-consents-enabled', {specimenConsentsEnabled});
+  }
+
   async setConsentsCp(cpId, source) {
     return http.put('collection-protocols/' + cpId + '/consents-source', source);
   }

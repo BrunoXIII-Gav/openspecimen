@@ -150,12 +150,27 @@ export default {
       ];
     },
 
-    status: function() {
+    statusValue: function() {
       return this.specimen.availabilityStatus || 'Pending';
     },
 
+    status: function() {
+      const statusKeys = {
+        'Available': 'available',
+        'Distributed': 'distributed',
+        'Reserved': 'reserved',
+        'Closed': 'closed',
+        'Missed Collection': 'missed_collection',
+        'Not Collected': 'not_collected',
+        'Pending': 'pending'
+      };
+
+      const statusKey = statusKeys[this.statusValue];
+      return statusKey ? this.$t('specimens.availability_status_values.' + statusKey) : this.statusValue;
+    },
+
     statusType: function() {
-      switch(this.status) {
+      switch(this.statusValue) {
         case 'Available':
           return 'success';
         case 'Distributed':

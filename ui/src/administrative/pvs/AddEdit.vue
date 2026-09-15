@@ -70,7 +70,15 @@ export default {
       });
     }
 
-    const knownAttributes = pvAdminSvc.getKnownAttributes().map(a => ({name: a, value: a}));
+    const knownAttributes = pvAdminSvc.getKnownAttributes().map(
+      attribute => {
+        const labelCode = 'pvs.attribute_names.' + attribute;
+        return {
+          name: i18n.exists(labelCode) ? i18n.msg(labelCode) : attribute,
+          value: attribute
+        };
+      }
+    );
 
     const formSchema = {
       rows: [

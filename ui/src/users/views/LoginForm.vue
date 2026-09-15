@@ -7,13 +7,13 @@
     </template>
 
     <template #primary-action>
-      <os-button primary label="Sign In" @click="login" />
+      <os-button primary :label="$t('login.sign_in')" @click="login" />
     </template>
   
     <template #secondary-actions v-if="ctx.forgotPasswordEnabled || ctx.otpAuthEnabled">
-      <os-button text label="Forgot Password?" @click="gotoForgotPassword" v-if="ctx.forgotPasswordEnabled" />
+      <os-button text :label="$t('login.forgot_password')" @click="gotoForgotPassword" v-if="ctx.forgotPasswordEnabled" />
 
-      <os-button text label="Reset OTP Secret Code?" @click="gotoResetOtpSecret" v-if="ctx.otpAuthEnabled" />
+      <os-button text :label="$t('login.reset_otp_secret_code')" @click="gotoResetOtpSecret" v-if="ctx.otpAuthEnabled" />
     </template>
   </FormCard>
 </template>

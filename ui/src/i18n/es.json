@@ -105,6 +105,7 @@
       "version": "Versión"
     },
     "action": "Acción",
+    "by": "por",
     "add_record": "Agregar registro",
     "add_specimens": {
       "dup_labels": "Etiquetas duplicadas escaneadas: {labels}",
@@ -1615,6 +1616,15 @@
     "start_date_req": "La Fecha de Inicio es obligatoria"
   },
   "login": {
+    "forgot_password": "¿Olvidó su contraseña?",
+    "login_name": "Nombre de usuario",
+    "login_name_required": "El nombre de usuario es obligatorio",
+    "otp": "OTP",
+    "otp_required": "El OTP es obligatorio",
+    "password": "Contraseña",
+    "password_required": "La contraseña es obligatoria",
+    "reset_otp_secret_code": "¿Restablecer el código secreto OTP?",
+    "sign_in": "Iniciar sesión",
     "sign_in_to_continue": "Inicie sesión para continuar",
     "sign_in_to_continue_to_os": "Inicie sesión para continuar en OpenSpecimen",
     "sign_up": "Registrarse"
@@ -1735,6 +1745,34 @@
     "vital_status": "Estado Vital"
   },
   "pvs": {
+    "attribute_names": {
+      "anatomic_site": "Sitio anatómico",
+      "clinical_diagnosis": "Diagnóstico clínico",
+      "clinical_status": "Estado clínico",
+      "collection_container": "Contenedor de recolección",
+      "collection_procedure": "Procedimiento de recolección",
+      "consent_response": "Respuesta de consentimiento",
+      "date_format": "Formato de fecha",
+      "embedding_medium": "Medio de inclusión",
+      "ethnicity": "Etnicidad",
+      "fixation_type": "Tipo de fijación",
+      "frozen_method": "Método de congelación",
+      "gender": "Sexo",
+      "histological_quality": "Calidad histológica",
+      "laterality": "Lateralidad",
+      "missed_visit_reason": "Motivo de visita perdida",
+      "pathology_status": "Estado patológico",
+      "race": "Raza",
+      "receive_quality": "Calidad de recepción",
+      "shipment_item_received_quality": "Calidad de recepción del elemento de envío",
+      "shipment_request_status": "Estado de solicitud de envío",
+      "site_type": "Tipo de sede",
+      "specimen_biohazard": "Riesgo biológico de la muestra",
+      "specimen_dispose_reason": "Motivo de eliminación de muestra",
+      "specimen_type": "Tipo de muestra",
+      "specimen_unit": "Unidad de muestra",
+      "vital_status": "Estado vital"
+    },
     "anatomic_site": {
       "abdomen_nos": "Abdomen, SAI",
       "abdominal_esophagus": "Esófago abdominal",
@@ -2537,6 +2575,7 @@
     "limit_specimen_qty": "Limitar especímenes por cantidades acumulativas",
     "list": "Consultas",
     "loading_records": "Cargando registros...",
+    "page": "Página {page}",
     "max": "Máximo",
     "max_date": "Fecha máxima",
     "max_date_req": "La fecha máxima es obligatoria",
@@ -3140,6 +3179,15 @@
     "anatomic_site": "Sitio Anatómico",
     "available_quantity": "Cantidad Disponible",
     "available_quantity_req": "La cantidad disponible es obligatoria",
+    "availability_status_values": {
+      "available": "Disponible",
+      "closed": "Cerrado",
+      "distributed": "Distribuido",
+      "missed_collection": "Recolección omitida",
+      "not_collected": "No recolectado",
+      "pending": "Pendiente",
+      "reserved": "Reservado"
+    },
     "barcode": "Código de Barras",
     "biohazards": "Riesgos Biológicos",
     "bulk_update": "Actualización Masiva de Especímenes",
@@ -3160,6 +3208,12 @@
     "collection_procedure": "Procedimiento de Recolección",
     "collection_status": "Estado de Recolección",
     "collection_status_req": "El estado de recolección es obligatorio",
+    "collection_status_values": {
+      "collected": "Recolectado",
+      "missed_collection": "Recolección omitida",
+      "not_collected": "No recolectado",
+      "pending": "Pendiente"
+    },
     "collector": "Recolector",
     "comments": "Comentarios",
     "concentration": "Concentración",
@@ -3407,6 +3461,12 @@
     "spr_text_extract_failed": "El sistema no encontró texto legible en el archivo cargado. Generalmente, esto ocurre cuando se cargan imágenes u otros archivos no textuales. Para ver el informe, cargue un archivo que contenga texto.",
     "status": "Estado",
     "status_req": "El estado es obligatorio",
+    "status_values": {
+      "complete": "Completada",
+      "missed_collection": "Recolección omitida",
+      "not_collected": "No recolectada",
+      "pending": "Pendiente"
+    },
     "surg_path_number": "Número de Patología Quirúrgica",
     "text_report": "Informe de Texto",
     "unplanned_visit": "Visita No Planificada",

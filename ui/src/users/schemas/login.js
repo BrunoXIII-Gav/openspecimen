@@ -8,10 +8,10 @@ export default {
             type: 'text',
             name: 'loginDetail.loginName',
             'md-type': true,
-            placeholder: 'Login Name',
+            placeholderCode: 'login.login_name',
             validations: {
               required: {
-                message: 'Login Name is mandatory'
+                messageCode: 'login.login_name_required'
               }
             },
             showWhen: '!!loginDetail.domainName && !externalAuth'
@@ -24,10 +24,10 @@ export default {
             type: 'password',
             name: 'loginDetail.password',
             'md-type': true,
-            placeholder: 'Password',
+            placeholderCode: 'login.password',
             validations: {
               required: {
-                message: 'Password is mandatory'
+                messageCode: 'login.password_required'
               }
             },
             showWhen: '!!loginDetail.domainName && !externalAuth'
@@ -40,10 +40,10 @@ export default {
             type: 'text',
             name: 'loginDetail.props.otp',
             'md-type': true,
-            placeholder: 'OTP',
+            placeholderCode: 'login.otp',
             validations: {
               required: {
-                message: 'OTP is mandatory'
+                messageCode: 'login.otp_required'
               }
             },
             showWhen: '!!loginDetail.domainName && otpAuthEnabled && !externalAuth'

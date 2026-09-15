@@ -24,7 +24,7 @@
                   v-for="(attr, idx) in ctx.attributes"
                   :key="idx"
                   @click="selectAttribute(attr)">
-                  <span>{{ attr.attribute }}</span>
+                  <span>{{ getAttributeLabel(attr.attribute) }}</span>
                   <span class="attr-count">{{ attr.count }}</span>
                 </div>
               </div>
@@ -48,6 +48,7 @@
 <script>
 import routerSvc  from '@/common/services/Router.js';
 import pvAdminSvc from '@/administrative/services/PermissibleValueAdmin.js';
+import i18n       from '@/common/services/I18n.js';
 
 export default {
   data() {
@@ -80,6 +81,11 @@ export default {
 
     selectAttribute(attr) {
       routerSvc.goto('PvsListItemValues', {attribute: attr.attribute});
+    },
+
+    getAttributeLabel(attribute) {
+      const labelCode = 'pvs.attribute_names.' + attribute;
+      return i18n.exists(labelCode) ? i18n.msg(labelCode) : attribute;
     }
   }
 }

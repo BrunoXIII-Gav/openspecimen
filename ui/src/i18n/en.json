@@ -108,6 +108,7 @@
       "version": "Version"
     },
     "action": "Action",
+    "by": "by",
     "add_record": "Add Record",
     "add_specimens": {
       "dup_labels": "Duplicate labels scanned: {labels}",
@@ -1664,6 +1665,15 @@
   },
 
   "login": {
+    "forgot_password": "Forgot Password?",
+    "login_name": "Login Name",
+    "login_name_required": "Login name is mandatory",
+    "otp": "OTP",
+    "otp_required": "OTP is mandatory",
+    "password": "Password",
+    "password_required": "Password is mandatory",
+    "reset_otp_secret_code": "Reset OTP Secret Code?",
+    "sign_in": "Sign In",
     "sign_in_to_continue": "Sign in to continue",
     "sign_in_to_continue_to_os": "Sign in to continue to OpenSpecimen",
     "sign_up": "Sign Up"
@@ -1787,6 +1797,34 @@
   },
 
   "pvs": {
+    "attribute_names": {
+      "anatomic_site": "Anatomic Site",
+      "clinical_diagnosis": "Clinical Diagnosis",
+      "clinical_status": "Clinical Status",
+      "collection_container": "Collection Container",
+      "collection_procedure": "Collection Procedure",
+      "consent_response": "Consent Response",
+      "date_format": "Date Format",
+      "embedding_medium": "Embedding Medium",
+      "ethnicity": "Ethnicity",
+      "fixation_type": "Fixation Type",
+      "frozen_method": "Frozen Method",
+      "gender": "Gender",
+      "histological_quality": "Histological Quality",
+      "laterality": "Laterality",
+      "missed_visit_reason": "Missed Visit Reason",
+      "pathology_status": "Pathology Status",
+      "race": "Race",
+      "receive_quality": "Receive Quality",
+      "shipment_item_received_quality": "Shipment Item Received Quality",
+      "shipment_request_status": "Shipment Request Status",
+      "site_type": "Site Type",
+      "specimen_biohazard": "Specimen Biohazard",
+      "specimen_dispose_reason": "Specimen Dispose Reason",
+      "specimen_type": "Specimen Type",
+      "specimen_unit": "Specimen Unit",
+      "vital_status": "Vital Status"
+    },
     "anatomic_site": {
       "abdomen_nos": "Abdomen, NOS",
       "abdominal_esophagus": "Abdominal esophagus",
@@ -2592,6 +2630,7 @@
     "limit_specimen_qty": "Limit specimens by cumulative quantities",
     "list": "Queries",
     "loading_records": "Loading records...",
+    "page": "Page {page}",
     "max": "Max",
     "max_date": "Max. Date",
     "max_date_req": "Max. Date is mandatory",
@@ -3211,6 +3250,15 @@
     "anatomic_site": "Anatomic Site",
     "available_quantity": "Available Quantity",
     "available_quantity_req": "Available Quantity is mandatory",
+    "availability_status_values": {
+      "available": "Available",
+      "closed": "Closed",
+      "distributed": "Distributed",
+      "missed_collection": "Missed Collection",
+      "not_collected": "Not Collected",
+      "pending": "Pending",
+      "reserved": "Reserved"
+    },
     "barcode": "Barcode",
     "biohazards": "Biohazards",
     "bulk_update": "Bulk Update Specimens",
@@ -3231,6 +3279,12 @@
     "collection_procedure": "Collection Procedure",
     "collection_status": "Collection Status",
     "collection_status_req": "Collection Status is mandatory",
+    "collection_status_values": {
+      "collected": "Collected",
+      "missed_collection": "Missed Collection",
+      "not_collected": "Not Collected",
+      "pending": "Pending"
+    },
     "collector": "Collector",
     "comments": "Comments",
     "concentration": "Concentration",
@@ -3481,6 +3535,12 @@
     "spr_text_extract_failed": "The system couldn't find any readable text in your uploaded file. Usually, this happens when you upload images or other non-text files. To view the report, please upload a file that contains text.",
     "status": "Status",
     "status_req": "Status is mandatory",
+    "status_values": {
+      "complete": "Complete",
+      "missed_collection": "Missed Collection",
+      "not_collected": "Not Collected",
+      "pending": "Pending"
+    },
     "surg_path_number": "Surg Path Number",
     "text_report": "Text Report",
     "unplanned_visit": "Unplanned Visit",

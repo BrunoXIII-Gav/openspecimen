@@ -2,7 +2,7 @@
   <os-page>
     <os-page-head>
       <span>
-        <h3>{{ attribute }}</h3>
+        <h3>{{ getAttributeLabel(attribute) }}</h3>
       </span>
 
       <template #right>
@@ -51,6 +51,7 @@
 import valuesSchema from '@/administrative/schemas/pvs/values.js';
 
 import alertSvc  from '@/common/services/Alerts.js';
+import i18n      from '@/common/services/I18n.js';
 import routerSvc from '@/common/services/Router.js';
 import pvAdminSvc from '@/administrative/services/PermissibleValueAdmin.js';
 
@@ -106,6 +107,11 @@ export default {
 
     createPv() {
       routerSvc.goto('PvAddEdit', {pvId: -1}, {attribute: this.attribute});
+    },
+
+    getAttributeLabel(attribute) {
+      const labelCode = 'pvs.attribute_names.' + attribute;
+      return i18n.exists(labelCode) ? i18n.msg(labelCode) : attribute;
     },
 
     deletePvs() {

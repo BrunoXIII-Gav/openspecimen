@@ -211,15 +211,26 @@ class Util {
   async loadSpecimenTypeProps() {
     const qp = {attribute: 'specimen_type', includeParentValue: true, includeProps: true};
     const resp = await http.get('permissible-values', qp);
+    const labelCodes = resp.reduce(
+      (acc, type) => {
+        acc[type.value] = type.labelCode;
+        return acc;
+      },
+      {}
+    );
+
     this.spmnTypeProps = resp.reduce(
       (acc, type) => {
         if (type.parentValue) {
           let props = acc[type.parentValue + ':' + type.value] = type.props || {};
           props.specimenClass = type.parentValue;
           props.type = type.value;
+          props.specimenClassLabelCode = labelCodes[type.parentValue];
+          props.typeLabelCode = type.labelCode;
         } else {
-          let props = acc[type.value + ':*'] = type.props;
+          let props = acc[type.value + ':*'] = type.props || {};
           props.specimenClass = type.value;
+          props.specimenClassLabelCode = type.labelCode;
         }
 
         return acc;
@@ -247,7 +258,23 @@ class Util {
     const props = this.spmnTypeProps || {};
     return Object.values(props)
       .filter(prop => !!prop.type)
-      .map(prop => ({specimenClass: prop.specimenClass, type: prop.type}));
+      .map(prop => ({...prop}));
+  }
+
+  getSpecimenTypeDisplay({specimenClass, type} = {}) {
+    const propsMap = this.spmnTypeProps || {};
+    const props = propsMap[specimenClass + ':' + type] || {};
+    const classProps = propsMap[specimenClass + ':*'] || {};
+    const typeLabelCode = props.typeLabelCode;
+    const classLabelCode = props.specimenClassLabelCode || classProps.specimenClassLabelCode;
+    const typeLabel = typeLabelCode && i18n.exists(typeLabelCode) ? i18n.msg(typeLabelCode) : type;
+    const classLabel = classLabelCode && i18n.exists(classLabelCode) ? i18n.msg(classLabelCode) : specimenClass;
+
+    if (!type) {
+      return classLabel || '';
+    }
+
+    return classLabel ? typeLabel + ' (' + classLabel + ')' : typeLabel;
   }
 
   getSpecimenMeasureUnit({cpShortTitle, specimenClass, type, specimenType}, measure) {

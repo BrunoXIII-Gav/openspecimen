@@ -350,7 +350,7 @@ export default {
             }
           }
 
-          value = value || 'Not Stored';
+          value = value || this.$t('specimens.not_stored');
         } else if (field.type == 'specimen-quantity' || field.type == 'specimen-measure') {
           const specimen = exprUtil.eval(object || {}, field.specimen || 'specimen');
           const unit = util.getSpecimenMeasureUnit(specimen, field.measure || 'quantity');
@@ -361,9 +361,7 @@ export default {
           value += ' ' + unit;
         } else if (field.type == 'specimen-type') {
           const specimen = exprUtil.eval(object || {}, field.specimen || 'specimen');
-          if (specimen.specimenClass) {
-            value += ' (' + specimen.specimenClass + ')';
-          }
+          value = util.getSpecimenTypeDisplay(specimen);
         } else if (field.type == 'booleanCheckbox' || field.type == 'toggle-checkbox') {
           if (value == true || value == 'true') {
             value = this.$t('common.yes');

@@ -139,12 +139,24 @@ export default {
       ];
     },
 
-    status: function() {
+    statusValue: function() {
       return this.visit.status || 'Pending';
     },
 
+    status: function() {
+      const statusKeys = {
+        'Complete': 'complete',
+        'Pending': 'pending',
+        'Missed Collection': 'missed_collection',
+        'Not Collected': 'not_collected'
+      };
+
+      const statusKey = statusKeys[this.statusValue];
+      return statusKey ? this.$t('visits.status_values.' + statusKey) : this.statusValue;
+    },
+
     statusType: function() {
-      switch (this.status) {
+      switch (this.statusValue) {
         case 'Pending':
           return 'warning';
         case 'Missed Collection':

@@ -15,9 +15,9 @@
         </div>
       </div>
       <div class="summary">
-        <h4 class="title">{{event.name}}</h4>
+        <h4 class="title">{{eventName(event.name)}}</h4>
         <div class="description">
-          <span><i>by</i> {{event.user}}</span>
+          <span><i>{{$t('common.by')}}</i> {{event.user}}</span>
         </div>
         <div class="action-buttons" v-if="!hideActions && (event.sysForm || event.isEditable)">
           <os-button-group class="buttons" v-if="event.isEditable">
@@ -52,6 +52,15 @@ export default {
 
     onClick: function(event) {
       this.$emit('click', event);
+    },
+
+    eventName: function(name) {
+      const eventNames = {
+        'Collection Event': 'specimens.collection_event',
+        'Received Event': 'specimens.received_event'
+      };
+
+      return eventNames[name] ? this.$t(eventNames[name]) : name;
     }
   }
 }

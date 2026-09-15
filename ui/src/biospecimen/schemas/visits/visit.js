@@ -1,3 +1,13 @@
+const getStatusOptions = () => {
+  const i18n = window.osSvc.i18nSvc;
+  return [
+    { value: 'Complete',          label: i18n.msg('visits.status_values.complete') },
+    { value: 'Pending',           label: i18n.msg('visits.status_values.pending') },
+    { value: 'Missed Collection', label: i18n.msg('visits.status_values.missed_collection') },
+    { value: 'Not Collected',     label: i18n.msg('visits.status_values.not_collected') }
+  ];
+};
+
 export default {
   fields:  [
     {
@@ -19,13 +29,14 @@ export default {
       "name": "visit.status",
       "listSource": {
         "selectProp": "value",
-        "displayProp": "value",
-        "options": [
-          { "value": "Complete" },
-          { "value": "Pending" },
-          { "value": "Missed Collection" },
-          { "value": "Not Collected" }
-        ]
+        "displayProp": "label",
+        "loadFn": getStatusOptions
+      },
+      "displayValues": {
+        "Complete":          () => window.osSvc.i18nSvc.msg('visits.status_values.complete'),
+        "Pending":           () => window.osSvc.i18nSvc.msg('visits.status_values.pending'),
+        "Missed Collection": () => window.osSvc.i18nSvc.msg('visits.status_values.missed_collection'),
+        "Not Collected":     () => window.osSvc.i18nSvc.msg('visits.status_values.not_collected')
       },
       "validations": {
         "required": {

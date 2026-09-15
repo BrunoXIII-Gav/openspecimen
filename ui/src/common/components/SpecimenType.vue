@@ -5,9 +5,9 @@
         ref="selectWidget"
         v-model="selected"
         :options="ddOptions"
-        option-label="type"
+        option-label="typeDisplay"
         option-value="type"
-        option-group-label="specimenClass"
+        option-group-label="specimenClassDisplay"
         option-group-children="types"
         :filter="true"
         :auto-filter-focus="true"
@@ -22,9 +22,9 @@
         ref="selectWidget"
         v-model="selected"
         :options="ddOptions"
-        option-label="type"
+        option-label="typeDisplay"
         option-value="type"
-        option-group-label="specimenClass"
+        option-group-label="specimenClassDisplay"
         option-group-children="types"
         :filter="true"
         :auto-filter-focus="true"
@@ -74,7 +74,13 @@ export default {
   created() {
     const map = {};
     for (let type of this._getSpecimenTypes()) {
-      const types = map[type.specimenClass] = map[type.specimenClass] || {specimenClass: type.specimenClass, types: []};
+      const display = util.getSpecimenTypeDisplay(type);
+      type.typeDisplay = display.split(' (')[0];
+      const types = map[type.specimenClass] = map[type.specimenClass] || {
+        specimenClass: type.specimenClass,
+        specimenClassDisplay: util.getSpecimenTypeDisplay({specimenClass: type.specimenClass, type: null}),
+        types: []
+      };
       types.types.push(type);
     }
 
@@ -103,7 +109,7 @@ export default {
       }
 
       const option = this._getSelectedOption(this.selected);
-      return option.type + ' (' + option.specimenClass + ')';
+      return util.getSpecimenTypeDisplay(option);
     },
 
     async _updateValue(value) {
@@ -118,7 +124,11 @@ export default {
         const specimenTypes = await http.get('permissible-values/v', qp);
         const match = specimenTypes.find(type => type.value.toLowerCase() == value.toLowerCase());
         if (match) {
-          const specimenType  = {specimenClass: match.parentValue, type: match.value};
+          const specimenType  = {
+            specimenClass: match.parentValue,
+            type: match.value,
+            typeDisplay: match.value
+          };
           Object.assign(option, specimenType);
 
           //
@@ -128,7 +138,11 @@ export default {
           if (ddOption) {
             ddOption.types.push(specimenType);
           } else {
-            this.ddOptions.push({specimenClass: match.parentValue, types: [specimenType]});
+            this.ddOptions.push({
+              specimenClass: match.parentValue,
+              specimenClassDisplay: match.parentValue,
+              types: [specimenType]
+            });
           }
         }
       }

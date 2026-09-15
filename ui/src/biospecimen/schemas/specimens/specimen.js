@@ -1,3 +1,13 @@
+const getCollectionStatusOptions = () => {
+  const i18n = window.osSvc.i18nSvc;
+  return [
+    { value: 'Collected',         label: i18n.msg('specimens.collection_status_values.collected') },
+    { value: 'Missed Collection', label: i18n.msg('specimens.collection_status_values.missed_collection') },
+    { value: 'Not Collected',     label: i18n.msg('specimens.collection_status_values.not_collected') },
+    { value: 'Pending',           label: i18n.msg('specimens.collection_status_values.pending') }
+  ];
+};
+
 export default {
   fields:  [
     {
@@ -50,14 +60,15 @@ export default {
       "labelCode": "specimens.collection_status",
       "name": "specimen.status",
       "listSource": {
-        "options": [
-          { "name": "Collected" },
-          { "name": "Missed Collection" },
-          { "name": "Not Collected" },
-          { "name": "Pending" }
-        ],
-        "selectProp": "name",
-        "displayProp": "name"
+        "loadFn": getCollectionStatusOptions,
+        "selectProp": "value",
+        "displayProp": "label"
+      },
+      "displayValues": {
+        "Collected":         () => window.osSvc.i18nSvc.msg('specimens.collection_status_values.collected'),
+        "Missed Collection": () => window.osSvc.i18nSvc.msg('specimens.collection_status_values.missed_collection'),
+        "Not Collected":     () => window.osSvc.i18nSvc.msg('specimens.collection_status_values.not_collected'),
+        "Pending":           () => window.osSvc.i18nSvc.msg('specimens.collection_status_values.pending')
       },
       "validations": {
         "required": {

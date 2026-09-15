@@ -145,7 +145,7 @@
 </template>
 
 <script>
-import { computed, defineAsyncComponent, reactive, ref, watch } from "vue";
+import { computed, defineAsyncComponent, provide, reactive, ref, watch } from "vue";
 import Card from "primevue/card";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
@@ -197,6 +197,8 @@ export default {
         rows: [],
       }
     );
+
+    provide('designerForm', form);
 
     let fields = computed(() => {
       let result = [];

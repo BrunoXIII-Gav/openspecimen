@@ -57,6 +57,8 @@
       </div>
     </div>
   </div>
+
+  <ConditionalVisibility :field="fm" />
 </template>
 
 <script>
@@ -64,6 +66,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import InputText from "primevue/inputtext";
 import InputSwitch from "primevue/inputswitch";
 import Checkbox from "primevue/checkbox";
+import ConditionalVisibility from "./ConditionalVisibility.vue";
 import utility from "../services/Utility.js";
 import fieldsRegistry from "../services/FieldsRegistry.js";
 
@@ -73,7 +76,8 @@ export default {
   components: {
     InputText,
     InputSwitch,
-    Checkbox
+    Checkbox,
+    ConditionalVisibility
   },
 
   props: {

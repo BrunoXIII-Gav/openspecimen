@@ -135,7 +135,7 @@ import DefineView from './DefineView.vue';
 import Facets from './Facets.vue';
 import SaveQuery from './SaveQuery.vue';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 100;
 
 export default {
   props: ['query'],

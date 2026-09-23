@@ -1,13 +1,15 @@
 <template>
   <div>
     <ul class="os-key-values bg-col os-one-col" :class="{'vertical': ctx.verticalLayout}">
-      <li class="item" v-for="field in ctx.simpleFields" :key="field.udn">
+      <li class="item" v-for="(field, index) in ctx.simpleFields" :key="field.udn">
         <strong class="key key-sm strong">
           <os-html :content="field.caption" />
         </strong>
         <span class="value value-md" v-if="field.type != 'label'">
           <FormFieldValue :field="field" />
         </span>
+        <div v-if="referencePrefix" :id="referencePrefix + '-' + index"
+          :data-ref-prefix="referencePrefix" :data-ref-field="field.name || field.udn"></div>
       </li>
     </ul>
 
@@ -46,7 +48,7 @@ import FormFieldValue from '@/forms/components/FormFieldValue.vue';
 
 export default {
 
-  props: ['record'],
+  props: ['record', 'referencePrefix'],
 
   components: {
     FormFieldValue

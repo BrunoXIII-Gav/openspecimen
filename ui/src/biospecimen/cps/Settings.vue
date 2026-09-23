@@ -35,6 +35,11 @@
         </template>
       </os-card>
     </router-link>
+    <router-link :to="{name: 'CpDetail.Settings.FieldReferences', params: {cpId: cp.id}}">
+      <os-card>
+        <template #body>{{ $t('cps.field_references') }}</template>
+      </os-card>
+    </router-link>
 
     <os-plugin-views page="cp-detail" view="settings" :viewProps="{cp}" />
   </div>

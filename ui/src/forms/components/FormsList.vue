@@ -58,7 +58,13 @@
               <os-plugin-views :page="page" :view="view" :viewProps="{...viewProps, record}" />
             </div>
 
-            <FormRecordOverview :record="record" />
+            <FormRecordOverview :record="record" :reference-prefix="'form-view-' + rowObject.recordId" />
+            <FieldReferences v-if="viewProps.cp && viewProps.cpr" :cp-id="viewProps.cp.id"
+              :target="viewProps.specimen ? 'specimen' : viewProps.visit ? 'visit' : 'participant'"
+              :target-form-id="rowObject.formId" :cpr-id="viewProps.cpr.id"
+              :visit-id="viewProps.visit && viewProps.visit.id" :specimen-id="viewProps.specimen && viewProps.specimen.id"
+              :parent-id="viewProps.specimen && viewProps.specimen.parentId"
+              :target-prefix="'form-view-' + rowObject.recordId" />
           </div>
         </template>
       </os-list-view>
@@ -78,13 +84,15 @@ import util   from '@/common/services/Util.js';
 
 import DeleteFormRecord   from '@/forms/components/DeleteFormRecord.vue';
 import FormRecordOverview from '@/forms/components/FormRecordOverview.vue';
+import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 
 export default {
   props: ['object', 'api', 'formId', 'recordId'],
 
   components: {
     DeleteFormRecord,
-    FormRecordOverview
+    FormRecordOverview,
+    FieldReferences
   },
 
   data() {

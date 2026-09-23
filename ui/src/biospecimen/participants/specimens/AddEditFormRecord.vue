@@ -19,6 +19,8 @@ export default {
         getBreadcrumb: this._getBreadcrumb,
 
         getForms: this._getForms,
+        getFieldReferenceContext: () => ({cpId: cp.id, target: 'specimen', cprId: this.cpr.id,
+          visitId: this.visit.id, specimenId: this.specimen.id, parentId: this.specimen.parentId}),
 
         gotoOverview: this._gotoOverview,
 

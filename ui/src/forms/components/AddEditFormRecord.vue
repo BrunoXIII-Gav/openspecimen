@@ -5,7 +5,12 @@
       <span>{{ctx.formDef && ctx.formDef.caption}}</span>
     </template>
 
-    <os-form ref="deForm" :schema="ctx.formSchema" :data="ctx.record" @input="handleChange($event)">
+    <os-form ref="deForm" :schema="ctx.formSchema" :data="ctx.record"
+      :reference-prefix="'form-edit-' + formId + '-' + entity.id" @input="handleChange($event)">
+      <template #static-fields>
+        <os-field-references v-if="fieldReferenceContext" v-bind="fieldReferenceContext" :target-form-id="formId"
+          :target-prefix="'form-edit-' + formId + '-' + entity.id" />
+      </template>
       <os-button primary :label="$t('common.buttons.save')"   @click="saveRecord(false)" />
       <os-button primary :label="$t('common.buttons.save_draft')" @click="saveRecord(false, true)" v-if="showDraft" />
       <os-button primary :label="$t('common.buttons.save_n_next')"  @click="saveRecord(true)" v-if="showNext" />
@@ -18,8 +23,10 @@
 
 import formUtil  from '@/common/services/FormUtil.js';
 import formSvc   from '@/forms/services/Form.js';
+import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 
 export default {
+  components: {'os-field-references': FieldReferences},
   props: [
     'entity',
     'formId',
@@ -28,7 +35,8 @@ export default {
     'recordId',
     'hidePanel',
     'showNext',
-    'showDraft'
+    'showDraft',
+    'fieldReferenceContext'
   ],
 
   emits: ['saved', 'cancelled'],

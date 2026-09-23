@@ -37,6 +37,8 @@
         <div class="help">
           <slot :name="field.name"></slot>
         </div>
+        <div v-if="referencePrefix" :id="referencePrefix + '-' + idx"
+          :data-ref-prefix="referencePrefix" :data-ref-field="field.name"></div>
       </span>
     </li>
   </ul>
@@ -127,7 +129,7 @@ import http from '@/common/services/HttpClient.js';
 import util from '@/common/services/Util.js';
 
 export default {
-  props: ['object', 'schema', 'columns', 'bgCol', 'colType', 'showEmptyFields'],
+  props: ['object', 'schema', 'columns', 'bgCol', 'colType', 'showEmptyFields', 'referencePrefix'],
 
   components: {
     Section
@@ -264,7 +266,10 @@ export default {
         value = field.value(object);
       } else {
         value = exprUtil.getValue(object, field.name); // props.object[field.name];
-        if (field.displayValues) {
+        const valueI18nKey = field.valueI18nKeys && field.valueI18nKeys[value];
+        if (valueI18nKey && this.$te(valueI18nKey)) {
+          value = this.$t(valueI18nKey);
+        } else if (field.displayValues) {
           const dispValue = field.displayValues[value];
           if (typeof dispValue == 'function') {
             value = dispValue();

@@ -7,6 +7,9 @@
       </div>
     </div>
 
+    <div v-if="referencePrefix" :id="referencePrefix + '-start'"
+      :data-ref-prefix="referencePrefix" data-ref-field="__form_start__"></div>
+
     <div class="row" v-for="(formRow, rowIdx) of formRows" :key="rowIdx">
       <div class="section" v-if="formRow.sectionLabel || formRow.sectionLabelCode">
         <span>{{toLabelText(formRow.sectionLabelCode, formRow.sectionLabel)}}</span>
@@ -37,6 +40,8 @@
             <os-inline-message>{{errorMessages[field.name]}}</os-inline-message>
           </div>
           <slot :name="field.name"></slot>
+          <div v-if="referencePrefix" :id="referencePrefix + '-' + rowIdx + '-' + fieldIdx"
+            :data-ref-prefix="referencePrefix" :data-ref-field="field.name"></div>
         </div>
       </template>
     </div>
@@ -66,7 +71,7 @@ import i18n         from '@/common/services/I18n.js';
 import util         from '@/common/services/Util.js';
 
 export default {
-   props: ['schema', 'data', 'disabled-fields'],
+   props: ['schema', 'data', 'disabled-fields', 'referencePrefix'],
 
    emits: ['input', 'form-validity'],
 

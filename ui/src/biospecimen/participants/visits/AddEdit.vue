@@ -26,7 +26,11 @@
     </os-page-head>
 
     <os-page-body>
-      <os-form ref="visitForm" :schema="ctx.addEditFs" :data="dataCtx" @input="handleInput($event)">
+      <os-form ref="visitForm" :schema="ctx.addEditFs" :data="dataCtx" :reference-prefix="'visit-edit-' + cpr.id + '-' + dataCtx.visit.id" @input="handleInput($event)">
+        <template #static-fields>
+          <os-field-references :cp-id="dataCtx.cp.id" target="visit" :cpr-id="cpr.id" :visit-id="dataCtx.visit.id"
+            :target-prefix="'visit-edit-' + cpr.id + '-' + dataCtx.visit.id" />
+        </template>
         <div>
           <os-button primary :label="$t(!dataCtx.visit.id ? 'common.buttons.add' : 'common.buttons.update')"
             @click="saveOrUpdate()" />
@@ -46,8 +50,10 @@ import authSvc    from '@/common/services/Authorization.js';
 import formUtil   from '@/common/services/FormUtil.js';
 import routerSvc  from '@/common/services/Router.js';
 import util       from '@/common/services/Util.js';
+import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 
 export default {
+  components: {'os-field-references': FieldReferences},
   props: ['cpr', 'visit'],
 
   inject: ['cpViewCtx'],

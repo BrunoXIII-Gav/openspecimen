@@ -22,7 +22,9 @@
 
   <os-grid>
     <os-grid-column width="12">
-      <os-overview :schema="ctx.dict" :object="ctx" v-if="ctx.dict.length > 0" />
+      <os-overview :schema="ctx.dict" :object="ctx" :reference-prefix="'visit-view-' + visit.id" v-if="ctx.dict.length > 0" />
+      <FieldReferences :cp-id="ctx.cp.id" target="visit" :cpr-id="cpr.id" :visit-id="visit.id"
+        :target-prefix="'visit-view-' + visit.id" />
 
       <SpecimenTree :cp="ctx.cp" :cpr="cpr" :visit="visit" :specimens="ctx.specimens"
         :ref-date="visit.status && visit.status != 'Pending' ? visit.visitDate : 0"
@@ -40,6 +42,7 @@
 <script>
 
 import SpecimenTree from '@/biospecimen/components/SpecimenTree.vue';
+import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 
 import i18n        from '@/common/services/I18n.js';
 import routerSvc   from '@/common/services/Router.js';
@@ -52,7 +55,8 @@ export default {
   props: ['cpr', 'visit'],
 
   components: {
-    SpecimenTree
+    SpecimenTree,
+    FieldReferences
   },
 
   inject: ['cpViewCtx'],

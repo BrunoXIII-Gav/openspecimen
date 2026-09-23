@@ -17,7 +17,8 @@
     <os-page-body>
       <os-addedit-form-record :entity="object" :form-def="ctx.formDef" :form-id="formId"
         :form-ctxt-id="formCtxtId" :record-id="recordId" :hide-panel="true" :show-next="!!ctx.nextForm"
-        :show-draft="allowDraftRecords" @saved="saved" @cancelled="saveCancelled" />
+        :show-draft="allowDraftRecords" :field-reference-context="api.getFieldReferenceContext && api.getFieldReferenceContext()"
+        @saved="saved" @cancelled="saveCancelled" />
     </os-page-body>
   </os-page>
 </template>

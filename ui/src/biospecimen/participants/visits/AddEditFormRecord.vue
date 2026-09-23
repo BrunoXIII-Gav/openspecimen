@@ -19,6 +19,7 @@ export default {
         getBreadcrumb: this._getBreadcrumb,
 
         getForms: this._getForms,
+        getFieldReferenceContext: () => ({cpId: cp.id, target: 'visit', cprId: this.cpr.id, visitId: this.visit.id}),
 
         gotoOverview: this._gotoOverview,
 

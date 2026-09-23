@@ -538,6 +538,24 @@ public class FormDaoImpl extends AbstractDao<FormContextBean> implements FormDao
 	}
 
 	@Override
+	public List<FormRecordEntryBean> getReferenceRecordEntries(Long formCtxtId, Long objectId,
+		boolean onlyComplete, int startAt, int maxResults) {
+		String hql = "from krishagni.catissueplus.beans.FormRecordEntryBean re where re.formCtxtId = :formCtxtId " +
+			"and re.objectId = :objectId and re.activityStatusStr = 'ACTIVE' " +
+			(onlyComplete ? "and re.formStatus = :formStatus " : "") +
+			"order by re.updatedTime desc, re.identifier desc";
+		var query = getCurrentSession().createQuery(hql, FormRecordEntryBean.class)
+			.setParameter("formCtxtId", formCtxtId)
+			.setParameter("objectId", objectId)
+			.setFirstResult(startAt)
+			.setMaxResults(maxResults);
+		if (onlyComplete) {
+			query.setParameter("formStatus", com.krishagni.catissueplus.core.biospecimen.domain.BaseEntity.DataEntryStatus.COMPLETE);
+		}
+		return query.list();
+	}
+
+	@Override
 	public FormRecordEntryBean getRecordEntry(Long recordId) {
 		return createNamedQuery(GET_RE_BY_ID, FormRecordEntryBean.class)
 			.setParameter("recordId", recordId)

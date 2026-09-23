@@ -6,6 +6,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -150,7 +151,10 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		setPathologicalStatus(detail, existing, specimen, ose);
 		setSpecimenClass(detail, existing, specimen, ose);
 		setSpecimenType(detail, existing, specimen, ose);
+		lockParentForConsumption(existing, specimen);
 		setQuantity(detail, existing, specimen, ose);
+		validateQuantityAgainstChildren(detail, existing, specimen, ose);
+		setParentConsumption(detail, existing, specimen, ose);
 		setConcentration(detail, existing, specimen, ose);
 		setBiohazards(detail, existing, specimen, ose);
 		setFreezeThawCycles(detail, existing, specimen, ose);
@@ -173,6 +177,97 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 
 		ose.checkAndThrow();
 		return specimen;
+	}
+
+	private void lockParentForConsumption(Specimen existing, Specimen specimen) {
+		Specimen parent = specimen.getParentSpecimen();
+		if (parent == null || parent.getId() == null || !specimen.isCollected() ||
+			!specimen.isAliquot() && !specimen.isDerivative() || existing != null && existing.isCollected()) {
+			return;
+		}
+
+		daoFactory.getSpecimenDao().lockForQuantityUpdate(parent);
+	}
+
+	private void setParentConsumption(SpecimenDetail detail, Specimen existing, Specimen specimen,
+		OpenSpecimenException ose) {
+		if (specimen.isAliquot()) {
+			validateParentBalance(existing, specimen, specimen.getInitialQuantity(), ose);
+			if (detail.getParentConsumedQty() != null || Boolean.TRUE.equals(detail.getProcessAllParent())) {
+				ose.addError(SpecimenErrorCode.INVALID_QTY);
+			}
+			return;
+		}
+		if (!specimen.isDerivative()) {
+			if (detail.getParentConsumedQty() != null || Boolean.TRUE.equals(detail.getProcessAllParent())) {
+				ose.addError(SpecimenErrorCode.INVALID_QTY);
+			}
+			return;
+		}
+
+		if (existing != null && existing.isCollected()) {
+			if ((detail.isAttrModified("parentConsumedQty") &&
+				!Objects.equals(detail.getParentConsumedQty(), existing.getParentConsumedQuantity())) ||
+				(detail.isAttrModified("processAllParent") &&
+				!Objects.equals(detail.getProcessAllParent(), existing.getProcessAllParent()))) {
+				ose.addError(SpecimenErrorCode.PARENT_CONSUMED_QTY_IMMUTABLE);
+			}
+			specimen.setParentConsumedQuantity(existing.getParentConsumedQuantity());
+			specimen.setProcessAllParent(existing.getProcessAllParent());
+			return;
+		}
+
+		Specimen parent = specimen.getParentSpecimen();
+		boolean processAll = existing != null && !detail.isAttrModified("processAllParent") ?
+			Boolean.TRUE.equals(existing.getProcessAllParent()) : Boolean.TRUE.equals(detail.getProcessAllParent());
+		BigDecimal requested = existing != null && !detail.isAttrModified("parentConsumedQty") ?
+			existing.getParentConsumedQuantity() : detail.getParentConsumedQty();
+		BigDecimal consumed = processAll && parent != null ? parent.getAvailableQuantity() : requested;
+		specimen.setParentConsumedQuantity(consumed);
+		specimen.setProcessAllParent(processAll);
+		if (consumed != null && consumed.compareTo(BigDecimal.ZERO) <= 0) {
+			ose.addError(SpecimenErrorCode.INVALID_QTY);
+		}
+
+		if (!specimen.isCollected() || parent == null || existing != null && existing.isCollected()) return;
+		if (parent.getInitialQuantity() == null || parent.getAvailableQuantity() == null) {
+			ose.addError(SpecimenErrorCode.PARENT_QTY_REQUIRED, parent.getLabel());
+		} else if (consumed == null) {
+			ose.addError(SpecimenErrorCode.PARENT_CONSUMED_QTY_REQUIRED);
+		} else if (consumed.compareTo(parent.getAvailableQuantity()) > 0) {
+			ose.addError(SpecimenErrorCode.PARENT_QTY_INSUFFICIENT, parent.getLabel());
+		}
+	}
+
+	private void validateQuantityAgainstChildren(SpecimenDetail detail, Specimen existing, Specimen specimen,
+		OpenSpecimenException ose) {
+		if (existing == null || !detail.isAttrModified("initialQty") && !detail.isAttrModified("availableQty")) return;
+		BigDecimal consumed = BigDecimal.ZERO;
+		for (Specimen child : existing.getChildCollection()) {
+			if (!child.isCollected()) continue;
+			BigDecimal qty = child.isAliquot() ? child.getInitialQuantity() :
+				child.isDerivative() ? child.getParentConsumedQuantity() : null;
+			if (qty != null) consumed = consumed.add(qty);
+		}
+		if (consumed.signum() == 0) return;
+		BigDecimal initial = specimen.getInitialQuantity();
+		BigDecimal available = specimen.getAvailableQuantity();
+		if (initial == null || available == null || available.compareTo(initial.subtract(consumed)) > 0) {
+			ose.addError(SpecimenErrorCode.AVAILABLE_QTY_EXCEEDS_CHILD_BALANCE, specimen.getLabel());
+		}
+	}
+
+	private void validateParentBalance(Specimen existing, Specimen specimen, BigDecimal consumed,
+		OpenSpecimenException ose) {
+		Specimen parent = specimen.getParentSpecimen();
+		if (!specimen.isCollected() || parent == null || existing != null && existing.isCollected()) return;
+		if (parent.getInitialQuantity() == null || parent.getAvailableQuantity() == null) {
+			ose.addError(SpecimenErrorCode.PARENT_QTY_REQUIRED, parent.getLabel());
+		} else if (consumed == null || consumed.compareTo(BigDecimal.ZERO) <= 0) {
+			ose.addError(SpecimenErrorCode.ALIQUOT_QTY_REQ);
+		} else if (consumed != null && consumed.compareTo(parent.getAvailableQuantity()) > 0) {
+			ose.addError(SpecimenErrorCode.PARENT_QTY_INSUFFICIENT, parent.getLabel());
+		}
 	}
 
 	private void setAdditionalLabel(SpecimenDetail detail, Specimen specimen, OpenSpecimenException ose) {

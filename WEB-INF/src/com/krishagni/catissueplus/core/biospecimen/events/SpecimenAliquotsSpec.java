@@ -28,6 +28,10 @@ public class SpecimenAliquotsSpec {
 	
 	private BigDecimal qtyPerAliquot;
 
+	private BigDecimal parentConsumedQty;
+
+	private Boolean processAllParent;
+
 	private String specimenClass;
 
 	private String type;
@@ -148,6 +152,22 @@ public class SpecimenAliquotsSpec {
 
 	public void setQtyPerAliquot(BigDecimal qtyPerAliquot) {
 		this.qtyPerAliquot = qtyPerAliquot;
+	}
+
+	public BigDecimal getParentConsumedQty() {
+		return parentConsumedQty;
+	}
+
+	public void setParentConsumedQty(BigDecimal parentConsumedQty) {
+		this.parentConsumedQty = parentConsumedQty;
+	}
+
+	public Boolean getProcessAllParent() {
+		return processAllParent;
+	}
+
+	public void setProcessAllParent(Boolean processAllParent) {
+		this.processAllParent = processAllParent;
 	}
 
 	public String getSpecimenClass() {

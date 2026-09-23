@@ -40,7 +40,8 @@ export default {
       }
 
       const parentId = this.$route && this.$route.query && this.$route.query.parentId;
-      return 'new-' + this.cpr.id + '-' + this.visit.id + '-' + (parentId || '0');
+      const lineage = this.$route && this.$route.query && this.$route.query.lineage;
+      return 'new-' + this.cpr.id + '-' + this.visit.id + '-' + (parentId || '0') + '-' + (lineage || 'New');
     }
   },
 
@@ -88,8 +89,6 @@ export default {
       const params = new URLSearchParams(queryStr);
       const parentId = params.get('parentId') ? parseInt(params.get('parentId')) : null;
       const lineage = params.get('lineage') || 'New';
-      console.log('_loadBlank lineage:', lineage, 'parentId:', parentId);
-
       let labelFmt = cp.specimenLabelFmt || '';
       if (lineage === 'Aliquot') {
         labelFmt = cp.aliquotLabelFmt || cp.aliquotLabelFmtToUse || '';

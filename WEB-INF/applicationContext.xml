@@ -222,6 +222,8 @@
     <property name="srFactory" ref="srFactory"/>
     <property name="rbacSvc" ref="rbacSvc"/>
     <property name="daoFactory" ref="biospecimenDaoFactory"/>
+    <property name="deDaoFactory" ref="deDaoFactory"/>
+    <property name="formSvc" ref="formSvc"/>
     <property name="listSvc" ref="listSvc"/>
     <property name="rptSettingsFactory" ref="reportSettingsFact"/>
     <property name="sessionFactory" ref="sessionFactory"/>
@@ -603,6 +605,15 @@
           <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
         </entry>
         <entry key="SpecimenExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+        <entry key="SpecimenPrimaryExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+        <entry key="SpecimenDerivedExtension">
+          <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
+        </entry>
+        <entry key="SpecimenAliquotExtension">
           <bean class="com.krishagni.catissueplus.core.de.services.impl.SingleFormContextProc"/>
         </entry>
         <entry key="SiteExtension">

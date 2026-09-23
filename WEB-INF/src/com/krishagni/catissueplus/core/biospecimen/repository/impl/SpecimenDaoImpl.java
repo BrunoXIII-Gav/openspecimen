@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.LockMode;
 
 import com.krishagni.catissueplus.core.biospecimen.domain.BaseEntity;
 import com.krishagni.catissueplus.core.biospecimen.domain.LabSpecimenService;
@@ -36,6 +37,13 @@ import com.krishagni.catissueplus.core.common.repository.Junction;
 import com.krishagni.catissueplus.core.common.repository.SubQuery;
 
 public class SpecimenDaoImpl extends AbstractDao<Specimen> implements SpecimenDao {
+	@Override
+	public void lockForQuantityUpdate(Specimen specimen) {
+		// Flush earlier children in this transaction before reading the parent balance again.
+		getCurrentSession().flush();
+		getCurrentSession().refresh(specimen, LockMode.PESSIMISTIC_WRITE);
+	}
+
 	public Class<?> getType() {
 		return Specimen.class;
 	}

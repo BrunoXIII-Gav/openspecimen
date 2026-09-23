@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -151,6 +153,10 @@ public class FormServiceImpl implements FormService, InitializingBean {
 
 	private static Map<String, List<String>> editableEvents;
 
+	private static final long TEMP_UPLOAD_LIFETIME = TimeUnit.HOURS.toMillis(1);
+
+	private final Map<String, TempUploadOwner> tempUploads = new ConcurrentHashMap<>();
+
 	private Map<String, FormAccessChecker> formAccessCheckers = new HashMap<>();
 
 	static {
@@ -227,6 +233,9 @@ public class FormServiceImpl implements FormService, InitializingBean {
 		formAccessCheckers.put("VisitExtension", CP_FORMS_CHECKER);
 		formAccessCheckers.put("SpecimenCollectionGroup", CP_FORMS_CHECKER);
 		formAccessCheckers.put("SpecimenExtension", CP_FORMS_CHECKER);
+		formAccessCheckers.put(Specimen.PRIMARY_EXTN, CP_FORMS_CHECKER);
+		formAccessCheckers.put(Specimen.DERIVATIVE_EXTN, CP_FORMS_CHECKER);
+		formAccessCheckers.put(Specimen.ALIQUOT_EXTN, CP_FORMS_CHECKER);
 		formAccessCheckers.put("Specimen", CP_FORMS_CHECKER);
 
 		formAccessCheckers.put("User", USER_FORM_CHECKER);
@@ -655,6 +664,12 @@ public class FormServiceImpl implements FormService, InitializingBean {
 		GetFileDetailOp op = req.getPayload();
 		FileControlValue fcv = formDataMgr.getFileMetadata(op.getFileId());
 		if (fcv == null) {
+			TempUploadOwner owner = tempUploads.get(op.getFileId());
+			Long currentUser = AuthUtil.getCurrentUser() == null ? null : AuthUtil.getCurrentUser().getId();
+			if (owner == null || !Objects.equals(owner.userId(), currentUser) ||
+				System.currentTimeMillis() - owner.uploadedAt() > TEMP_UPLOAD_LIFETIME) {
+				return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
+			}
 			File file = new File(DeConfiguration.getInstance().fileUploadDir(), op.getFileId());
 			if (file.exists()) {
 				return ResponseEvent.response(FileDetail.from(file));
@@ -668,8 +683,43 @@ public class FormServiceImpl implements FormService, InitializingBean {
 		if (checker == null || !checker.isDataReadAllowed(fcv.getObjectType(), fcv.getObjectId())) {
 			return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
 		}
+		if (fcv.getFormId() == null || fcv.getRecordId() == null) {
+			return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
+		}
+		Container form = getContainer(fcv.getFormId(), null);
+		FormData record = formDataMgr.getFormData(form, fcv.getRecordId());
+		boolean phiAllowed = isPhiAccessAllowed(fcv.getObjectType(), fcv.getObjectId());
+		if (record == null || !containsReadableFile(record, op.getFileId(), phiAllowed)) {
+			return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
+		}
 
 		return ResponseEvent.response(FileDetail.from(fcv));
+	}
+
+	private boolean containsReadableFile(FormData data, String fileId, boolean phiAllowed) {
+		if (data == null) return false;
+		for (ControlValue value : data.getFieldValues()) {
+			if (value == null || value.getControl() == null || value.getValue() == null) continue;
+			if (value.getControl().isPhi() && !phiAllowed) continue;
+			Object content = value.getValue();
+			if (content instanceof FileControlValue file && fileId.equals(file.getFileId())) return true;
+			if (content instanceof FormData child && containsReadableFile(child, fileId, phiAllowed)) return true;
+			if (content instanceof List<?> rows) {
+				for (Object row : rows) {
+					if (row instanceof FormData child && containsReadableFile(child, fileId, phiAllowed)) return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private record TempUploadOwner(Long userId, long uploadedAt) { }
+
+	private void rememberTempUpload(String fileId) {
+		if (fileId == null || AuthUtil.getCurrentUser() == null) return;
+		long now = System.currentTimeMillis();
+		tempUploads.entrySet().removeIf(entry -> now - entry.getValue().uploadedAt() > TEMP_UPLOAD_LIFETIME);
+		tempUploads.put(fileId, new TempUploadOwner(AuthUtil.getCurrentUser().getId(), now));
 	}
 	
 	@Override
@@ -685,6 +735,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 			InputStream in = input.getInputStream();
 			String fileId = FileUploadMgr.getInstance().saveFile(in);
 			fileDetail.setFileId(fileId);
+			rememberTempUpload(fileId);
 			return ResponseEvent.response(fileDetail);
 		} catch (Exception e) {
 			return ResponseEvent.serverError(e);
@@ -717,6 +768,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 
 		try {
 			String fileId = FileUploadMgr.getInstance().saveFile(bin, type);
+			rememberTempUpload(fileId);
 
 			FileDetail result = new FileDetail();
 			result.setFileId(fileId);
@@ -1224,7 +1276,8 @@ public class FormServiceImpl implements FormService, InitializingBean {
 		return !Arrays.asList(
 			"Participant", "ParticipantExtension",
 			"SpecimenCollectionGroup", "VisitExtension",
-			"Specimen", "SpecimenExtension"
+			"Specimen", "SpecimenExtension",
+			Specimen.PRIMARY_EXTN, Specimen.DERIVATIVE_EXTN, Specimen.ALIQUOT_EXTN
 		).contains(entity);
 	}
 
@@ -1866,7 +1919,9 @@ public class FormServiceImpl implements FormService, InitializingBean {
 			allowPhiAccess = AccessCtrlMgr.getInstance().ensureReadParticipantRights(objectId);
 		} else if (entityType.equals(SCG_FORM) || Visit.EXTN.equals(entityType)) {
 			allowPhiAccess = AccessCtrlMgr.getInstance().ensureReadVisitRights(objectId, true);
-		} else if (entityType.equals(SPECIMEN_FORM) || entityType.equals(SPECIMEN_EVENT_FORM) || Specimen.EXTN.equals(entityType)) {
+		} else if (entityType.equals(SPECIMEN_FORM) || entityType.equals(SPECIMEN_EVENT_FORM) ||
+			Specimen.EXTN.equals(entityType) || Specimen.PRIMARY_EXTN.equals(entityType) ||
+			Specimen.DERIVATIVE_EXTN.equals(entityType) || Specimen.ALIQUOT_EXTN.equals(entityType)) {
 			allowPhiAccess = AccessCtrlMgr.getInstance().ensureReadSpecimenRights(objectId, true);
 		} else {
 			allowPhiAccess = true;
@@ -2000,7 +2055,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 				formDao.moveRegistrationRecords(cpId, srcFc.getIdentifier(), tgtFc.getIdentifier());
 			case "SpecimenCollectionGroup", "VisitExtension" ->
 				formDao.moveVisitRecords(cpId, srcFc.getIdentifier(), tgtFc.getIdentifier());
-			case "Specimen", "SpecimenExtension" ->
+			case "Specimen", "SpecimenExtension", Specimen.PRIMARY_EXTN, Specimen.DERIVATIVE_EXTN, Specimen.ALIQUOT_EXTN ->
 				formDao.moveSpecimenRecords(cpId, srcFc.getIdentifier(), tgtFc.getIdentifier());
 			default -> 0;
 		};

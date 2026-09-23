@@ -1615,6 +1615,8 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 		derived.setSpecimenClass(spec.getSpecimenClass());
 		derived.setType(spec.getType());
 		derived.setStatus(Specimen.COLLECTED);
+		derived.setParentConsumedQty(spec.getParentConsumedQty());
+		derived.setProcessAllParent(spec.getProcessAllParent());
 		derived.setIncrParentFreezeThaw(spec.getIncrParentFreezeThaw());
 		derived.setCloseAfterChildrenCreation(!spec.keepDerivedOpen());
 		return derived;
@@ -1689,19 +1691,21 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 	}
 
 	private void createExtensions(Long cpId, List<Specimen> specimens) {
-		if (cpId != null) {
-			DeObject.createExtensions(true, Specimen.EXTN, cpId, specimens);
-			return;
-		}
-
 		Map<Long, List<Specimen>> cpSpmnsMap = new HashMap<>();
-		for (Specimen spmn : specimens) {
-			List<Specimen> cpSpmns = cpSpmnsMap.computeIfAbsent(spmn.getCpId(), (k) -> new ArrayList<>());
-			cpSpmns.add(spmn);
+		if (cpId != null) {
+			cpSpmnsMap.put(cpId, specimens);
+		} else {
+			for (Specimen spmn : specimens) {
+				List<Specimen> cpSpmns = cpSpmnsMap.computeIfAbsent(spmn.getCpId(), (k) -> new ArrayList<>());
+				cpSpmns.add(spmn);
+			}
 		}
 
 		for (Map.Entry<Long, List<Specimen>> cpSpmns : cpSpmnsMap.entrySet()) {
-			DeObject.createExtensions(true, Specimen.EXTN, cpSpmns.getKey(), cpSpmns.getValue());
+			Map<String, List<Specimen>> lineageSpmns = cpSpmns.getValue().stream()
+				.collect(Collectors.groupingBy(Specimen::getEntityType));
+			lineageSpmns.forEach((entityType, spmns) ->
+				DeObject.createExtensions(true, entityType, cpSpmns.getKey(), spmns));
 		}
 	}
 

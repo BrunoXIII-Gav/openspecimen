@@ -31,7 +31,10 @@
         </template>
       </os-page-toolbar>
 
-      <os-overview :schema="ctx.dict" :object="ctx" v-if="ctx.dict.length > 0" />
+      <os-overview :schema="ctx.dict" :object="ctx" :reference-prefix="'specimen-view-' + specimen.id" v-if="ctx.dict.length > 0" />
+      <FieldReferences :cp-id="ctx.cp.id" target="specimen" :cpr-id="cpr.id" :visit-id="visit.id"
+        :specimen-id="specimen.id" :parent-id="specimen.parentId"
+        :target-prefix="'specimen-view-' + specimen.id" />
 
       <SpecimenTree :cp="ctx.cp" :cpr="cpr" :visit="visit" :specimen="ctx.specimen" :specimens="ctx.children"
         :ref-date="ctx.specimen.status && ctx.specimen.status != 'Pending' ? ctx.specimen.createdOn : 0"
@@ -127,6 +130,7 @@
 
 import EventsSummaryList from './EventsSummaryList.vue';
 import SpecimenTree from '@/biospecimen/components/SpecimenTree.vue';
+import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 import wfSvc from '@/biospecimen/services/Workflow.js';
@@ -145,7 +149,8 @@ export default {
 
   components: {
     EventsSummaryList,
-    SpecimenTree
+    SpecimenTree,
+    FieldReferences
   },
 
   inject: ['cpViewCtx', 'specimen'],
@@ -193,7 +198,7 @@ export default {
 
   async created() {
     this._setupSpecimen();
-    this.ctx.dict = await this.cpViewCtx.getSpecimenDict();
+    this.ctx.dict = await this.cpViewCtx.getSpecimenDict(false, this.specimen.lineage);
     if (typeof this.action == 'string') {
       const [view, formId, recordId] = this.action.split(',');
       if (view == 'show_event' && formId > 0 && recordId > 0) {

@@ -20,7 +20,7 @@ export default class CpViewContext {
 
   visitsTabQ = null;
 
-  specimenDictQ = null;
+  specimenDictQs = {};
 
   cp = null;
 
@@ -255,16 +255,18 @@ export default class CpViewContext {
     return cp.storeSprEnabled;
   }
 
-  getSpecimenDict(dataEntry) {
-    if (!this.specimenDictQ) {
-      this.specimenDictQ = specimenSvc.getDict(this.cpId);
+  getSpecimenDict(dataEntry, lineage) {
+    this.specimenDictQs = this.specimenDictQs || {};
+    const key = lineage || 'default';
+    if (!this.specimenDictQs[key]) {
+      this.specimenDictQs[key] = specimenSvc.getDict(this.cpId, lineage);
     }
 
-    return this.specimenDictQ.then(fields => dataEntry ? fields.filter(field => field.name.indexOf('calc') != 0) : fields);
+    return this.specimenDictQs[key].then(fields => dataEntry ? fields.filter(field => field.name.indexOf('calc') != 0) : fields);
   }
 
-  async getSpecimenAddEditLayout() {
-    return this.getSpecimenDict(true).then(dict => specimenSvc.getLayout(this.cpId, dict));
+  async getSpecimenAddEditLayout(lineage) {
+    return this.getSpecimenDict(true, lineage).then(dict => specimenSvc.getLayout(this.cpId, dict));
   }
 
   async getSpecimenEventForms(context) {

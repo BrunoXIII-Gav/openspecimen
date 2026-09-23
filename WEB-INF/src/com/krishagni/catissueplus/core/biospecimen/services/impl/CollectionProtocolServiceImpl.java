@@ -156,6 +156,10 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 	private SpecimenRequirementFactory srFactory;
 
 	private DaoFactory daoFactory;
+
+	private com.krishagni.catissueplus.core.de.repository.DaoFactory deDaoFactory;
+
+	private com.krishagni.catissueplus.core.de.services.FormService formSvc;
 	
 	private RbacService rbacSvc;
 
@@ -187,6 +191,14 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 
 	public void setDaoFactory(DaoFactory daoFactory) {
 		this.daoFactory = daoFactory;
+	}
+
+	public void setDeDaoFactory(com.krishagni.catissueplus.core.de.repository.DaoFactory deDaoFactory) {
+		this.deDaoFactory = deDaoFactory;
+	}
+
+	public void setFormSvc(com.krishagni.catissueplus.core.de.services.FormService formSvc) {
+		this.formSvc = formSvc;
 	}
 
 	public void setRbacSvc(RbacService rbacSvc) {
@@ -1069,7 +1081,8 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 
 			SpecimenRequirementDetail result = SpecimenRequirementDetail.from(sr);
 			if (MapUtils.isNotEmpty(sr.getDefaultCustomFieldValues())) {
-				DeObject extn = DeObject.fromValueMap(result.getCpId(), Specimen.EXTN, sr.getDefaultCustomFieldValues());
+				DeObject extn = DeObject.fromValueMap(result.getCpId(),
+					Specimen.getExtensionEntityType(result.getLineage()), sr.getDefaultCustomFieldValues());
 				result.setExtensionDetail(ExtensionDetail.from(extn, false, true));
 			}
 
@@ -1529,6 +1542,9 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 
 		if (input.getWorkflows() != null) {
 			for (WorkflowDetail detail : input.getWorkflows().values()) {
+				if ("fieldReferences".equals(detail.getName())) {
+					FieldReferenceRules.validate(cp.getId(), detail.getData(), deDaoFactory, formSvc);
+				}
 				Workflow wf = new Workflow();
 				BeanUtils.copyProperties(detail, wf);
 				cfg.getWorkflows().put(wf.getName(), wf);
@@ -1930,7 +1946,19 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 		if (srcWfCfg != null) {
 			CpWorkflowConfig newConfig = new CpWorkflowConfig();
 			newConfig.setCp(dstCp);
-			newConfig.setWorkflows(srcWfCfg.getWorkflows());
+			Map<String, Workflow> copied = new HashMap<>(srcWfCfg.getWorkflows());
+			Workflow refs = copied.get("fieldReferences");
+			if (refs != null) {
+				Workflow disabled = new Workflow();
+				disabled.setName(refs.getName());
+				disabled.setView(refs.getView());
+				disabled.setCtrl(refs.getCtrl());
+				Map<String, Object> data = new HashMap<>(refs.getData());
+				data.put("enabled", false);
+				disabled.setData(data);
+				copied.put("fieldReferences", disabled);
+			}
+			newConfig.setWorkflows(copied);
 			daoFactory.getCollectionProtocolDao().saveCpWorkflows(newConfig);
 		}
 	}

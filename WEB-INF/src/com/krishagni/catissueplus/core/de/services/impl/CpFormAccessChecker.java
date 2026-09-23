@@ -52,7 +52,7 @@ public class CpFormAccessChecker implements FormAccessChecker {
 				case "VisitExtension", "SpecimenCollectionGroup" ->
 					AccessCtrlMgr.getInstance().ensureReadVisitRights(objectId);
 
-				case "SpecimenExtension", "Specimen" ->
+				case "SpecimenExtension", "SpecimenPrimaryExtension", "SpecimenDerivedExtension", "SpecimenAliquotExtension", "Specimen" ->
 					AccessCtrlMgr.getInstance().ensureReadSpecimenRights(objectId);
 
 				default ->
@@ -99,7 +99,7 @@ public class CpFormAccessChecker implements FormAccessChecker {
 				case "VisitExtension", "SpecimenCollectionGroup" ->
 					AccessCtrlMgr.getInstance().ensureCreateOrUpdateVisitRights(objectId, false);
 
-				case "SpecimenExtension", "Specimen" ->
+				case "SpecimenExtension", "SpecimenPrimaryExtension", "SpecimenDerivedExtension", "SpecimenAliquotExtension", "Specimen" ->
 					AccessCtrlMgr.getInstance().ensureCreateOrUpdateSpecimenRights(objectId, false);
 
 				default ->

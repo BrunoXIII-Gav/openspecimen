@@ -69,4 +69,12 @@
       <column name="cpGroup_MOD" type="${boolean.type}" />
     </addColumn>
   </changeSet>
+  <changeSet author="codex" id="Audit specimen parent processing quantity">
+    <addColumn tableName="CATISSUE_SPECIMEN_AUD">
+      <column name="PARENT_CONSUMED_QUANTITY" type="${decimal.type}(24,8)" />
+      <column name="parentConsumedQuantity_MOD" type="${boolean.type}" />
+      <column name="PROCESS_ALL_PARENT" type="${boolean.type}" />
+      <column name="processAllParent_MOD" type="${boolean.type}" />
+    </addColumn>
+  </changeSet>
 </databaseChangeLog>

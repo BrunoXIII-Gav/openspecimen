@@ -34,6 +34,14 @@ export default {
       },
 
       {
+        fields: [ { name: "specimen.processAllParent" } ]
+      },
+
+      {
+        fields: [ { name: "specimen.parentConsumedQty" } ]
+      },
+
+      {
         fields: [ { name: "specimen.concentration" } ]
       },
 

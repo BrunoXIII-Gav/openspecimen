@@ -109,6 +109,14 @@ public class Specimen extends BaseExtensionEntity {
 	public static final String PROCESSED = "Processed";
 
 	public static final String EXTN = "SpecimenExtension";
+
+	//
+	// Custom fields can be configured independently for each specimen lineage.
+	// EXTN is retained as the backwards-compatible, catch-all association.
+	//
+	public static final String PRIMARY_EXTN    = "SpecimenPrimaryExtension";
+	public static final String DERIVATIVE_EXTN = "SpecimenDerivedExtension";
+	public static final String ALIQUOT_EXTN    = "SpecimenAliquotExtension";
 	
 	private static final String ENTITY_NAME = "specimen";
 
@@ -143,6 +151,10 @@ public class Specimen extends BaseExtensionEntity {
 	private String imageId;
 
 	private BigDecimal availableQuantity;
+
+	private BigDecimal parentConsumedQuantity;
+
+	private Boolean processAllParent;
 
 	private String collectionStatus;
 
@@ -504,6 +516,22 @@ public class Specimen extends BaseExtensionEntity {
 		this.availableQuantity = availableQuantity;
 	}
 
+	public BigDecimal getParentConsumedQuantity() {
+		return parentConsumedQuantity;
+	}
+
+	public void setParentConsumedQuantity(BigDecimal parentConsumedQuantity) {
+		this.parentConsumedQuantity = parentConsumedQuantity;
+	}
+
+	public Boolean getProcessAllParent() {
+		return processAllParent;
+	}
+
+	public void setProcessAllParent(Boolean processAllParent) {
+		this.processAllParent = processAllParent;
+	}
+
 	public String getCollectionStatus() {
 		return collectionStatus;
 	}
@@ -838,6 +866,18 @@ public class Specimen extends BaseExtensionEntity {
 
 	@Override
 	public String getEntityType() {
+		return getExtensionEntityType(getLineage());
+	}
+
+	public static String getExtensionEntityType(String lineage) {
+		if (ALIQUOT.equals(lineage)) {
+			return ALIQUOT_EXTN;
+		} else if (DERIVED.equals(lineage)) {
+			return DERIVATIVE_EXTN;
+		} else if (NEW.equals(lineage)) {
+			return PRIMARY_EXTN;
+		}
+
 		return EXTN;
 	}
 
@@ -1124,7 +1164,8 @@ public class Specimen extends BaseExtensionEntity {
 		setActivityStatus(Status.ACTIVITY_STATUS_DISABLED.getStatus());
 		virtualize(null, "Specimen deleted");
 		updateAvailableStatus();
-		FormUtil.getInstance().deleteRecords(getCpId(), Arrays.asList("Specimen", "SpecimenEvent", "SpecimenExtension"), getId());
+		FormUtil.getInstance().deleteRecords(getCpId(), Arrays.asList(
+			"Specimen", "SpecimenEvent", EXTN, PRIMARY_EXTN, DERIVATIVE_EXTN, ALIQUOT_EXTN), getId());
 		getDeleteEvents().add(SpecimenDeleteEvent.deleteEvent(this, getOpComments()));
 	}
 
@@ -1138,7 +1179,8 @@ public class Specimen extends BaseExtensionEntity {
 		setBarcode(Utility.stripTs(getBarcode()));
 		setActivityStatus(Status.ACTIVITY_STATUS_ACTIVE.getStatus());
 		updateAvailableStatus();
-		FormUtil.getInstance().undeleteRecords(getCpId(), Arrays.asList("Specimen", "SpecimenEvent", "SpecimenExtension"), getId());
+		FormUtil.getInstance().undeleteRecords(getCpId(), Arrays.asList(
+			"Specimen", "SpecimenEvent", EXTN, PRIMARY_EXTN, DERIVATIVE_EXTN, ALIQUOT_EXTN), getId());
 		getDeleteEvents().add(SpecimenDeleteEvent.undeleteEvent(this, getOpComments()));
 
 		if (includeChildren) {
@@ -1378,6 +1420,11 @@ public class Specimen extends BaseExtensionEntity {
 			reason = specimen.getComment();
 		}
 
+		// Collection changes debit the parent. Use the quantities supplied in this update,
+		// not the values from the previous pending version of this specimen.
+		setInitialQuantity(specimen.getInitialQuantity());
+		setParentConsumedQuantity(specimen.getParentConsumedQuantity());
+		setProcessAllParent(specimen.getProcessAllParent());
 		updateStatus(specimen, reason);
 
 		//
@@ -1393,7 +1440,6 @@ public class Specimen extends BaseExtensionEntity {
 		}
 
 		setImageId(specimen.getImageId());
-		setInitialQuantity(specimen.getInitialQuantity());
 		setAvailableQuantity(specimen.getAvailableQuantity());
 		setConcentration(specimen.getConcentration());
 
@@ -1555,7 +1601,7 @@ public class Specimen extends BaseExtensionEntity {
 				}
 
 				setCollectionStatus(collectionStatus);
-				decAliquotedQtyFromParent();
+				decChildQtyFromParent();
 				addServices();
 			}
 		}
@@ -2117,8 +2163,8 @@ public class Specimen extends BaseExtensionEntity {
 			autoCollectParentSpecimens(specimen);
 		}
 
-		if (specimen.isAliquot()) {
-			specimen.decAliquotedQtyFromParent();
+		if (specimen.isAliquot() || specimen.isDerivative()) {
+			specimen.decChildQtyFromParent();
 		}
 
 		specimen.occupyPosition();
@@ -2205,10 +2251,10 @@ public class Specimen extends BaseExtensionEntity {
 		updateCollectionStatus(PENDING);
 	}
 
-	public void decAliquotedQtyFromParent() {
-		if (isCollected() && isAliquot()) {
-			adjustParentSpecimenQty(initialQuantity);
-		}		
+	public void decChildQtyFromParent() {
+		if (isCollected() && (isAliquot() || isDerivative())) {
+			adjustParentSpecimenQty(isAliquot() ? initialQuantity : parentConsumedQuantity);
+		}
 	}
 	
 	public void occupyPosition() {
@@ -2689,17 +2735,21 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	private void adjustParentSpecimenQty(BigDecimal qty) {
+		if (qty == null) {
+			throw OpenSpecimenException.userError(isAliquot() ? SpecimenErrorCode.ALIQUOT_QTY_REQ :
+				SpecimenErrorCode.PARENT_CONSUMED_QTY_REQUIRED);
+		}
+		if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+			throw OpenSpecimenException.userError(SpecimenErrorCode.INVALID_QTY);
+		}
 		BigDecimal parentQty = parentSpecimen.getAvailableQuantity();
-		if (parentQty == null || NumUtil.isZero(parentQty) || qty == null) {
-			return;
+		if (parentSpecimen.getInitialQuantity() == null || parentQty == null) {
+			throw OpenSpecimenException.userError(SpecimenErrorCode.PARENT_QTY_REQUIRED, parentSpecimen.getLabel());
 		}
-
-		parentQty = parentQty.subtract(qty);
-		if (NumUtil.lessThanEqualsZero(parentQty)) {
-			parentQty = BigDecimal.ZERO;
+		if (qty.compareTo(parentQty) > 0) {
+			throw OpenSpecimenException.userError(SpecimenErrorCode.PARENT_QTY_INSUFFICIENT, parentSpecimen.getLabel());
 		}
-
-		parentSpecimen.setAvailableQuantity(parentQty);
+		parentSpecimen.setAvailableQuantity(parentQty.subtract(qty));
 	}
 
 	private void addCollectionDetails() {

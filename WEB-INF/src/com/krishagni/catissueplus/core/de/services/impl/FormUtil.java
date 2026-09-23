@@ -29,7 +29,8 @@ public class FormUtil {
 			Arrays.asList(
 				"Participant", "ParticipantExtension",
 				"SpecimenCollectionGroup", "VisitExtension",
-				"Specimen", "SpecimenExtension", "SpecimenEvent")
+				"Specimen", "SpecimenExtension", "SpecimenPrimaryExtension",
+				"SpecimenDerivedExtension", "SpecimenAliquotExtension", "SpecimenEvent")
 		);
 	}
 

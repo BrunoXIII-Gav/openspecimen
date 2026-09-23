@@ -89,6 +89,10 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 	private BigDecimal initialQty;
 	
 	private BigDecimal availableQty;
+
+	private BigDecimal parentConsumedQty;
+
+	private Boolean processAllParent;
 	
 	private BigDecimal concentration;
 
@@ -370,6 +374,22 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 		this.availableQty = availableQty;
 	}
 
+	public BigDecimal getParentConsumedQty() {
+		return parentConsumedQty;
+	}
+
+	public void setParentConsumedQty(BigDecimal parentConsumedQty) {
+		this.parentConsumedQty = parentConsumedQty;
+	}
+
+	public Boolean getProcessAllParent() {
+		return processAllParent;
+	}
+
+	public void setProcessAllParent(Boolean processAllParent) {
+		this.processAllParent = processAllParent;
+	}
+
 	public BigDecimal getConcentration() {
 		return concentration;
 	}
@@ -609,6 +629,8 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 		result.setPathology(PermissibleValue.getValue(specimen.getPathologicalStatus()));
 		result.setInitialQty(specimen.getInitialQuantity());
 		result.setAvailableQty(specimen.getAvailableQuantity());
+		result.setParentConsumedQty(specimen.getParentConsumedQuantity());
+		result.setProcessAllParent(specimen.getProcessAllParent());
 		result.setConcentration(specimen.getConcentration());
 		if (specimen.getParentSpecimen() != null) {
 			result.setParentId(specimen.getParentSpecimen().getId());

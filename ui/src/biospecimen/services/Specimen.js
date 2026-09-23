@@ -80,6 +80,18 @@ class Specimen {
     }
   }
 
+  createAliquots(spec) {
+    return http.post('specimens/aliquots', spec);
+  }
+
+  createDerivatives(specimens) {
+    return http.post('specimens/collect', specimens);
+  }
+
+  createChildren(specimens) {
+    return http.post('specimens/collect', specimens);
+  }
+
   async deleteSpecimen(specimenId, forceDelete, reason) {
     return http.delete('specimens/' + specimenId, {}, {forceDelete, reason});
   }
@@ -224,13 +236,22 @@ class Specimen {
     );
   }
 
-  async getDict(cpId) {
+  async getDict(cpId, lineage) {
     const aliases = ['specimen', 'calcSpecimen'];
     return cpSvc.getDictFor(
       cpId, aliases, 'specimen.extensionDetail',
-      specimenSchema, this.getCustomFieldsForm
+      specimenSchema, (id) => this.getCustomFieldsForm(id, lineage)
     ).then(
       fields => {
+        for (const name of ['specimen.processAllParent', 'specimen.parentConsumedQty']) {
+          if (!fields.some(field => field.name == name)) {
+            const systemField = specimenSchema.fields.find(field => field.name == name);
+            if (systemField) {
+              fields.push(util.clone(systemField));
+            }
+          }
+        }
+
         fields = fields.filter(field => field.name.indexOf('specimen.events') == -1)
         for (let field of fields) {
           if (field.href) {
@@ -268,11 +289,20 @@ class Specimen {
   }
 
   async getLayout(cpId, specimenFields) {
-    return cpSvc.getLayoutFor(cpId, 'specimen', 'specimen.extensionDetail', addEditLayout.layout, specimenFields);
+    const layout = await cpSvc.getLayoutFor(cpId, 'specimen', 'specimen.extensionDetail', addEditLayout.layout, specimenFields);
+    // These inputs are required to account for material consumed by a new derivative,
+    // including protocols that defined a custom specimen layout before they existed.
+    for (const name of ['specimen.processAllParent', 'specimen.parentConsumedQty']) {
+      if (!layout.rows.some(row => row.fields.some(field => field.name == name))) {
+        layout.rows.push({fields: [{name}]});
+      }
+    }
+
+    return layout;
   }
 
-  async getCustomFieldsForm(cpId) {
-    return http.get('specimens/extension-form', { cpId }).then(
+  async getCustomFieldsForm(cpId, lineage) {
+    return http.get('specimens/extension-form', { cpId, lineage }).then(
       (resp) => {
         if (!resp || !resp.formId) {
           return null;

@@ -267,6 +267,36 @@ class Form {
       allCps: false
     },
 
+    'SpecimenPrimaryExtension': {
+      entityType: 'SpecimenPrimaryExtension',
+      allowMultipleRecs: false,
+      allowNotifs: false,
+      allowEdits: false,
+      cpBased: true,
+      allowDelete: true,
+      allCps: false
+    },
+
+    'SpecimenDerivedExtension': {
+      entityType: 'SpecimenDerivedExtension',
+      allowMultipleRecs: false,
+      allowNotifs: false,
+      allowEdits: false,
+      cpBased: true,
+      allowDelete: true,
+      allCps: false
+    },
+
+    'SpecimenAliquotExtension': {
+      entityType: 'SpecimenAliquotExtension',
+      allowMultipleRecs: false,
+      allowNotifs: false,
+      allowEdits: false,
+      cpBased: true,
+      allowDelete: true,
+      allCps: false
+    },
+
     'SpecimenEvent': {
       entityType: 'SpecimenEvent',
       allowMultipleRecs: true,

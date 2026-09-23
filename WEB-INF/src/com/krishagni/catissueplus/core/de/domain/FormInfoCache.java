@@ -79,7 +79,12 @@ public class FormInfoCache implements FormContextProcessor, FormEventsListener, 
 			}
 		}
 
-		return ctxtInfo.getFormName(entityTypeKey);
+		String formName = ctxtInfo.getFormName(entityTypeKey);
+		if (StringUtils.isBlank(formName) && cpBased && isLineageSpecificSpecimenExtension(entityType)) {
+			formName = getFormName(true, "SpecimenExtension", entityId);
+		}
+
+		return formName;
 	}
 
 	public Long getFormContext(Long cpId, String entityType, String formName) {
@@ -101,7 +106,12 @@ public class FormInfoCache implements FormContextProcessor, FormEventsListener, 
 			}
 		}
 
-		return ctxtInfo.getFormContext(entityTypeKey, formName);
+		Long formCtxtId = ctxtInfo.getFormContext(entityTypeKey, formName);
+		if (formCtxtId == null && cpBased && isLineageSpecificSpecimenExtension(entityType)) {
+			formCtxtId = getFormContext(true, "SpecimenExtension", entityId, formName);
+		}
+
+		return formCtxtId;
 	}
 
 	public Container getForm(String formName) {
@@ -176,7 +186,18 @@ public class FormInfoCache implements FormContextProcessor, FormEventsListener, 
 
 			contextInfo.removeFormName(entityTypeKey);
 			contextInfo.removeFormContext(formCtxt.getIdentifier());
+			if ("SpecimenExtension".equals(formCtxt.getEntityType())) {
+				contextInfo.removeFormName("SpecimenPrimaryExtension");
+				contextInfo.removeFormName("SpecimenDerivedExtension");
+				contextInfo.removeFormName("SpecimenAliquotExtension");
+			}
 		}
+	}
+
+	private boolean isLineageSpecificSpecimenExtension(String entityType) {
+		return "SpecimenPrimaryExtension".equals(entityType) ||
+			"SpecimenDerivedExtension".equals(entityType) ||
+			"SpecimenAliquotExtension".equals(entityType);
 	}
 
 	private FormService getFormService() {
@@ -287,4 +308,3 @@ public class FormInfoCache implements FormContextProcessor, FormEventsListener, 
 		}
 	}
 }
-

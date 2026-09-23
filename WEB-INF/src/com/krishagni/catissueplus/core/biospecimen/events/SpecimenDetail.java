@@ -513,7 +513,8 @@ public class SpecimenDetail extends SpecimenInfo {
 
 		if (anticipated.getDefaultCustomFieldValues() != null && !anticipated.getDefaultCustomFieldValues().isEmpty()) {
 			Long cpId = anticipated.getCollectionProtocol().getId();
-			DeObject extn = DeObject.fromValueMap(cpId, Specimen.EXTN, anticipated.getDefaultCustomFieldValues());
+			DeObject extn = DeObject.fromValueMap(cpId,
+				Specimen.getExtensionEntityType(anticipated.getLineage()), anticipated.getDefaultCustomFieldValues());
 			result.setExtensionDetail(ExtensionDetail.from(extn, false, true));
 		}
 

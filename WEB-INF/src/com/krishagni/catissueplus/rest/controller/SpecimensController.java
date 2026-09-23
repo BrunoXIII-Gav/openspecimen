@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.SpecimenErrorCode;
 import com.krishagni.catissueplus.core.biospecimen.events.CpEntityDeleteCriteria;
+import com.krishagni.catissueplus.core.biospecimen.events.SpecimenAliquotsSpec;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenInfo;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenQueryCriteria;
@@ -186,6 +188,15 @@ public class SpecimensController {
 	@ResponseBody	
 	public SpecimenDetail createSpecimen(@RequestBody SpecimenDetail detail) {
 		ResponseEvent<SpecimenDetail> resp = specimenSvc.createSpecimen(getRequest(detail));
+		resp.throwErrorIfUnsuccessful();
+		return resp.getPayload();
+	}
+
+	@RequestMapping(method = RequestMethod.POST, value = "/aliquots")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public List<SpecimenDetail> createAliquots(@RequestBody SpecimenAliquotsSpec detail) {
+		ResponseEvent<List<SpecimenDetail>> resp = specimenSvc.createAliquots(getRequest(detail));
 		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}
@@ -424,9 +435,12 @@ public class SpecimensController {
 	@ResponseBody
 	public Map<String, Object> getForm(
 			@RequestParam(value = "cpId", required = false, defaultValue = "-1")
-			Long cpId) {
+			Long cpId,
+			@RequestParam(value = "lineage", required = false)
+			String lineage) {
 
-		return formSvc.getExtensionInfo(cpId, Specimen.EXTN);
+		String entityType = StringUtils.isBlank(lineage) ? Specimen.EXTN : Specimen.getExtensionEntityType(lineage);
+		return formSvc.getExtensionInfo(cpId, entityType);
 	}
 
 	private <T> RequestEvent<T> getRequest(T payload) {

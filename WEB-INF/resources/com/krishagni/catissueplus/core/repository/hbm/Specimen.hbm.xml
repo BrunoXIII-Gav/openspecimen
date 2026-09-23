@@ -40,6 +40,10 @@
     <property name="createdOn" column="CREATED_ON" />
 
     <property name="availableQuantity" column="AVAILABLE_QUANTITY" />
+
+    <property name="parentConsumedQuantity" column="PARENT_CONSUMED_QUANTITY" />
+
+    <property name="processAllParent" column="PROCESS_ALL_PARENT" />
     
     <property name="concentration" column="CONCENTRATION"/>
 

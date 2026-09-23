@@ -779,6 +779,9 @@ public class CollectionProtocolGroupServiceImpl implements CollectionProtocolGro
 	private boolean isMultipleFormsLevel(String level) {
 		return !level.equals("ParticipantExtension") &&
 			!level.equals("VisitExtension") &&
-			!level.equals("SpecimenExtension");
+			!level.equals("SpecimenExtension") &&
+			!level.equals("SpecimenPrimaryExtension") &&
+			!level.equals("SpecimenDerivedExtension") &&
+			!level.equals("SpecimenAliquotExtension");
 	}
 }

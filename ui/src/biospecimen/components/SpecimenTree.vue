@@ -116,7 +116,7 @@ export default {
     },
 
     items: function() {
-      return this._flattenSpecimens(this.specimens || [], 0);
+      return this._flattenSpecimens(this.specimens || [], 0, undefined, this.specimen);
     },
 
     selectedSpecimens: function() {
@@ -132,11 +132,7 @@ export default {
     },
 
     fields: function() {
-      if (this.treeCfg.fields && this.treeCfg.fields.length > 0) {
-        return this.treeCfg.fields;
-      }
-
-      return [
+      const configuredFields = this.treeCfg.fields && this.treeCfg.fields.length > 0 ? this.treeCfg.fields : [
         {
           type: 'specimen-description',
           name: 'specimen',
@@ -155,6 +151,28 @@ export default {
           labelCode: 'specimens.location',
         }
       ];
+
+      // The initial quantity is the output entered when a derivative is created.
+      // Available quantity is deliberately not shown here because it can later decrease.
+      return configuredFields.concat({
+        type: 'specimen-measure',
+        name: 'derivedQty',
+        labelCode: 'specimens.derivative_quantity',
+        specimen: 'specimen',
+        measure: 'quantity',
+        value: ({specimen}) => specimen.lineage == 'Derived' ? specimen.initialQty : null
+      }, {
+        type: 'text',
+        name: 'parentProcessedQty',
+        labelCode: 'specimens.parent_consumed_quantity',
+        value: ({specimen, parentSpecimen}) => {
+          if (specimen.lineage != 'Derived' || specimen.parentConsumedQty == null) {
+            return '-';
+          }
+
+          return this._formatQuantity(specimen.parentConsumedQty, parentSpecimen);
+        }
+      });
     },
 
     pageTopLine: function() {
@@ -280,7 +298,7 @@ export default {
       this.pendingHidden = true;
     },
 
-    _flattenSpecimens: function(specimens, depth, parentUid) {
+    _flattenSpecimens: function(specimens, depth, parentUid, parentSpecimen) {
       let idx = 0;
       let result = [];
       for (const specimen of specimens) {
@@ -296,14 +314,17 @@ export default {
         const {lineage, children} = specimen;
         if (hideDerivatives && lineage == 'Derived' &&
              (children && children.length > 0 && children.every(aliquot => aliquot.lineage == 'Aliquot'))) {
-          const aliquots = this._flattenSpecimens(children || [], depth, parentUid);
+          const aliquots = this._flattenSpecimens(children || [], depth, parentUid, specimen);
           Array.prototype.push.apply(result, aliquots);
         } else {
           const uid = parentUid !== undefined && parentUid !== null ? parentUid + '_' + idx : idx;
-          const item = {cpr: this.cpr, visit: this.visit, specimen, depth, expanded: true, show: true, uid, parentUid};
+          const item = {
+            cpr: this.cpr, visit: this.visit, specimen, parentSpecimen,
+            depth, expanded: true, show: true, uid, parentUid
+          };
           result.push(item);
       
-          const flattened = this._flattenSpecimens(children || [], depth + 1, uid);
+          const flattened = this._flattenSpecimens(children || [], depth + 1, uid, specimen);
           Array.prototype.push.apply(result, flattened);
           item.hasChildren = (flattened || []).length > 0;
         }
@@ -312,6 +333,11 @@ export default {
       }
 
       return result;
+    },
+
+    _formatQuantity: function(quantity, specimen) {
+      const unit = specimen && util.getSpecimenMeasureUnit(specimen, 'quantity');
+      return quantity + (unit ? ' ' + unit : '');
     },
 
     _getDescendants: function(items, item) {

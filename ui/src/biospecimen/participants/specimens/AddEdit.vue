@@ -26,7 +26,13 @@
     </os-page-head>
 
     <os-page-body>
-      <os-form ref="spmnForm" :schema="ctx.addEditFs" :data="dataCtx" @input="handleInput($event)">
+      <os-form ref="spmnForm" :schema="ctx.addEditFs" :data="dataCtx"
+        :reference-prefix="'specimen-edit-' + cpr.id + '-' + dataCtx.specimen.id" @input="handleInput($event)">
+        <template #static-fields>
+          <os-field-references :cp-id="dataCtx.cp.id" target="specimen" :cpr-id="cpr.id" :visit-id="visit.id"
+            :specimen-id="dataCtx.specimen.id" :parent-id="dataCtx.specimen.parentId"
+            :target-prefix="'specimen-edit-' + cpr.id + '-' + dataCtx.specimen.id" />
+        </template>
         <div>
           <os-button primary :label="$t(!dataCtx.specimen.id ? 'common.buttons.add' : 'common.buttons.update')"
             @click="saveOrUpdate()" />
@@ -47,8 +53,10 @@ import authSvc    from '@/common/services/Authorization.js';
 import formUtil   from '@/common/services/FormUtil.js';
 import routerSvc  from '@/common/services/Router.js';
 import util       from '@/common/services/Util.js';
+import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 
 export default {
+  components: {'os-field-references': FieldReferences},
   props: ['cpr', 'visit', 'specimen'],
 
   inject: ['cpViewCtx'],
@@ -99,7 +107,10 @@ export default {
 
   created() {
     const cpCtx = this.cpViewCtx;
-    const promises = [ cpCtx.getSpecimenDict(true), cpCtx.getSpecimenAddEditLayout() ];
+    const promises = [
+      cpCtx.getSpecimenDict(true, this.dataCtx.specimen.lineage),
+      cpCtx.getSpecimenAddEditLayout(this.dataCtx.specimen.lineage)
+    ];
     Promise.all(promises).then(
       ([fields, layout]) => {
         const formSchema = this.ctx.addEditFs = formUtil.getFormSchema(fields, layout);

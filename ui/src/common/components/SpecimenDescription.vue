@@ -19,7 +19,8 @@ export default {
 
   data() {
     return {
-      tmpl: null
+      tmpl: null,
+      visibleFields: null
     }
   },
 
@@ -81,13 +82,40 @@ export default {
     }
   },
 
-  created() {
-    cpSvc.getWorkflowProperty(this.object.cpId, 'common', 'spmnDescTmpl').then(tmpl => this.tmpl = tmpl);
+  watch: {
+    'object.cpId': {
+      immediate: true,
+      handler() {
+        this._loadDescriptionSettings();
+      }
+    }
   },
 
   methods: {
+    async _loadDescriptionSettings() {
+      const cpId = this.object.cpId;
+      this.tmpl = null;
+      this.visibleFields = null;
+
+      const [tmpl, dictionary] = await Promise.all([
+        cpSvc.getWorkflowProperty(cpId, 'common', 'spmnDescTmpl'),
+        cpSvc.getWorkflow(cpId, 'dictionary')
+      ]);
+
+      // A table row can be reused while navigating. Ignore a late response
+      // from the previously displayed collection protocol.
+      if (cpId != this.object.cpId) {
+        return;
+      }
+
+      this.tmpl = tmpl;
+      if (dictionary?.osFieldsEditor?.version == 1 && Array.isArray(dictionary.fields)) {
+        this.visibleFields = dictionary.fields.map(field => field.name);
+      }
+    },
+
     _getDescription: function(value, attrs) {
-      return util.getSpecimenDescription(value, attrs);
+      return util.getSpecimenDescription(value, {...attrs, visibleFields: this.visibleFields});
     }
   }
 }

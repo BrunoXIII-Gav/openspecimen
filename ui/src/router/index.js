@@ -497,6 +497,21 @@ const routes = [
         props: (route) => ({pvId: route.params && route.params.pvId, attribute: route.query.attribute})
       },
 
+      /*********************************
+       * Specimen type units module    *
+       *********************************/
+      {
+        path: 'specimen-type-units',
+        name: 'SpecimenTypeUnitsList',
+        component: () => import(/* webpackChunkName: "specimen-type-units" */ '../administrative/specimen-type-units/List.vue')
+      },
+      {
+        path: 'specimen-type-unit-addedit/:unitId',
+        name: 'SpecimenTypeUnitAddEdit',
+        component: () => import(/* webpackChunkName: "specimen-type-units" */ '../administrative/specimen-type-units/AddEdit.vue'),
+        props: (route) => ({unitId: route.params && route.params.unitId})
+      },
+
       /*****************************
        *****************************
        * Institutes module         *
@@ -1433,6 +1448,11 @@ const routes = [
                 path: 'field-settings',
                 name: 'CpDetail.Settings.FieldSettings',
                 component: () => import(/* webpackChunkName: "cps" */ '../biospecimen/cps/FieldSettings.vue')
+              },
+              {
+                path: 'field-references',
+                name: 'CpDetail.Settings.FieldReferences',
+                component: () => import(/* webpackChunkName: "cps" */ '../biospecimen/cps/FieldReferences.vue')
               }
             ]
           }
@@ -1711,6 +1731,11 @@ const routes = [
                             path: 'addedit',
                             name: 'SpecimenAddEdit',
                             component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/specimens/AddEdit.vue')
+                          },
+                          {
+                            path: 'create-children',
+                            name: 'SpecimenCreateChildren',
+                            component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/specimens/CreateChildren.vue')
                           },
                           {
                             path: 'addedit-event',

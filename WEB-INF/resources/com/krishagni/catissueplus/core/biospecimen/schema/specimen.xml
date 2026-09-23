@@ -94,6 +94,16 @@
     </field>
 
     <field>
+      <caption>#getMessage("specimen_parent_consumed_quantity")</caption>
+      <attribute>parentConsumedQty</attribute>
+    </field>
+
+    <field>
+      <caption>#getMessage("specimen_process_all_parent")</caption>
+      <attribute>processAllParent</attribute>
+    </field>
+
+    <field>
       <caption>#getMessage("specimen_concentration")</caption>
       <attribute>concentration</attribute>
     </field>

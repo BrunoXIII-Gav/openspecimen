@@ -17,6 +17,8 @@ import com.krishagni.catissueplus.core.common.access.SiteCpPair;
 import com.krishagni.catissueplus.core.common.repository.Dao;
 
 public interface SpecimenDao extends Dao<Specimen> {
+	void lockForQuantityUpdate(Specimen specimen);
+
 	List<Specimen> getSpecimens(SpecimenListCriteria crit);
 
 	Integer getSpecimensCount(SpecimenListCriteria crit);

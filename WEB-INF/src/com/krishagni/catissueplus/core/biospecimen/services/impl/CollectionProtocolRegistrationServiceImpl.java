@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -809,7 +810,8 @@ public class CollectionProtocolRegistrationServiceImpl implements CollectionProt
 		raiseErrorIfSpecimenCentric(cpr);
 
 		OpenSpecimenException ose = new OpenSpecimenException(ErrorType.USER_ERROR);
-		ensureValidAndUniquePpid(existing, cpr, ose);
+		boolean inheritedPpid = inheritPpidFromExistingRegistration(cpr);
+		ensureValidAndUniquePpid(existing, cpr, inheritedPpid, ose);
 		ensureUniqueBarcode(existing, cpr, ose);
 		if (existing == null) {
 			if (cpr.isDeleted()) {
@@ -848,6 +850,33 @@ public class CollectionProtocolRegistrationServiceImpl implements CollectionProt
 
 		EventPublisher.getInstance().publish(new CprSavedEvent(cpr));
 		return cpr;
+	}
+
+	/**
+	 * Reuses the participant's earliest PPID when the participant is registered to
+	 * another collection protocol. This keeps specimen labels based on %PPI% and
+	 * %PPI_UID% continuous across collection protocols, while a participant with
+	 * no prior registration continues to use the target protocol's PPID generator.
+	 */
+	private boolean inheritPpidFromExistingRegistration(CollectionProtocolRegistration cpr) {
+		if (StringUtils.isNotBlank(cpr.getPpid()) || cpr.getParticipant() == null || cpr.getParticipant().getId() == null) {
+			return false;
+		}
+
+		Participant participant = daoFactory.getParticipantDao().getById(cpr.getParticipant().getId());
+		if (participant == null) {
+			return false;
+		}
+
+		return participant.getCprs().stream()
+			.filter(existingCpr -> !existingCpr.getCollectionProtocol().equals(cpr.getCollectionProtocol()))
+			.filter(existingCpr -> StringUtils.isNotBlank(existingCpr.getPpid()))
+			.min(Comparator.comparing(CollectionProtocolRegistration::getId))
+			.map(existingCpr -> {
+				cpr.setPpid(existingCpr.getPpid());
+				return true;
+			})
+			.orElse(false);
 	}
 
 	private MatchedRegistrationsList getRegistrationMatches(CollectionProtocolRegistrationDetail input) {
@@ -1110,7 +1139,11 @@ public class CollectionProtocolRegistrationServiceImpl implements CollectionProt
 		}
 	}
 
-	private void ensureValidAndUniquePpid(CollectionProtocolRegistration existing, CollectionProtocolRegistration cpr, OpenSpecimenException ose) {
+	private void ensureValidAndUniquePpid(
+		CollectionProtocolRegistration existing,
+		CollectionProtocolRegistration cpr,
+		boolean inheritedPpid,
+		OpenSpecimenException ose) {
 		if (existing != null && existing.getPpid().equals(cpr.getPpid())) {
 			return;
 		}
@@ -1133,7 +1166,7 @@ public class CollectionProtocolRegistrationServiceImpl implements CollectionProt
 			// PPID format is specified
 			//
 			
-			if (!cp.isManualPpidEnabled()) {
+			if (!cp.isManualPpidEnabled() && !inheritedPpid) {
 				ose.addError(CprErrorCode.MANUAL_PPID_NOT_ALLOWED);
 				return;
 			}
@@ -1216,7 +1249,8 @@ public class CollectionProtocolRegistrationServiceImpl implements CollectionProt
 				allSpmns = specimens.stream().map(Specimen::getDescendants).flatMap(List::stream).collect(Collectors.toList());
 			}
 
-			DeObject.createExtensions(true, Specimen.EXTN, visit.getCpId(), allSpmns);
+			allSpmns.stream().collect(Collectors.groupingBy(Specimen::getEntityType)).forEach(
+				(entityType, lineageSpecimens) -> DeObject.createExtensions(true, entityType, visit.getCpId(), lineageSpecimens));
 		}
 
 		return SpecimenDetail.getSpecimens(visit, anticipatedSpecimens, specimens, false, excludePhi, excludeChildren);

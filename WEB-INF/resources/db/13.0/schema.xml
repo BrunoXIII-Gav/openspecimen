@@ -186,4 +186,10 @@
       );
     </sql>
   </changeSet>
+  <changeSet author="codex" id="Specimen parent processing quantity">
+    <addColumn tableName="CATISSUE_SPECIMEN">
+      <column name="PARENT_CONSUMED_QUANTITY" type="${decimal.type}(24,8)" />
+      <column name="PROCESS_ALL_PARENT" type="${boolean.type}" />
+    </addColumn>
+  </changeSet>
 </databaseChangeLog>

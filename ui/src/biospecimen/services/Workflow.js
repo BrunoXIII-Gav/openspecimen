@@ -39,12 +39,12 @@ class Workflow {
 
   async createAliquots(specimens) {
     const {cpId, cprId, visitId, id: parentId} = specimens[0];
-    routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1}, {parentId, lineage: 'Aliquot'});
+    routerSvc.goto('SpecimenCreateChildren', {cpId, cprId, visitId, specimenId: -1}, {parentId, lineage: 'Aliquot'});
   }
 
   async createDerivedSpecimens(specimens) {
     const {cpId, cprId, visitId, id: parentId} = specimens[0];
-    routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1}, {parentId, lineage: 'Derived'});
+    routerSvc.goto('SpecimenCreateChildren', {cpId, cprId, visitId, specimenId: -1}, {parentId, lineage: 'Derived'});
   }
 
   async createPooledSpecimens(specimens) {

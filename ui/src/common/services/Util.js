@@ -635,20 +635,37 @@ class Util {
     specimen = specimen || {};
     opts = opts || {};
 
-    const ns = i18n.msg('pvs.not_specified');
     const detailed = opts.detailed == 'true' || opts.detailed == true;
+    const visibleFields = opts.visibleFields;
+    const isVisible = (fieldName) => !visibleFields || visibleFields.includes(fieldName);
+    const isSpecified = (value) => {
+      if (value === null || value === undefined || String(value).trim() == '') {
+        return false;
+      }
+
+      // The persisted default PV is usually in English, whereas the UI can be
+      // in any supported locale. Do not let either representation leak into a
+      // generated specimen description.
+      const normalizedValue = String(value).trim().toLowerCase();
+      const notSpecifiedValues = new Set([
+        'not specified',
+        'no especificado',
+        String(i18n.msg('pvs.not_specified')).trim().toLowerCase()
+      ]);
+      return !notSpecifiedValues.has(normalizedValue);
+    };
 
     let result = '';
     if (!specimen.lineage || specimen.lineage == 'New' || detailed) {
-      if (specimen.pathology && specimen.pathology != ns) {
+      if (isVisible('specimen.pathology') && isSpecified(specimen.pathology)) {
         result += specimen.pathology + ' ';
       }
 
-      if (specimen.type) {
+      if (isVisible('specimen.type') && isSpecified(specimen.type)) {
         result += specimen.type;
       }
 
-      if (specimen.specimenClass == 'Tissue' && specimen.anatomicSite && specimen.anatomicSite != ns) {
+      if (specimen.specimenClass == 'Tissue' && isVisible('specimen.anatomicSite') && isSpecified(specimen.anatomicSite)) {
         result += ' ' + i18n.msg('specimens.extracted_from', {anatomicSite: specimen.anatomicSite});
       }
 
@@ -658,15 +675,18 @@ class Util {
           collectionContainer = specimen.collectionEvent.container;
         }
 
-        if (collectionContainer && collectionContainer != ns) {
+        if (isVisible('specimen.collectionEvent.container') && isSpecified(collectionContainer)) {
           result += ' ' + i18n.msg('specimens.collected_in', {container: collectionContainer});
         }
       }
     } else if (specimen.lineage == 'Derived') {
-      result += specimen.lineage + ' ' + specimen.type;
+      result += specimen.lineage;
+      if (isVisible('specimen.type') && isSpecified(specimen.type)) {
+        result += ' ' + specimen.type;
+      }
     } else if (specimen.lineage == 'Aliquot') {
       result += specimen.lineage;
-      if (opts.showAliquotType == 'true' || opts.showAliquotType == true) {
+      if (isVisible('specimen.type') && (opts.showAliquotType == 'true' || opts.showAliquotType == true)) {
         result += ' ' + specimen.type;
       }
     }

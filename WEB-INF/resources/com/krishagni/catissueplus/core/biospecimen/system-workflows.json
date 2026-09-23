@@ -602,6 +602,21 @@
                             "width": "100px"
                         },
                         {
+                            "name": "specimen.parentConsumedQty",
+                            "caption": "Parent Quantity Processed",
+                            "type": "number",
+                            "maxFractionDigits": 8,
+                            "optional": true,
+                            "width": "140px"
+                        },
+                        {
+                            "name": "specimen.processAllParent",
+                            "caption": "Process All Parent Quantity",
+                            "type": "toggle-checkbox",
+                            "optional": true,
+                            "width": "140px"
+                        },
+                        {
                             "name": "specimen.createdOn",
                             "caption" : "Created On",
                             "type" : "date",

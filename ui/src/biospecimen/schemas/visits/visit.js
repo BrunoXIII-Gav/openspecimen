@@ -38,6 +38,12 @@ export default {
         "Missed Collection": () => window.osSvc.i18nSvc.msg('visits.status_values.missed_collection'),
         "Not Collected":     () => window.osSvc.i18nSvc.msg('visits.status_values.not_collected')
       },
+      "valueI18nKeys": {
+        "Complete": "visits.status_values.complete",
+        "Pending": "visits.status_values.pending",
+        "Missed Collection": "visits.status_values.missed_collection",
+        "Not Collected": "visits.status_values.not_collected"
+      },
       "validations": {
         "required": {
           "messageCode": "visits.status_req"

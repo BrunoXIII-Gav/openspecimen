@@ -70,6 +70,12 @@ export default {
         "Not Collected":     () => window.osSvc.i18nSvc.msg('specimens.collection_status_values.not_collected'),
         "Pending":           () => window.osSvc.i18nSvc.msg('specimens.collection_status_values.pending')
       },
+      "valueI18nKeys": {
+        "Collected": "specimens.collection_status_values.collected",
+        "Missed Collection": "specimens.collection_status_values.missed_collection",
+        "Not Collected": "specimens.collection_status_values.not_collected",
+        "Pending": "specimens.collection_status_values.pending"
+      },
       "validations": {
         "required": {
           "messageCode": "specimens.collection_status_req"
@@ -115,6 +121,23 @@ export default {
           "messageCode": "specimens.available_quantity_req"
         }
       }
+    },
+    {
+      "type": "booleanCheckbox",
+      "labelCode": "specimens.process_all_parent",
+      "name": "specimen.processAllParent",
+      "showWhen": "specimen.lineage == 'Derived' && specimen.parentId > 0",
+      "showInOverviewWhen": "specimen.lineage == 'Derived' && specimen.processAllParent",
+      "disableWhen": "!!specimen.id && specimen.status == 'Collected'"
+    },
+    {
+      "type": "number",
+      "labelCode": "specimens.parent_consumed_quantity",
+      "name": "specimen.parentConsumedQty",
+      "maxFractionDigits": 8,
+      "showWhen": "specimen.lineage == 'Derived' && specimen.parentId > 0 && !specimen.processAllParent",
+      "showInOverviewWhen": "specimen.lineage == 'Derived' && specimen.parentConsumedQty != null",
+      "disableWhen": "!!specimen.id && specimen.status == 'Collected'"
     },
     {
       "type": "specimen-measure",

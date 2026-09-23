@@ -259,6 +259,19 @@ class CollectionProtocol {
         let fields = (dict.fields || []).filter(field => objAliases.some(alias => field.name.indexOf(alias) == 0));
         if (fields.length > 0) {
           fields = formUtil.sdeFieldsToDict(fields);
+          const defaultFields = (defSchema.fields || []).reduce(
+            (result, field) => (result[field.name] = field) && result, {}
+          );
+          fields = fields.map(
+            (field) => {
+              const defaultField = defaultFields[field.name];
+              if (!defaultField?.valueI18nKeys) {
+                return field;
+              }
+
+              return {...field, valueI18nKeys: util.clone(defaultField.valueI18nKeys)};
+            }
+          );
         } else {
           fields = util.clone(defSchema.fields);
         }

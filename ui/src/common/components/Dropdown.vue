@@ -50,7 +50,7 @@ import exprUtil from '@/common/services/ExpressionUtil.js';
 import util from '@/common/services/Util.js';
 
 export default {
-  props: ['modelValue', 'listSource', 'form', 'disabled', 'context', 'tabOrder', 'dataKey', 'optional', 'unique'],
+  props: ['modelValue', 'listSource', 'form', 'disabled', 'context', 'tabOrder', 'dataKey', 'optional', 'unique', 'valueI18nKeys'],
 
   emits: ['update:modelValue'],
 
@@ -89,12 +89,12 @@ export default {
 
       let selectedVal = await this.selectedValue() || [];
       if (this.listSource.options) {
-        this.ctx.options = this.dedup(selectedVal, this.listSource.options);
+        this.ctx.options = this.localizeOptions(this.dedup(selectedVal, this.listSource.options));
       } else if (typeof this.listSource.loadFn == 'function') {
         let self = this;
         this.listSource.loadFn({context: this.context, query: query, maxResults: 100}).then(
           function(options) {
-            self.ctx.options = self.dedup(selectedVal, options || []);
+            self.ctx.options = self.localizeOptions(self.dedup(selectedVal, options || []));
           }
         );
       } else if (typeof this.listSource.apiUrl == 'string') {
@@ -238,6 +238,23 @@ export default {
       return result;
     },
 
+    localizeOptions(options) {
+      if (!this.valueI18nKeys || typeof this.displayProp != 'string') {
+        return options;
+      }
+
+      return options.map(
+        (option) => {
+          if (!option || typeof option != 'object') {
+            return option;
+          }
+
+          const key = this.valueI18nKeys[option[this.selectProp]];
+          return key ? {...option, [this.displayProp]: this.$t(key)} : option;
+        }
+      );
+    },
+
     onChange: function(event) {
       this.optionSelected = !!event.value;
     },
@@ -348,16 +365,16 @@ export default {
     modelValue: async function() {
       let selectedVal = await this.selectedValue();
       if (this.ctx.options) {
-        this.ctx.options = this.dedup(selectedVal, this.ctx.options);
+        this.ctx.options = this.localizeOptions(this.dedup(selectedVal, this.ctx.options));
       } else {
-        this.ctx.options = selectedVal;
+        this.ctx.options = this.localizeOptions(selectedVal);
       }
     }
   },
 
   mounted() {
     if (this.modelValue) {
-      this.selectedValue().then(val => this.ctx.options = val);
+      this.selectedValue().then(val => this.ctx.options = this.localizeOptions(val));
     }
   }
 }

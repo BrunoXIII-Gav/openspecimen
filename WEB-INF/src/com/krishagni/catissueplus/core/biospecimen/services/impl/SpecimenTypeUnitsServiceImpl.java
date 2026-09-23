@@ -57,6 +57,17 @@ public class SpecimenTypeUnitsServiceImpl implements SpecimenTypeUnitsService, I
 
 	@Override
 	@PlusTransactional
+	public ResponseEvent<SpecimenTypeUnitDetail> getUnit(RequestEvent<Long> req) {
+		SpecimenTypeUnit unit = daoFactory.getSpecimenTypeUnitDao().getById(req.getPayload());
+		if (unit == null) {
+			return ResponseEvent.userError(SpecimenTypeUnitError.NOT_FOUND, req.getPayload());
+		}
+
+		return ResponseEvent.response(SpecimenTypeUnitDetail.from(unit));
+	}
+
+	@Override
+	@PlusTransactional
 	public ResponseEvent<Long> getUnitsCount(RequestEvent<SpecimenTypeUnitsListCriteria> req) {
 		return ResponseEvent.response(daoFactory.getSpecimenTypeUnitDao().getUnitsCount(req.getPayload()));
 	}

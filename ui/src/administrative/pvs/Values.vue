@@ -20,6 +20,8 @@
           <span v-if="!ctx.selectedPvs || ctx.selectedPvs.length == 0">
             <os-button left-icon="plus" :label="$t('common.buttons.create')"
               @click="createPv" />
+            <os-button v-if="attribute === 'specimen_unit'" left-icon="cog"
+              :label="$t('pvs.configure_specimen_type_units')" @click="configureSpecimenTypeUnits" />
           </span>
           <span v-else>
             <os-button left-icon="trash" :label="$t('common.buttons.delete')" @click="deletePvs" />
@@ -107,6 +109,10 @@ export default {
 
     createPv() {
       routerSvc.goto('PvAddEdit', {pvId: -1}, {attribute: this.attribute});
+    },
+
+    configureSpecimenTypeUnits() {
+      routerSvc.goto('SpecimenTypeUnitsList');
     },
 
     getAttributeLabel(attribute) {

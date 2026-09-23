@@ -47,6 +47,7 @@ class PermissibleValueAdmin {
       'site_type',
       'specimen_biohazard',
       'specimen_type',
+      'specimen_unit',
       'vital_status'
     ];
   }

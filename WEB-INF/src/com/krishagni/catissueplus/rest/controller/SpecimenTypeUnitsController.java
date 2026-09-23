@@ -56,6 +56,13 @@ public class SpecimenTypeUnitsController {
 		return ResponseEvent.unwrap(unitsSvc.getUnits(RequestEvent.wrap(crit)));
 	}
 
+	@RequestMapping(method = RequestMethod.GET, value = "/{id}")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public SpecimenTypeUnitDetail getUnit(@PathVariable("id") Long id) {
+		return ResponseEvent.unwrap(unitsSvc.getUnit(RequestEvent.wrap(id)));
+	}
+
 	@RequestMapping(method = RequestMethod.GET, value = "/count")
 	@ResponseStatus(HttpStatus.OK)
 	@ResponseBody

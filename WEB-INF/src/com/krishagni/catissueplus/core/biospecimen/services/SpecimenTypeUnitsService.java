@@ -10,6 +10,8 @@ import com.krishagni.catissueplus.core.common.events.ResponseEvent;
 public interface SpecimenTypeUnitsService {
 	ResponseEvent<List<SpecimenTypeUnitDetail>> getUnits(RequestEvent<SpecimenTypeUnitsListCriteria> req);
 
+	ResponseEvent<SpecimenTypeUnitDetail> getUnit(RequestEvent<Long> req);
+
 	ResponseEvent<Long> getUnitsCount(RequestEvent<SpecimenTypeUnitsListCriteria> req);
 
 	ResponseEvent<SpecimenTypeUnitDetail> createUnit(RequestEvent<SpecimenTypeUnitDetail> req);

@@ -7,7 +7,7 @@
         v-model="selected"
         :options="ctx.options"
         :data-key="dataKey"
-        :option-label="displayProp"
+        :option-label="effectiveDisplayProp"
         :option-value="selectProp"
         :filter="true"
         :auto-filter-focus="true"
@@ -26,7 +26,7 @@
         v-model="selected"
         :options="ctx.options"
         :data-key="dataKey"
-        :option-label="displayProp"
+        :option-label="effectiveDisplayProp"
         :option-value="selectProp"
         :filter="true"
         :auto-filter-focus="true"
@@ -250,7 +250,11 @@ export default {
           }
 
           const key = this.valueI18nKeys[option[this.selectProp]];
-          return key ? {...option, [this.displayProp]: this.$t(key)} : option;
+          // A protocol dictionary can use the same property as both value and
+          // label (for example {value: 'Complete'}). Never translate that
+          // property: PrimeVue would then submit the translated label instead
+          // of the backend's canonical status code.
+          return key ? {...option, [this.effectiveDisplayProp]: this.$t(key)} : option;
         }
       );
     },
@@ -294,10 +298,10 @@ export default {
         return null;
       }
 
-      if (typeof this.displayProp == 'function') {
-        return this.displayProp(option);
-      } else if (this.displayProp) {
-        return option[this.displayProp];
+      if (typeof this.effectiveDisplayProp == 'function') {
+        return this.effectiveDisplayProp(option);
+      } else if (this.effectiveDisplayProp) {
+        return option[this.effectiveDisplayProp] || option[this.displayProp] || option[this.selectProp];
       }
 
       return option;
@@ -346,6 +350,11 @@ export default {
 
     displayProp: function() {
       return this.listSource.displayProp;
+    },
+
+    effectiveDisplayProp: function() {
+      return this.valueI18nKeys && typeof this.displayProp == 'string' &&
+        this.displayProp == this.selectProp ? '__osTranslatedLabel' : this.displayProp;
     },
 
     selectProp: function() {

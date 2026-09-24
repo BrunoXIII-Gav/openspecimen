@@ -207,7 +207,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 
 		if (existing != null && existing.isCollected()) {
 			if ((detail.isAttrModified("parentConsumedQty") &&
-				!Objects.equals(detail.getParentConsumedQty(), existing.getParentConsumedQuantity())) ||
+				!sameQuantity(detail.getParentConsumedQty(), existing.getParentConsumedQuantity())) ||
 				(detail.isAttrModified("processAllParent") &&
 				!Objects.equals(detail.getProcessAllParent(), existing.getProcessAllParent()))) {
 				ose.addError(SpecimenErrorCode.PARENT_CONSUMED_QTY_IMMUTABLE);
@@ -237,6 +237,10 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		} else if (consumed.compareTo(parent.getAvailableQuantity()) > 0) {
 			ose.addError(SpecimenErrorCode.PARENT_QTY_INSUFFICIENT, parent.getLabel());
 		}
+	}
+
+	private boolean sameQuantity(BigDecimal lhs, BigDecimal rhs) {
+		return lhs == rhs || lhs != null && rhs != null && lhs.compareTo(rhs) == 0;
 	}
 
 	private void validateQuantityAgainstChildren(SpecimenDetail detail, Specimen existing, Specimen specimen,

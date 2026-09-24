@@ -3,13 +3,13 @@
   <div class="os-input-number" :class="$attrs['md-type'] && 'md-type'" tabindex="-1">
     <div class="p-float-label" :class="!$attrs.placeholder && 'no-label'" v-if="$attrs['md-type']">
       <InputNumber v-model="inputValue" :mode="'decimal'" :tabindex="tabOrder"
-        :input-props="{disabled}" :minFractionDigits="maxFractionDigits"
+        :input-props="{disabled}" :minFractionDigits="minimumFractionDigits"
         :maxFractionDigits="maxFractionDigits" @input="handleInput" />
       <label>{{$attrs.placeholder}}</label>
     </div>
     <div v-else>
       <InputNumber v-model="inputValue" :placeholder="$attrs.placeholder" :tabindex="tabOrder"
-        :mode="'decimal'" :minFractionDigits="maxFractionDigits" :maxFractionDigits="maxFractionDigits"
+        :mode="'decimal'" :minFractionDigits="minimumFractionDigits" :maxFractionDigits="maxFractionDigits"
         :input-props="{disabled}" />
     </div>
     <div class="unit" v-if="unitText">
@@ -22,7 +22,7 @@
 import InputNumber from 'primevue/inputnumber';
 
 export default {
-  props: ['modelValue', 'maxFractionDigits', 'tabOrder', 'disabled', 'unit', 'form'],
+  props: ['modelValue', 'maxFractionDigits', 'minFractionDigits', 'tabOrder', 'disabled', 'unit', 'form'],
 
   components: {
     InputNumber
@@ -34,6 +34,10 @@ export default {
   },
 
   computed: {
+    minimumFractionDigits: function() {
+      return this.minFractionDigits == null ? this.maxFractionDigits : this.minFractionDigits;
+    },
+
     inputValue: {
       get() {
         return this.modelValue && +this.modelValue;

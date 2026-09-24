@@ -644,6 +644,7 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 			location.setId(-1L);
 		} else {
 			location = StorageLocationSummary.from(position);
+			location.setContainerHierarchy(StorageLocationSummary.getContainerHierarchy(position.getContainer()));
 			result.setStorageSite(position.getContainer().getSite().getName());
 		}
 		result.setStorageLocation(location);

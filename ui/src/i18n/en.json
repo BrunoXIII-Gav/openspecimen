@@ -599,6 +599,8 @@
     "confirm_delete_selected": "Are you sure you want to delete the selected containers?",
     "confirm_transfer": "Specimen {labels} is already stored in a container. Do you really want to move it to a new location? | Specimens {labels} are already stored in containers. Do you really want to move them to a new location?",
     "container_hierarchy": "Container Hierarchy",
+    "storage_hierarchy": "Storage Hierarchy",
+    "position": "Position",
     "container_position_selector": "Container Position Selector",
     "column_labeling_scheme": "Column",
     "column_labeling_scheme_required": "Column Labeling Scheme is mandatory",

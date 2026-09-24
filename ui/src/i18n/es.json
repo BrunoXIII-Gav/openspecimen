@@ -568,6 +568,8 @@
     "confirm_delete_selected": "¿Está seguro de que desea eliminar los contenedores seleccionados?",
     "confirm_transfer": "La muestra {labels} ya está almacenada en un contenedor. ¿Realmente desea moverla a una nueva ubicación? | Las muestras {labels} ya están almacenadas en contenedores. ¿Realmente desea moverlas a una nueva ubicación?",
     "container_hierarchy": "Jerarquía de Contenedores",
+    "storage_hierarchy": "Jerarquía de almacenamiento",
+    "position": "Posición",
     "container_position_selector": "Selector de Posición del Contenedor",
     "column_labeling_scheme": "Columna",
     "column_labeling_scheme_required": "El esquema de etiquetado de columna es obligatorio",

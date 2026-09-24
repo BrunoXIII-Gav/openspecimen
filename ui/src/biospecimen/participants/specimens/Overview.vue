@@ -32,6 +32,24 @@
       </os-page-toolbar>
 
       <os-overview :schema="ctx.dict" :object="ctx" :reference-prefix="'specimen-view-' + specimen.id" v-if="ctx.dict.length > 0" />
+
+      <os-section class="storage-hierarchy" v-if="storageHierarchy.length > 0">
+        <template #title>
+          <span v-t="'containers.storage_hierarchy'">Storage Hierarchy</span>
+        </template>
+
+        <template #content>
+          <div class="storage-hierarchy__row" v-for="container in storageHierarchy" :key="container.id">
+            <span class="storage-hierarchy__label">{{ container.typeName || $t('containers.singular') }}</span>
+            <a :href="getContainerUrl(container)">{{ container.displayName || container.name }}</a>
+          </div>
+
+          <div class="storage-hierarchy__row" v-if="formattedStoragePosition">
+            <span class="storage-hierarchy__label" v-t="'containers.position'">Position</span>
+            <a :href="getContainerUrl(specimen.storageLocation)">{{ formattedStoragePosition }}</a>
+          </div>
+        </template>
+      </os-section>
       <FieldReferences :cp-id="ctx.cp.id" target="specimen" :cpr-id="cpr.id" :visit-id="visit.id"
         :specimen-id="specimen.id" :parent-id="specimen.parentId"
         :target-prefix="'specimen-view-' + specimen.id" />
@@ -284,6 +302,25 @@ export default {
       return this.cpViewCtx.isPrintSpecimenAllowed(this.cpr) && this.notCoordinatOrStoreAllowed;
     },
 
+    storageHierarchy: function() {
+      const {storageLocation} = this.specimen || {};
+      return storageLocation && storageLocation.containerHierarchy || [];
+    },
+
+    formattedStoragePosition: function() {
+      const {storageLocation = {}} = this.specimen || {};
+      const {mode, position, positionX, positionY} = storageLocation;
+      if (mode == 'LINEAR' && position != null) {
+        return String(position);
+      }
+
+      if (positionY && positionX) {
+        return /^[A-Za-z]+$/.test(positionY) ? positionY + positionX : positionY + ', ' + positionX;
+      }
+
+      return null;
+    },
+
     notCoordinatOrStoreAllowed: function() {
       return this.cpViewCtx.notCoordinatOrStoreAllowed(this.specimen || {});
     },
@@ -301,6 +338,12 @@ export default {
   },
 
   methods: {
+    getContainerUrl: function(container) {
+      return container && container.id > 0
+        ? routerSvc.getUrl('ContainerDetail.Locations', {containerId: container.id})
+        : null;
+    },
+
     edit: function() {
       const {cpId, cprId, visitId, eventId, id} = this.specimen;
       routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: id}, {eventId});
@@ -601,3 +644,20 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.storage-hierarchy {
+  margin-top: 1rem;
+}
+
+.storage-hierarchy__row {
+  display: grid;
+  grid-template-columns: minmax(11rem, 16rem) minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.25rem 1rem;
+}
+
+.storage-hierarchy__label {
+  color: var(--text-color-secondary);
+}
+</style>

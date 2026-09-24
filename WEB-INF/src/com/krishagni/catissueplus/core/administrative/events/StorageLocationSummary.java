@@ -1,6 +1,7 @@
 package com.krishagni.catissueplus.core.administrative.events;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,6 +48,10 @@ public class StorageLocationSummary implements Serializable {
 	private String formattedPosition;
 
 	private String hierarchy;
+
+	private String typeName;
+
+	private List<StorageLocationSummary> containerHierarchy;
 
 	public Long getId() {
 		return id;
@@ -176,6 +181,22 @@ public class StorageLocationSummary implements Serializable {
 		this.hierarchy = hierarchy;
 	}
 
+	public String getTypeName() {
+		return typeName;
+	}
+
+	public void setTypeName(String typeName) {
+		this.typeName = typeName;
+	}
+
+	public List<StorageLocationSummary> getContainerHierarchy() {
+		return containerHierarchy;
+	}
+
+	public void setContainerHierarchy(List<StorageLocationSummary> containerHierarchy) {
+		this.containerHierarchy = containerHierarchy;
+	}
+
 	public static StorageLocationSummary from(StorageContainerPosition position) {
 		if (position == null) {
 			return null;
@@ -198,10 +219,20 @@ public class StorageLocationSummary implements Serializable {
 		storageLocation.setName(container.getName());
 		storageLocation.setBarcode(container.getBarcode());
 		storageLocation.setDisplayName(container.getDisplayName());
+		storageLocation.setTypeName(container.getType() != null ? container.getType().getName() : null);
 		storageLocation.setMode(container.getPositionLabelingMode().name());
 		storageLocation.setSiteId(container.getSite().getId());
 		storageLocation.setSiteName(container.getSite().getName());
 		return storageLocation;
+	}
+
+	public static List<StorageLocationSummary> getContainerHierarchy(StorageContainer container) {
+		List<StorageLocationSummary> hierarchy = new ArrayList<>();
+		for (StorageContainer current = container; current != null; current = current.getParentContainer()) {
+			hierarchy.add(0, from(current));
+		}
+
+		return hierarchy;
 	}
 
 	public static List<StorageLocationSummary> from(List<StorageContainerPosition> positions) {

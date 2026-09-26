@@ -3,6 +3,8 @@ package com.krishagni.catissueplus.core.de.services.impl;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -113,6 +115,7 @@ import edu.common.dynamicextensions.domain.nui.DataType;
 import edu.common.dynamicextensions.domain.nui.FileUploadControl;
 import edu.common.dynamicextensions.domain.nui.Label;
 import edu.common.dynamicextensions.domain.nui.LookupControl;
+import edu.common.dynamicextensions.domain.nui.NumberField;
 import edu.common.dynamicextensions.domain.nui.PageBreak;
 import edu.common.dynamicextensions.domain.nui.PermissibleValue;
 import edu.common.dynamicextensions.domain.nui.SelectControl;
@@ -128,6 +131,7 @@ import edu.common.dynamicextensions.nutility.ContainerParser;
 import edu.common.dynamicextensions.nutility.ContainerPropsParser;
 import edu.common.dynamicextensions.nutility.DeConfiguration;
 import edu.common.dynamicextensions.nutility.FileUploadMgr;
+import edu.common.dynamicextensions.nutility.FormulaParser;
 import krishagni.catissueplus.beans.FormContextBean;
 import krishagni.catissueplus.beans.FormRecordEntryBean;
 import krishagni.catissueplus.beans.FormRecordEntryBean.Status;
@@ -1374,6 +1378,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 			form.getAssociations().forEach(this::ensureUpdateAllowed);
 		}
 
+		validateCalculatedFields(input);
 		try {
 			return Container.createContainer(getUserContext(false), input, true);
 		} catch (FormException e) {
@@ -1384,6 +1389,104 @@ public class FormServiceImpl implements FormService, InitializingBean {
 
 			throw e;
 		}
+	}
+
+	private void validateCalculatedFields(Container form) {
+		for (Control control : form.getControls()) {
+			if (control instanceof NumberField numberField && numberField.isCalculated()) {
+				String formula = numberField.getFormula();
+				if (StringUtils.isBlank(formula) || !formula.matches("[A-Za-z0-9_\\s+\\-*/().]+")) {
+					throw OpenSpecimenException.userError(FormErrorCode.INVALID_DATA, "Invalid calculated field formula: " + control.getCaption());
+				}
+
+				FormulaParser parser = new FormulaParser();
+				try {
+					parser.parseExpression(formula);
+				} catch (FormException e) {
+					throw OpenSpecimenException.userError(FormErrorCode.INVALID_DATA, "Invalid calculated field formula: " + control.getCaption());
+				}
+
+				List<String> symbols = parser.getSymbols();
+				if (symbols.isEmpty()) {
+					throw OpenSpecimenException.userError(FormErrorCode.INVALID_DATA, "A calculated field must reference at least one numeric field: " + control.getCaption());
+				}
+
+				for (String symbol : symbols) {
+					Control source = form.getControl(symbol);
+					if (!(source instanceof NumberField) || ((NumberField) source).isCalculated()) {
+						throw OpenSpecimenException.userError(FormErrorCode.INVALID_DATA, "Invalid calculated field source: " + symbol);
+					}
+				}
+			}
+
+			if (control instanceof SubFormControl subForm) {
+				validateCalculatedFields(subForm.getSubContainer());
+			}
+		}
+	}
+
+	private void calculateCalculatedFields(FormData formData) {
+		Container form = formData.getContainer();
+		for (Control control : form.getControls()) {
+			if (!(control instanceof NumberField numberField) || !numberField.isCalculated()) {
+				continue;
+			}
+
+			FormulaParser parser = new FormulaParser();
+			try {
+				parser.parseExpression(numberField.getFormula());
+				boolean useZeroForMissingValues = usesZeroForMissingValues(numberField);
+				boolean hasEmptySource = false;
+				for (String symbol : parser.getSymbols()) {
+					ControlValue source = formData.getFieldValue(symbol);
+					Object sourceValue = source == null ? null : source.getValue();
+					if (sourceValue == null || StringUtils.isBlank(sourceValue.toString())) {
+						if (useZeroForMissingValues) {
+							parser.setVariableValue(symbol, 0.0d);
+							continue;
+						}
+
+						hasEmptySource = true;
+						break;
+					}
+
+					parser.setVariableValue(symbol, new BigDecimal(sourceValue.toString()).doubleValue());
+				}
+
+				ControlValue calculated = formData.getFieldValue(numberField.getName());
+				if (calculated == null) {
+					calculated = new ControlValue(numberField, null);
+					formData.addFieldValue(calculated);
+				}
+
+				if (hasEmptySource) {
+					calculated.setValue(null);
+					continue;
+				}
+
+				double value = parser.getParser().getValue();
+				if (parser.getParser().hasError() || !Double.isFinite(value)) {
+					throw OpenSpecimenException.userError(FormErrorCode.INVALID_DATA, "Invalid calculated field result: " + control.getCaption());
+				}
+
+				BigDecimal result = BigDecimal.valueOf(value);
+				if (numberField.getNoOfDigitsAfterDecimal() >= 0) {
+					result = result.setScale(numberField.getNoOfDigitsAfterDecimal(), RoundingMode.HALF_UP);
+				}
+
+				calculated.setValue(result);
+			} catch (OpenSpecimenException e) {
+				throw e;
+			} catch (Exception e) {
+				throw OpenSpecimenException.userError(FormErrorCode.INVALID_DATA, "Invalid calculated field result: " + control.getCaption());
+			}
+		}
+	}
+
+	// The dynamic-forms library persists only the formula itself. The UI reserves
+	// 0 + (expression) for the explicit "missing values are zero" policy.
+	private boolean usesZeroForMissingValues(NumberField numberField) {
+		return numberField.getFormula() != null && numberField.getFormula().matches("(?s)^\\s*0\\s*\\+\\s*\\(.*\\)\\s*$");
 	}
 
 	private FormData saveOrUpdateFormData(Long recordId, FormData formData, boolean isPartial) {
@@ -1430,6 +1533,8 @@ public class FormServiceImpl implements FormService, InitializingBean {
 			FormData existing = formDataMgr.getFormData(formData.getContainer(), formData.getRecordId());
 			formData = updateFormData(existing, formData);
 		}
+
+		calculateCalculatedFields(formData);
 
 		String formStatus = (String) appData.get("formStatus");
 		if (StringUtils.isBlank(formStatus)) {

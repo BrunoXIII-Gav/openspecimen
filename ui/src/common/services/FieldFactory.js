@@ -5,6 +5,7 @@ import { requiredIf } from '@vuelidate/validators';
 import http from '@/common/services/HttpClient.js';
 import formSvc from '@/forms/services/Form.js';
 import exprUtil from '@/common/services/ExpressionUtil.js';
+import i18n from '@/common/services/I18n.js';
 
 class FieldFactory {
 
@@ -60,7 +61,12 @@ class FieldFactory {
       let validations = {};
       for (let rule in field.validations) {
         let fv = field.validations[rule];
-        if (rule == 'requiredIf') {
+        if (rule == 'calculation') {
+          validations[rule] = (value, form) => {
+            const result = evaluateFormula(fv.formula, name => form[(fv.prefix || "") + name], fv.scale, fv.missingAsZero);
+            return !result.error;
+          };
+        } else if (rule == 'requiredIf') {
           /*validations[rule] = (value, form) => {
             const required = exprUtil.eval({...form.$context, ...form}, fv.expr);
             return !required || (value == 0 || !!value);
@@ -124,6 +130,8 @@ class FieldFactory {
 
   getFieldSchema(field, namePrefix) {
     namePrefix = namePrefix || '';
+    const calculated = field.type == 'numberField' && typeof field.formula == 'string' && field.formula.trim().length > 0;
+    const calculation = getCalculatedFormula(field.formula);
 
     const fs = {
       name: namePrefix + field.name,
@@ -144,6 +152,11 @@ class FieldFactory {
       fs.type = 'number';
       fs.maxFractionDigits = field.noOfDigitsAfterDecimal || 0;
       fs.defaultValue = field.defaultValue;
+      if (calculated) {
+        fs.calculated = true;
+        fs.disabled = true;
+        fs.value = data => evaluateFormula(calculation.expression, name => exprUtil.getValue(data, namePrefix + name), fs.maxFractionDigits, calculation.missingAsZero).value;
+      }
     } else if (field.type == 'radiobutton') {
       fs.type = 'radio';
       fs.options = (field.pvs || []).map((pv) => ({caption: pv.optionName || pv.value, value: pv.value}));
@@ -237,6 +250,15 @@ class FieldFactory {
     }
 
     fs.validations = fs.validations = {};
+    if (calculated) {
+      fs.validations.calculation = {
+        formula: calculation.expression,
+        missingAsZero: calculation.missingAsZero,
+        scale: fs.maxFractionDigits,
+        prefix: namePrefix,
+        message: i18n.msg('forms.designer.calculation_invalid')
+      };
+    }
     if (field.mandatory == true) {
       fs.validations.required = {message: field.caption + ' is mandatory'};
     }
@@ -309,6 +331,98 @@ class FieldFactory {
   _matches(pattern, input) {
     return new RegExp(pattern).test(input);
   }
+}
+
+function getCalculatedFormula(formula) {
+  const match = (formula || "").match(/^\s*0\s*\+\s*\(([\s\S]*)\)\s*$/);
+  return {expression: match ? match[1] : formula, missingAsZero: !!match};
+}
+
+function evaluateFormula(formula, resolveValue, scale, missingAsZero) {
+  const compact = (formula || "").replace(/\s+/g, "");
+  const tokens = compact.match(/[A-Za-z_][A-Za-z0-9_]*|(?:\d+(?:\.\d*)?|\.\d+)|[()+\-*/]/g);
+  if (!tokens || tokens.join("") != compact) {
+    return {value: null, error: "invalid"};
+  }
+
+  const output = [];
+  const operators = [];
+  const precedence = {"+": 1, "-": 1, "*": 2, "/": 2, "u-": 3};
+  let expectsValue = true;
+  let hasEmptyValue = false;
+
+  for (let token of tokens) {
+    if (/^[A-Za-z_]/.test(token)) {
+      if (!expectsValue) return {value: null, error: "invalid"};
+      const rawValue = resolveValue(token);
+      if (rawValue == null || rawValue === "") {
+        hasEmptyValue = true;
+        output.push(0);
+      } else {
+        const value = Number(rawValue);
+        if (!Number.isFinite(value)) return {value: null, error: "not_number"};
+        output.push(value);
+      }
+      expectsValue = false;
+    } else if (/^(?:\d|\.)/.test(token)) {
+      if (!expectsValue) return {value: null, error: "invalid"};
+      output.push(Number(token));
+      expectsValue = false;
+    } else if (token == "(") {
+      if (!expectsValue) return {value: null, error: "invalid"};
+      operators.push(token);
+    } else if (token == ")") {
+      if (expectsValue) return {value: null, error: "invalid"};
+      while (operators.length > 0 && operators[operators.length - 1] != "(") output.push(operators.pop());
+      if (operators.pop() != "(") return {value: null, error: "invalid"};
+      expectsValue = false;
+    } else {
+      let operator = token;
+      if (expectsValue) {
+        if (token != "-") return {value: null, error: "invalid"};
+        operator = "u-";
+      }
+
+      while (operators.length > 0 && operators[operators.length - 1] != "(" &&
+        precedence[operators[operators.length - 1]] >= precedence[operator]) {
+        output.push(operators.pop());
+      }
+      operators.push(operator);
+      expectsValue = true;
+    }
+  }
+
+  if (expectsValue) return {value: null, error: "invalid"};
+  while (operators.length > 0) {
+    const operator = operators.pop();
+    if (operator == "(") return {value: null, error: "invalid"};
+    output.push(operator);
+  }
+
+  const values = [];
+  for (const item of output) {
+    if (typeof item == "number") {
+      values.push(item);
+      continue;
+    }
+
+    if (item == "u-") {
+      if (values.length < 1) return {value: null, error: "invalid"};
+      values.push(-values.pop());
+      continue;
+    }
+
+    if (values.length < 2) return {value: null, error: "invalid"};
+    const right = values.pop();
+    const left = values.pop();
+    if (item == "/" && right == 0) return {value: null, error: "division_by_zero"};
+    values.push(item == "+" ? left + right : item == "-" ? left - right : item == "*" ? left * right : left / right);
+  }
+
+  if (hasEmptyValue && !missingAsZero) return {value: null, error: null};
+  if (values.length != 1 || !Number.isFinite(values[0])) return {value: null, error: "invalid"};
+  const digits = Number.isInteger(scale) ? Math.max(0, Math.min(15, scale)) : 0;
+  return {value: Number(values[0].toFixed(digits)), error: null};
 }
 
 export default new FieldFactory();

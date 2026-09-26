@@ -38,6 +38,20 @@ const fields = [
     {
         type: "numberField",
         labelCode: "forms.designer.field_types.number_field",
+        validate: function (field) {
+            if (field.calculated && (!field.formula || field.formula.trim().length == 0)) {
+                return { status: false, error: i18n.msg('forms.designer.calculation_required') };
+            }
+
+            return { status: true };
+        }
+    },
+    {
+        // Stored as a numberField with a formula. The dynamic forms engine already
+        // understands that representation, so no new database control type is needed.
+        type: "calculatedNumberField",
+        labelCode: "forms.designer.field_types.calculated_number_field",
+        allowedInSubForm: false
     },
     {
         type: "radiobutton",

@@ -287,14 +287,20 @@ export default {
     });
 
     function addField(type) {
+      const calculated = type == "calculatedNumberField";
       let field = { 
         $saved: false,
-        type: type,
+        type: calculated ? "numberField" : type,
         $rowIdx: form.rows.length,
         $sfField: props.subForm != null
       };
 
-      if (type == "subForm") {
+      if (calculated) {
+        field.calculated = true;
+        field.formula = "";
+      }
+
+      if (field.type == "subForm") {
         field.rows = [];
       }
 

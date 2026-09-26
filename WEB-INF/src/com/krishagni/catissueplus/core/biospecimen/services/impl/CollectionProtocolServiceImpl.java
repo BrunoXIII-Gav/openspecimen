@@ -1544,6 +1544,8 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 			for (WorkflowDetail detail : input.getWorkflows().values()) {
 				if ("fieldReferences".equals(detail.getName())) {
 					FieldReferenceRules.validate(cp.getId(), detail.getData(), deDaoFactory, formSvc);
+				} else if ("consentGroups".equals(detail.getName())) {
+					validateConsentGroups(cp, detail.getData());
 				}
 				Workflow wf = new Workflow();
 				BeanUtils.copyProperties(detail, wf);
@@ -1554,6 +1556,62 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 		daoFactory.getCollectionProtocolDao().saveCpWorkflows(cfg);
 		EventPublisher.getInstance().publish(new CollectionProtocolSavedEvent(cp));
 		return cfg;
+	}
+
+	private void validateConsentGroups(CollectionProtocol cp, Map<String, Object> config) {
+		if (config == null || !(config.get("version") instanceof Number version) || version.intValue() != 1 ||
+			!(config.get("groups") instanceof List<?>) || ((List<?>) config.get("groups")).size() > 50) {
+			invalidConsentGroups();
+		}
+
+		List<?> groups = (List<?>) config.get("groups");
+
+		Set<String> available = cp.getConsentTier().stream().map(tier -> tier.getStatement().getCode())
+			.collect(Collectors.toSet());
+		Set<String> assigned = new HashSet<>();
+		for (Object item : groups) {
+			if (!(item instanceof Map<?, ?>)) {
+				invalidConsentGroups();
+			}
+
+			Map<?, ?> group = (Map<?, ?>) item;
+			Object captionObj = group.get("caption");
+			Object membersObj = group.get("members");
+			if (!(captionObj instanceof String) || StringUtils.isBlank((String) captionObj) ||
+				((String) captionObj).length() > 200 || !(membersObj instanceof List<?>) ||
+				((List<?>) membersObj).isEmpty() || ((List<?>) membersObj).size() > 100) {
+				invalidConsentGroups();
+			}
+
+			List<?> members = (List<?>) membersObj;
+			Set<String> groupCodes = new HashSet<>();
+			for (Object memberItem : members) {
+				if (!(memberItem instanceof Map<?, ?> member) || !(member.get("statementCode") instanceof String code) ||
+					StringUtils.isBlank(code) || !available.contains(code) || !groupCodes.add(code) || !assigned.add(code)) {
+					invalidConsentGroups();
+				}
+			}
+
+			for (Object memberItem : members) {
+				Map<?, ?> member = (Map<?, ?>) memberItem;
+				String code = (String) member.get("statementCode");
+				validateConsentGroupCondition(member.get("disabledWhen"), groupCodes, code);
+				validateConsentGroupCondition(member.get("visibleWhen"), groupCodes, code);
+			}
+		}
+	}
+
+	private void validateConsentGroupCondition(Object condition, Set<String> groupCodes, String code) {
+		if (condition == null) return;
+		if (!(condition instanceof List<?>) || ((List<?>) condition).size() >= groupCodes.size()) invalidConsentGroups();
+		List<?> codes = (List<?>) condition;
+		for (Object value : codes) {
+			if (!(value instanceof String other) || code.equals(other) || !groupCodes.contains(other)) invalidConsentGroups();
+		}
+	}
+
+	private void invalidConsentGroups() {
+		throw OpenSpecimenException.userError(CommonErrorCode.INVALID_INPUT, "consentGroups");
 	}
 
 	//

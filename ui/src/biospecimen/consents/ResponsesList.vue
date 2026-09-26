@@ -41,12 +41,22 @@
           <os-overview :bg-col="true" :schema="headerFields" :object="{consent: consent}" :columns="1" />
 
           <div class="responses">
-            <div class="response" v-for="(response, idx) of consent.responses" :key="idx">
-              <div class="statement">
-                <span>{{response.statement}}</span>
-                <span v-if="response.code">&nbsp; ({{response.code}})</span>
+            <section class="response-group" v-for="group of groupedResponses" :key="group.caption">
+              <h4>{{ group.caption }}</h4>
+              <div class="response" v-for="response of group.responses" :key="response.code">
+                <div class="statement">
+                  <span>{{ response.statement }}</span>
+                  <span v-if="response.code">&nbsp; ({{ response.code }})</span>
+                </div>
+                <div class="answer">{{ translatedResponse(response.response) || '-' }}</div>
               </div>
-              <div class="answer">{{translatedResponse(response.response) || '-'}}</div>
+            </section>
+            <div class="response" v-for="response of normalResponses" :key="response.code">
+              <div class="statement">
+                <span>{{ response.statement }}</span>
+                <span v-if="response.code">&nbsp; ({{ response.code }})</span>
+              </div>
+              <div class="answer">{{ translatedResponse(response.response) || '-' }}</div>
             </div>
           </div>
         </template>
@@ -54,10 +64,24 @@
     </os-grid-column>
   </os-grid>
 
-  <os-form :schema="formSchema" :data="dataCtx" v-if="editMode">
-    <os-button primary :label="$t('common.buttons.update')" @click="updateResponses" />
-    <os-button text :label="$t('common.buttons.cancel')" @click="cancelEditResponses" />
-  </os-form>
+  <div class="consent-editor" v-if="editMode">
+    <os-form ref="consentHeaderForm" :schema="headerSchema" :data="dataCtx" />
+
+    <section class="response-group" v-for="group of groupedResponses" :key="group.caption">
+      <h4>{{ group.caption }}</h4>
+      <os-boolean-checkbox v-for="member of group.members" :key="member.response.code"
+        v-model="dataCtx.groupResponses[member.response.code]"
+        :inline-label="member.response.statement + (member.response.code ? ' ( ' + member.response.code + ' )' : '')"
+        :disabled="isGroupMemberDisabled(group, member)" @change="setGroupResponse(group, member)" />
+    </section>
+
+    <os-form ref="consentResponsesForm" :schema="responseSchema" :data="dataCtx" />
+
+    <div class="consent-actions">
+      <os-button primary :label="$t('common.buttons.update')" @click="updateResponses" />
+      <os-button text :label="$t('common.buttons.cancel')" @click="cancelEditResponses" />
+    </div>
+  </div>
 
   <os-confirm-delete ref="confirmDeleteFormDialog" :captcha="false">
     <template #message>
@@ -88,6 +112,7 @@
 
 import alertsSvc from '@/common/services/Alerts.js';
 import cprSvc from '@/biospecimen/services/Cpr.js';
+import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
 import http from '@/common/services/HttpClient.js';
 import pvSvc from '@/common/services/PermissibleValue.js';
 import util from '@/common/services/Util.js';
@@ -99,6 +124,8 @@ export default {
     return {
       consent: {responses: []},
 
+      consentGroups: [],
+
       editMode: false,
 
       responsePvs: null,
@@ -109,6 +136,7 @@ export default {
 
   created() {
     this._loadConsent();
+    this._loadConsentGroups();
   },
 
   computed: {
@@ -140,28 +168,44 @@ export default {
       ]
     },
 
-    formSchema: function() {
-      const rows = this.headerFields.map(field => ({fields: [field]}));
+    groupedResponses: function() {
+      const responsesByCode = Object.fromEntries((this.consent.responses || []).map(response => [response.code, response]));
+      return this.consentGroups.map(group => {
+        const members = (group.members || []).map(member => ({...member, response: responsesByCode[member.statementCode]}))
+          .filter(member => !!member.response);
+        return {caption: group.caption, members, responses: members.map(member => member.response)};
+      }).filter(group => group.members.length > 0);
+    },
 
-      let idx = 0;
-      for (let response of this.consent.responses) {
+    groupedResponseCodes: function() {
+      return new Set(this.groupedResponses.flatMap(group => group.members.map(member => member.response.code)));
+    },
+
+    normalResponses: function() {
+      return (this.consent.responses || []).filter(response => !this.groupedResponseCodes.has(response.code));
+    },
+
+    headerSchema: function() {
+      return {rows: this.headerFields.map(field => ({fields: [field]}))};
+    },
+
+    responseSchema: function() {
+      const rows = [];
+      for (const response of this.normalResponses) {
+        const idx = this.consent.responses.findIndex(item => item.code === response.code);
         rows.push({
           fields: [{
-            type: 'radio',
-            label: response.statement + (response.code ? ' (' + response.code + ')' : ''),
-            name: 'consent.responses.' + idx + '.response',
+            type: "radio",
+            label: response.statement + (response.code ? " (" + response.code + ")" : ""),
+            name: "consent.responses." + idx + ".response",
             options: this.responsePvs || [],
             optionsPerRow: Math.min((this.responsePvs && this.responsePvs.length), 5),
             clearOption: true
           }]
         });
+      }
 
-        ++idx;
-      }
-      
-      return {
-        rows: rows
-      }
+      return {rows};
     }
   },
 
@@ -173,7 +217,17 @@ export default {
 
     editResponses: function() {
       this.editMode = true;
-      this.dataCtx = {consent: util.clone(this.consent || {})};
+      const groupResponses = {};
+      for (const group of this.groupedResponses) {
+        for (const member of group.members) {
+          groupResponses[member.response.code] = member.response.response === "Yes";
+        }
+      }
+
+      this.dataCtx = {consent: util.clone(this.consent || {}), groupResponses, groupResponseTouched: {}};
+      for (const group of this.groupedResponses) {
+        this.applyGroupConditions(group);
+      }
       if (!this.responsePvs) {
         pvSvc.getPvs('consent_response').then(
           responses => this.responsePvs = responses.map(({value}) => ({caption: this.translatedResponse(value), value}))
@@ -182,7 +236,17 @@ export default {
     },
 
     updateResponses: function() {
-      cprSvc.updateConsents(this.cpr, this.dataCtx.consent).then(
+      const consent = util.clone(this.dataCtx.consent);
+      for (const group of this.groupedResponses) {
+        for (const member of group.members) {
+          const response = consent.responses.find(item => item.code === member.response.code);
+          if (response && this.dataCtx.groupResponseTouched[member.response.code]) {
+            response.response = this.dataCtx.groupResponses[member.response.code] ? "Yes" : "No";
+          }
+        }
+      }
+
+      cprSvc.updateConsents(this.cpr, consent).then(
         (savedConsent) => {
           this.consent = savedConsent;
           alertsSvc.success({code: 'participant_consents.consents_updated'});
@@ -193,7 +257,33 @@ export default {
 
     cancelEditResponses: function() {
       this.editMode = false;
-      this.dataCtx = {consent: {}};
+      this.dataCtx = {consent: {}, groupResponses: {}, groupResponseTouched: {}};
+    },
+
+    setGroupResponse: function(group, member) {
+      this.dataCtx.groupResponseTouched[member.response.code] = true;
+      this.applyGroupConditions(group);
+    },
+
+    isGroupMemberVisible: function(group, member) {
+      const visibleWhen = member.visibleWhen || [];
+      return visibleWhen.length == 0 || visibleWhen.some(code => this.dataCtx.groupResponses[code]);
+    },
+
+    isGroupMemberDisabled: function(group, member) {
+      return !this.isGroupMemberVisible(group, member) ||
+        (member.disabledWhen || []).some(code => this.dataCtx.groupResponses[code]);
+    },
+
+    applyGroupConditions: function(group) {
+      for (let idx = 0; idx < group.members.length; ++idx) {
+        for (const member of group.members) {
+          if (this.isGroupMemberDisabled(group, member) && this.dataCtx.groupResponses[member.response.code]) {
+            this.dataCtx.groupResponses[member.response.code] = false;
+            this.dataCtx.groupResponseTouched[member.response.code] = true;
+          }
+        }
+      }
     },
 
     deleteForm: function() {
@@ -231,6 +321,20 @@ export default {
 
     _loadConsent: function() {
       cprSvc.getConsents(this.cpr).then(consent => this.consent = consent);
+    },
+
+    _loadConsentGroups: function() {
+      cpSvc.loadWorkflows(this.cp.id, "consentGroups").then(workflow => {
+        const config = workflow && workflow.data;
+        this.consentGroups = ((config && config.groups) || []).map(group => ({
+          caption: group.caption,
+          members: (group.members || []).map(member => ({
+            statementCode: member.statementCode,
+            disabledWhen: member.disabledWhen || [],
+            visibleWhen: member.visibleWhen || []
+          }))
+        }));
+      });
     },
 
     _getConsentResponseKey: function(response) {
@@ -274,5 +378,14 @@ export default {
   font-style: italic;
   opacity: 0.6;
   margin-bottom: 0.5rem;
+}
+
+@media (min-width: 1200px) {
+  .consent-editor > .response-group,
+  .consent-editor > .consent-actions {
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 </style>

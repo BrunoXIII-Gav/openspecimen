@@ -4,7 +4,9 @@ import static com.krishagni.catissueplus.core.common.PvAttributes.CONSENT_RESPON
 import static com.krishagni.catissueplus.core.common.service.PvValidator.isValid;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -22,6 +24,7 @@ import com.krishagni.catissueplus.core.biospecimen.domain.factory.CprErrorCode;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentTierResponseDetail;
 import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
+import com.krishagni.catissueplus.core.common.errors.CommonErrorCode;
 import com.krishagni.catissueplus.core.common.errors.ErrorType;
 import com.krishagni.catissueplus.core.common.errors.OpenSpecimenException;
 import com.krishagni.catissueplus.core.common.events.UserSummary;
@@ -115,7 +118,43 @@ public class ConsentResponsesFactoryImpl implements ConsentResponsesFactory {
 			}
 		}
 
+		validateConsentGroups(cpr, responsesMap, ose);
 		consentResponses.setConsentResponses(new HashSet<>(responsesMap.values()));
+	}
+
+	private void validateConsentGroups(CollectionProtocolRegistration cpr, Map<String, ConsentTierResponse> responses,
+		OpenSpecimenException ose) {
+		var cfg = daoFactory.getCollectionProtocolDao().getCpWorkflows(cpr.getCollectionProtocol().getId());
+		if (cfg == null || cfg.getWorkflows().get("consentGroups") == null) return;
+		Object data = cfg.getWorkflows().get("consentGroups").getData();
+		if (!(data instanceof Map<?, ?> config) || !(config.get("groups") instanceof List<?> groups)) return;
+
+		for (Object item : groups) {
+			if (!(item instanceof Map<?, ?> group) || !(group.get("members") instanceof List<?> members)) continue;
+			Set<String> selected = new HashSet<>();
+			for (Object memberItem : members) {
+				if (!(memberItem instanceof Map<?, ?> member) || !(member.get("statementCode") instanceof String code)) continue;
+				ConsentTierResponse response = responses.get(code);
+				if (response != null && "Yes".equals(PermissibleValue.getValue(response.getResponse()))) selected.add(code);
+			}
+
+			for (Object memberItem : members) {
+				if (!(memberItem instanceof Map<?, ?> member) || !(member.get("statementCode") instanceof String code) || !selected.contains(code)) continue;
+				if (hasSelectedCondition(member.get("disabledWhen"), selected) ||
+					hasUnmetVisibleCondition(member.get("visibleWhen"), selected)) {
+					ose.addError(CommonErrorCode.INVALID_INPUT, "consentGroups");
+					return;
+				}
+			}
+		}
+	}
+
+	private boolean hasSelectedCondition(Object condition, Set<String> selected) {
+		return condition instanceof List<?> codes && codes.stream().anyMatch(selected::contains);
+	}
+
+	private boolean hasUnmetVisibleCondition(Object condition, Set<String> selected) {
+		return condition instanceof List<?> codes && !codes.isEmpty() && codes.stream().noneMatch(selected::contains);
 	}
 
 	private ConsentTierResponse createResponse(

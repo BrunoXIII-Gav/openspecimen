@@ -4,9 +4,9 @@
       <small>{{ titleFor(entry.field) }}</small>
       <strong>{{ entry.field.caption }}</strong>
       <div v-if="Array.isArray(entry.field.value)">
-        <div v-for="(value, row) in valueLines(entry.field.value)" :key="row">{{ value }}</div>
+        <div v-for="(value, row) in valueLines(entry.field)" :key="row">{{ value }}</div>
       </div>
-      <span v-else>{{ entry.field.value }}</span>
+      <span v-else>{{ displayValue(entry.field, entry.field.value) }}</span>
     </div>
   </Teleport>
   <section class="os-field-references" v-if="sectionFields.length || loadError || page > 1 || hasMore">
@@ -19,9 +19,9 @@
           <template v-for="(field, index) in group.fields" :key="index">
             <dt>{{ field.caption }}</dt>
             <dd v-if="Array.isArray(field.value)">
-              <div v-for="(value, row) in valueLines(field.value)" :key="row">{{ value }}</div>
+              <div v-for="(value, row) in valueLines(field)" :key="row">{{ value }}</div>
             </dd>
-            <dd v-else>{{ field.value }}</dd>
+            <dd v-else>{{ displayValue(field, field.value) }}</dd>
           </template>
         </dl>
       </div>
@@ -116,10 +116,16 @@ export default {
       return null;
     },
 
-    valueLines(values) {
-      return values.flatMap((value, index) => Array.isArray(value)
-        ? value.map((nested, row) => `${index + 1}.${row + 1}: ${nested}`)
-        : [`${index + 1}: ${value}`]);
+    valueLines(field) {
+      return field.value.flatMap((value, index) => Array.isArray(value)
+        ? value.map((nested, row) => (index + 1) + '.' + (row + 1) + ": " + this.displayValue(field, nested))
+        : [(index + 1) + ": " + this.displayValue(field, value)]);
+    },
+
+    displayValue(field, value) {
+      if (field.sourceField != 'participant.gender' || typeof value != 'string') return value;
+      const gender = {female: 'female', male: 'male', undifferentiated: 'undifferentiated', unknown: 'unknown'}[value.toLowerCase()];
+      return gender ? this.$t('pvs.gender.' + gender) : value;
     },
 
     reload() {
@@ -135,7 +141,7 @@ export default {
 
       try {
         const fields = await http.get('field-references', {
-          cpId: this.cpId, target: this.target, targetFormId: this.targetFormId || undefined,
+          cpId: this.cpId, target: this.target, formId: this.targetFormId || undefined,
           cprId: this.cprId, visitId: this.visitId > 0 ? this.visitId : undefined,
           specimenId: this.specimenId > 0 ? this.specimenId : undefined,
           parentId: this.parentId > 0 ? this.parentId : undefined, page: this.page

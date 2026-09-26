@@ -19,6 +19,8 @@ export default {
 
         getForms: this._getForms,
 
+        getFieldReferenceContext: () => ({cpId: cp.id, target: 'participant', cprId: this.cpr.id}),
+
         gotoOverview: this._gotoOverview,
 
         isDraftDataEntryEnabled: () => cp.draftDataEntry

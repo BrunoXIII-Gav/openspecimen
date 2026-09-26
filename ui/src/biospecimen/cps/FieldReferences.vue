@@ -8,13 +8,14 @@
     <div class="reference-rule" v-for="(rule, index) in rules" :key="rule.id || index">
       <label>{{ $t('cps.reference_destination') }}
         <select v-model="rule.target" @change="resetRule(rule)">
+          <option value="participant">{{ $t('cps.reference_participant') }}</option>
           <option value="visit">{{ $t('cps.reference_visit') }}</option>
           <option value="specimen">{{ $t('cps.reference_specimen') }}</option>
         </select>
       </label>
       <label>{{ $t('cps.reference_destination_form') }}
         <select v-model="rule.targetFormId" @change="onTargetFormChanged(rule)">
-          <option :value="null">{{ $t('cps.reference_main_fields') }}</option>
+          <option v-if="rule.target != 'participant'" :value="null">{{ $t('cps.reference_main_fields') }}</option>
           <option v-for="form in formsFor(rule.target)" :key="form.formId" :value="form.formId">{{ form.caption }}</option>
         </select>
       </label>
@@ -118,7 +119,7 @@ export default {
     },
 
     sourcesFor(target) {
-      const values = target == 'participant' ? [] : target == 'visit' ? ['participant'] :
+      const values = target == 'participant' ? ['participant'] : target == 'visit' ? ['participant'] :
         ['participant', 'visit', 'parent', 'primary'];
       return values.map(value => ({value, label: this.$t('cps.reference_' + value)}));
     },
@@ -158,7 +159,7 @@ export default {
     },
 
     resetRule(rule) {
-      rule.targetFormId = null;
+      rule.targetFormId = rule.target == 'participant' ? (this.formsFor('participant')[0]?.formId || null) : null;
       rule.afterField = '';
       rule.source = this.sourcesFor(rule.target)[0]?.value || '';
       this.resetSource(rule);
@@ -191,6 +192,7 @@ export default {
     },
 
     async loadTargetCatalog(rule) {
+      if (rule.target == 'participant' && !rule.targetFormId) return;
       await this.loadCatalog({source: rule.target, sourceFormId: rule.targetFormId});
     },
 
@@ -202,7 +204,7 @@ export default {
     },
 
     async save() {
-      if (this.rules.some(rule => !rule.source || !rule.field || !rule.caption ||
+      if (this.rules.some(rule => (rule.target == 'participant' && !rule.targetFormId) || !rule.source || !rule.field || !rule.caption ||
           !this.sourcesFor(rule.target).some(source => source.value == rule.source))) {
         alertsSvc.error({code: 'cps.reference_invalid_rule'});
         return;

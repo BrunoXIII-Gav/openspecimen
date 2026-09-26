@@ -75,7 +75,8 @@ public final class FieldReferenceRules {
 			String caption = str(rule.get("caption"));
 			String group = str(rule.get("group"));
 			String afterField = str(rule.get("afterField"));
-			if (!("visit".equals(target) && "participant".equals(source)) &&
+			if (!("participant".equals(target) && "participant".equals(source)) &&
+				!("visit".equals(target) && "participant".equals(source)) &&
 				!("specimen".equals(target) && Set.of("participant", "visit", "parent", "primary").contains(source))) {
 				invalid("source/target");
 			}
@@ -100,6 +101,7 @@ public final class FieldReferenceRules {
 			} else if (sourceForm != null && deDaoFactory.getFormDao().getFormById(sourceForm) == null) {
 				invalid("sourceFormId");
 			}
+			if ("participant".equals(target) && targetForm == null) invalid("targetFormId");
 			if (targetForm != null) checkContext(cpId, targetForm, target, deDaoFactory);
 			if (!afterField.isEmpty() && !FORM_START.equals(afterField)) {
 				if (targetForm != null) {

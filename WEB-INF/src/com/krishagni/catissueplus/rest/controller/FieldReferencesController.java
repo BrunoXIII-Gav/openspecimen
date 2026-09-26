@@ -155,6 +155,7 @@ public class FieldReferencesController {
 		if (!Set.of("participant", "visit", "specimen").contains(target)) {
 			return List.of();
 		}
+		if ("participant".equals(target) && targetFormId == null) return List.of();
 
 		CollectionProtocol cp = daoFactory.getCollectionProtocolDao().getById(cpId);
 		if (cp == null) {
@@ -216,7 +217,8 @@ public class FieldReferencesController {
 				!sameForm(targetFormId, rule.get("targetFormId"))) continue;
 
 			String source = string(rule.get("source"));
-			if (!("visit".equals(target) && "participant".equals(source)) &&
+			if (!("participant".equals(target) && "participant".equals(source)) &&
+				!("visit".equals(target) && "participant".equals(source)) &&
 				!("specimen".equals(target) && Set.of("participant", "visit", "parent", "primary").contains(source))) continue;
 			String field = string(rule.get("field"));
 			String caption = string(rule.get("caption"));
@@ -264,10 +266,10 @@ public class FieldReferencesController {
 				if (formId != null) {
 					ReferenceValue value = formValue(formId, entityType, entity, field, phi,
 						string(rule.get("recordPolicy")), page, entriesCache, dataCache);
-					if (value != null) result.add(new ResolvedField(caption, group, afterField, value.value(), value.hasMore(), sourceLevel, formId, sourceFormCaption));
+					if (value != null) result.add(new ResolvedField(caption, group, afterField, value.value(), value.hasMore(), sourceLevel, formId, sourceFormCaption, field));
 				} else {
 					Object value = fixedValue(entity, field, phi);
-					if (value != null) result.add(new ResolvedField(caption, group, afterField, value, false, sourceLevel, null, null));
+					if (value != null) result.add(new ResolvedField(caption, group, afterField, value, false, sourceLevel, null, null, field));
 				}
 			} catch (OpenSpecimenException denied) {
 				// A destination may be readable even when this particular source is not.
@@ -440,7 +442,7 @@ public class FieldReferencesController {
 	private record ReferenceValue(Object value, boolean hasMore) { }
 
 	public record ResolvedField(String caption, String group, String afterField, Object value, boolean hasMore,
-		String sourceLevel, Long sourceFormId, String sourceFormCaption) { }
+		String sourceLevel, Long sourceFormId, String sourceFormCaption, String sourceField) { }
 
 	public record CatalogField(String name, String caption, String type, boolean sensitive, boolean visible) { }
 }

@@ -108,7 +108,13 @@ export default {
       "labelCode": "participants.gender",
       "name": "cpr.participant.gender",
       "attribute": "gender",
-      "selectProp": "value"
+      "selectProp": "value",
+      "valueI18nKeys": {
+        "Female": "pvs.gender.female",
+        "Male": "pvs.gender.male",
+        "Undifferentiated": "pvs.gender.undifferentiated",
+        "Unknown": "pvs.gender.unknown"
+      }
     },
     {
       "type": "pv",

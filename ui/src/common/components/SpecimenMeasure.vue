@@ -9,7 +9,7 @@
   </div>
   <div v-else>
     <span v-show="displayValue != undefined && displayValue != null">
-      <span>{{displayValue}} {{unit}}</span>
+      <span>{{displayValue}}<span v-if="displayUnit"> {{displayUnit}}</span></span>
     </span>
     <span v-show="displayValue == undefined || displayValue == null">
       <span>-</span>
@@ -69,6 +69,10 @@ export default {
     unit: function() {
       return util.getSpecimenMeasureUnit(this.specimen, this.measure || 'quantity');
     },
+    displayUnit: function() {
+      return this.unit && this.unit != '-' ? this.unit : null;
+    },
+
 
     showInput: function() {
       return this.readOnly == null || this.readOnly == undefined ||

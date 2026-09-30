@@ -48,7 +48,9 @@
                   <span>{{ response.statement }}</span>
                   <span v-if="response.code">&nbsp; ({{ response.code }})</span>
                 </div>
-                <div class="answer">{{ translatedResponse(response.response) || '-' }}</div>
+                <div class="answer">
+                  <os-boolean-checkbox :model-value="response.response === 'Yes'" disabled />
+                </div>
               </div>
             </section>
             <div class="response" v-for="response of normalResponses" :key="response.code">

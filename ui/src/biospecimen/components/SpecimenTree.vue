@@ -23,8 +23,11 @@
       :data="{}" :items="items" :schema="{columns: fields}" @selected-items="onItemsSelection($event)"
       v-if="items.length > 0">
     </os-table-form>
+    <div class="initial-quantity-total" v-if="initialQuantityTotal">
+      <strong>{{ $t('specimens.total_initial_quantity') }}:</strong> {{ initialQuantityTotal }}
+    </div>
 
-    <os-message :type="info" v-else>
+    <os-message :type="info" v-if="items.length == 0">
       <span v-t="'specimens.no_specimens'"> </span>
     </os-message>
 
@@ -152,29 +155,70 @@ export default {
         }
       ];
 
-      // The initial quantity is the output entered when a derivative is created.
-      // Available quantity is deliberately not shown here because it can later decrease.
+      if (!this.specimen) {
+        return configuredFields.concat({
+          type: 'specimen-measure',
+          name: 'initialQty',
+          labelCode: 'specimens.initial_quantity',
+          specimen: 'specimen',
+          measure: 'quantity',
+          value: ({specimen}) => specimen.lineage == 'New' ? specimen.initialQty : null
+        }, {
+          type: 'specimen-measure',
+          name: 'availableQty',
+          labelCode: 'specimens.available_quantity',
+          specimen: 'specimen',
+          measure: 'quantity',
+          value: ({specimen}) => specimen.lineage == 'New' ? specimen.availableQty : null
+        });
+      }
+
       return configuredFields.concat({
         type: 'specimen-measure',
-        name: 'derivedQty',
-        labelCode: 'specimens.derivative_quantity',
+        name: 'childQty',
+        labelCode: 'specimens.child_quantity',
         specimen: 'specimen',
         measure: 'quantity',
-        value: ({specimen}) => specimen.lineage == 'Derived' ? specimen.initialQty : null
+        value: ({specimen}) => ['Derived', 'Aliquot'].includes(specimen.lineage) ? specimen.initialQty : null
       }, {
         type: 'text',
-        name: 'parentProcessedQty',
-        labelCode: 'specimens.parent_consumed_quantity',
+        name: 'parentConsumedQty',
+        labelCode: 'specimens.parent_quantity_consumed',
         value: ({specimen, parentSpecimen}) => {
-          if (specimen.lineage != 'Derived' || specimen.parentConsumedQty == null) {
-            return '-';
+          if (specimen.lineage == 'Aliquot' && specimen.initialQty != null) {
+            return this._formatQuantity(specimen.initialQty, parentSpecimen) + ' · ' + this.$t('specimens.direct');
           }
 
-          return this._formatQuantity(specimen.parentConsumedQty, parentSpecimen);
+          if (specimen.lineage == 'Derived' && specimen.parentConsumedQty != null) {
+            return this._formatQuantity(specimen.parentConsumedQty, parentSpecimen);
+          }
+
+          return '-';
         }
       });
     },
 
+    initialQuantityTotal: function() {
+      if (this.specimen || !this.visit || !(this.visit.id > 0)) {
+        return null;
+      }
+
+      const totalsByUnit = {};
+      for (const {specimen} of this.items) {
+        if (specimen.lineage != 'New' || specimen.initialQty == null || !Number.isFinite(+specimen.initialQty)) {
+          continue;
+        }
+
+        const unit = util.getSpecimenMeasureUnit(specimen, 'quantity') || '';
+        const total = totalsByUnit[unit] || {quantity: 0, specimen};
+        total.quantity += +specimen.initialQty;
+        totalsByUnit[unit] = total;
+      }
+
+      return Object.values(totalsByUnit)
+        .map(({quantity, specimen}) => this._formatQuantity(quantity, specimen))
+        .join(' + ') || null;
+    },
     pageTopLine: function() {
       return this.pageTop == undefined || this.pageTop == null ? 167 : this.pageTop;
     },
@@ -337,7 +381,7 @@ export default {
 
     _formatQuantity: function(quantity, specimen) {
       const unit = specimen && util.getSpecimenMeasureUnit(specimen, 'quantity');
-      return quantity + (unit ? ' ' + unit : '');
+      return quantity + (unit && unit != '-' ? ' ' + unit : '');
     },
 
     _getDescendants: function(items, item) {
@@ -404,6 +448,14 @@ export default {
 </script>
 
 <style scoped>
+.initial-quantity-total {
+  border: 1px solid var(--surface-border);
+  border-top: 0;
+  padding: 0.75rem 1rem;
+  text-align: right;
+  background: var(--surface-ground);
+}
+
 .scroll-top {
   position: absolute;
   right: 1rem;

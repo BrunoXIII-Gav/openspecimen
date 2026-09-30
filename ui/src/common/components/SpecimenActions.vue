@@ -1,9 +1,11 @@
 <template>
   <os-menu :label="$t(label || 'common.specimen_actions.title')" :options="options" />
 
-  <os-confirm-delete ref="deleteSpecimensDialog" :captcha="false" :collectReason="true">
+  <os-confirm-delete ref="deleteSpecimensDialog" :captcha="false" :collectReason="true"
+    header-code="common.specimen_actions.void_title" reason-code="common.specimen_actions.void_reason"
+    confirm-button-code="common.specimen_actions.void_confirm">
     <template #message>
-      <span v-t="'common.specimen_actions.delete_selected'">Are you sure you want to delete the selected specimens and all its children?</span>
+      <span v-t="'common.specimen_actions.void_selected'">Void incorrect specimen records.</span>
     </template>
   </os-confirm-delete>
 
@@ -293,11 +295,11 @@ export default {
       }
 
       if (isSpmnDeleteAllowed) {
-        options.push({ icon: 'trash', caption: i18n('common.buttons.delete'), onSelect: () => this.deleteSpecimens() });
+        options.push({ icon: 'ban', caption: i18n('common.specimen_actions.void_records'), onSelect: () => this.deleteSpecimens() });
       }
 
       if (isSpmnUpdateAllowed) {
-        options.push({ icon: 'times', caption: i18n('common.buttons.close'), onSelect: () => this.closeSpecimens() });
+        options.push({ icon: 'trash', caption: i18n('common.specimen_actions.dispose'), onSelect: () => this.closeSpecimens() });
       }
 
       if (this.ctx.isDistAllowed) {
@@ -419,7 +421,7 @@ export default {
     deleteSpecimens: function() {
       const specimens = this.specimens;
       if (!specimens || specimens.length == 0) {
-        alertsSvc.error({code: 'common.specimen_actions.select_for_delete'});
+        alertsSvc.error({code: 'common.specimen_actions.select_for_void'});
         return;
       }
 
@@ -427,7 +429,7 @@ export default {
         ({reason}) => {
           specimenSvc.bulkDelete(specimens.map(({id}) => id), reason).then(
             () => {
-              alertsSvc.error({code: 'common.specimen_actions.deleted'});
+              alertsSvc.success({code: 'common.specimen_actions.voided'});
               this.$emit('reloadSpecimens');
             }
           );
@@ -438,13 +440,13 @@ export default {
     closeSpecimens: function() {
       const specimens = this.specimens;
       if (!specimens || specimens.length == 0) {
-        alertsSvc.error({code: 'common.specimen_actions.select_for_close'});
+        alertsSvc.error({code: 'common.specimen_actions.select_for_dispose'});
         return;
       }
 
       this.$refs.closeSpecimensDialog.open().then(
         () => {
-          alertsSvc.error({code: 'common.specimen_actions.closed'});
+          alertsSvc.success({code: 'common.specimen_actions.disposed'});
           this.$emit('reloadSpecimens');
         }
       );

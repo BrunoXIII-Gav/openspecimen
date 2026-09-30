@@ -248,7 +248,7 @@ export default {
       if (this.isUpdateAllowed) {
         const {reserved, activityStatus, status, storageLocation, checkoutPosition} = specimen;
         if (!reserved && activityStatus == 'Active' && status == 'Collected') {
-          options.push({icon: 'times', caption: this.$t('common.buttons.close'), onSelect: this.closeSpecimen});
+          options.push({icon: 'trash', caption: this.$t('specimens.dispose_specimen'), onSelect: this.closeSpecimen});
         } else if (activityStatus == 'Closed') {
           options.push({icon: 'check', caption: this.$t('common.buttons.reopen'), onSelect: this.reopenSpecimen});
         }
@@ -263,7 +263,7 @@ export default {
       }
 
       if (specimen.id > 0 && this.isDeleteAllowed) {
-        options.push({icon: 'trash', caption: this.$t('common.buttons.delete'), onSelect: this.deleteSpecimen});
+        options.push({icon: 'ban', caption: this.$t('specimens.void_record'), onSelect: this.deleteSpecimen});
       }
 
       Array.prototype.push.apply(options, this.ctx.pluginOptions || []);
@@ -575,6 +575,11 @@ export default {
           type: this.$t('specimens.specimen'),
           title: specimen.label + (specimen.barcode ? ' (' + specimen.barcode + ')' : ''),
           dependents: () => specimenSvc.getDependents(specimen),
+          headerCode: 'specimens.void_record_title',
+          confirmCode: 'specimens.confirm_void_record',
+          reasonCode: 'specimens.void_record_reason',
+          confirmButtonCode: 'specimens.void_record',
+          successCode: 'specimens.void_recorded',
           forceDelete: true,
           askReason: true,
           deleteObj: (reason) => specimenSvc.deleteSpecimen(specimen.id, true, reason)

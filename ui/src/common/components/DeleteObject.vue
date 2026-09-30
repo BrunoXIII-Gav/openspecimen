@@ -5,7 +5,7 @@
         <span v-t="{path: 'common.delete_na', args: input}"></span>
       </div>
       <div v-else>
-        <span v-t="'common.delete_confirmation'">Delete Confirmation</span>
+        <span v-t="input.headerCode || 'common.delete_confirmation'">Delete Confirmation</span>
       </div>
     </template>
 
@@ -15,7 +15,7 @@
           <span v-t="{path: 'common.delete_na_reason', args: input}"></span>
         </div>
         <div class="message" v-else>
-          <span v-t="{path: 'common.confirm_delete', args: input}">{{input.type}} <b>{{input.title}}</b> and any dependent data will be deleted. Are you sure you want to proceed?</span>
+          <span v-t="{path: input.confirmCode || 'common.confirm_delete', args: input}">{{input.type}} <b>{{input.title}}</b> and any dependent data will be deleted. Are you sure you want to proceed?</span>
         </div>
 
         <div class="dependents">
@@ -38,13 +38,13 @@
 
       <div v-else>
         <div class="message">
-          <span v-t="{path: 'common.confirm_delete', args: input}">{{input.type}} <b>{{input.title}}</b> and any dependent data will be deleted. Are you sure you want to proceed?</span>
+          <span v-t="{path: input.confirmCode || 'common.confirm_delete', args: input}">{{input.type}} <b>{{input.title}}</b> and any dependent data will be deleted. Are you sure you want to proceed?</span>
         </div>
       </div>
 
       <div v-if="input.askReason && (input.forceDelete || !ctx.dependents || ctx.dependents.length <= 0)">
         <div class="message">
-          <span v-t="'common.specify_delete_reason'">Specify the reason for deletion</span>
+          <span v-t="input.reasonCode || 'common.specify_delete_reason'">Specify the reason for deletion</span>
         </div>
 
         <os-textarea v-model="ctx.reason"></os-textarea>
@@ -58,7 +58,7 @@
       <div v-else>
         <os-button text :label="$t('common.buttons.cancel')" @click="cancel" />
 
-        <os-button danger :label="$t('common.buttons.yes')" @click="proceed"
+        <os-button danger :label="$t(input.confirmButtonCode || 'common.buttons.yes')" @click="proceed"
           :disabled="input.askReason && (!ctx.reason || ctx.reason.length <= 10)" />
       </div>
     </template>
@@ -108,7 +108,7 @@ export default {
               }
             }
 
-            alertSvc.success({code: 'common.record_deleted', args: self.input});
+            alertSvc.success({code: self.input.successCode || 'common.record_deleted', args: self.input});
             self.close('deleted');
           }
         );

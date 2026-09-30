@@ -1,7 +1,7 @@
 <template>
   <os-dialog ref="dialogInstance">
     <template #header>
-      <span v-t="'common.delete_confirmation'">Delete Confirmation</span>
+      <span v-t="headerCode || 'common.delete_confirmation'">Delete Confirmation</span>
     </template>
 
     <template #content>
@@ -20,7 +20,7 @@
 
       <os-form-group dense v-if="collectReason == true">
         <os-cell :width="12">
-          <div v-t="'common.enter_delete_reason'">Specify the reason, at least 10 characters in length, for deletion:</div>
+          <div v-t="reasonCode || 'common.enter_delete_reason'">Specify the reason, at least 10 characters in length, for deletion:</div>
           <os-textarea v-model="reason" :rows="3" />
         </os-cell>
       </os-form-group>
@@ -28,7 +28,7 @@
 
     <template #footer>
       <os-button text :label="$t('common.buttons.cancel')" @click="cancel" />
-      <os-button danger :label="$t('common.buttons.yes')" @click="proceed" :disabled="disabled" />
+      <os-button danger :label="$t(confirmButtonCode || 'common.buttons.yes')" @click="proceed" :disabled="disabled" />
     </template>
   </os-dialog>
 </template>
@@ -42,7 +42,7 @@ import FormGroup from '@/common/components/FormGroup.vue';
 import InputText from '@/common/components/InputText.vue';
 
 export default {
-  props: ['captcha', 'collectReason'],
+  props: ['captcha', 'collectReason', 'headerCode', 'reasonCode', 'confirmButtonCode'],
 
   components: {
     'os-button': Button,

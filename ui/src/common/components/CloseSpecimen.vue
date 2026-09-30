@@ -1,7 +1,7 @@
 <template>
   <os-dialog ref="dialogInstance">
     <template #header>
-      <span v-t="'common.close_specimen.title'">Close Specimen</span>
+      <span>{{disposeLabel}}</span>
     </template>
     <template #content>
       <os-form ref="form" :data="closeDetail" :schema="formSchema" @input="handleInput($event)" />
@@ -9,7 +9,7 @@
     <template #footer>
       <os-button text :label="$t('common.buttons.cancel')" @click="cancel" />
 
-      <os-button primary :label="$t('common.buttons.close')" @click="close" />
+      <os-button primary :label="disposeLabel" @click="close" />
     </template>
   </os-dialog>
 </template>
@@ -85,6 +85,13 @@ export default {
           }
         ]
       }
+    }
+  },
+
+  computed: {
+    disposeLabel: function() {
+      return this.$t((this.specimens || []).length > 1 ?
+        'specimens.dispose_specimens' : 'specimens.dispose_specimen');
     }
   },
 

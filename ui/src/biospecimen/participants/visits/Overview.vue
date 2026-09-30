@@ -9,6 +9,10 @@
         <os-button left-icon="plus" :label="$t('participants.add_specimen')"
           @click="addSpecimen" v-if="cpr.hasConsented && ctx.visit.status == 'Complete' && isCreateSpecimenAllowed" />
 
+        <os-button left-icon="plus" :label="$t('participants.add_multiple_specimens')"
+          @click="addMultipleSpecimens"
+          v-if="cpr.hasConsented && ctx.visit.status == 'Complete' && isCreateSpecimenAllowed" />
+
         <os-button left-icon="print" :label="$t('participants.print_specimen_labels')"
           @click="printLabels" v-if="isPrintSpecimenLabelAllowed" />
 
@@ -136,6 +140,10 @@ export default {
 
     addSpecimen: function() {
       wfSvc.addSpecimen(this.ctx.cp, this.visit);
+    },
+
+    addMultipleSpecimens: function() {
+      wfSvc.addMultipleSpecimens(this.ctx.cp, this.visit);
     },
 
     printLabels: function() {

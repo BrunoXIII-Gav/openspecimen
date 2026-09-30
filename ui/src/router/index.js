@@ -1738,6 +1738,11 @@ const routes = [
                             component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/specimens/CreateChildren.vue')
                           },
                           {
+                            path: 'create-multiple',
+                            name: 'SpecimenCreateMultiple',
+                            component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/specimens/CreateMultiple.vue')
+                          },
+                          {
                             path: 'addedit-event',
                             name: 'SpecimenEventAddEdit',
                             component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/specimens/AddEditEvent.vue'),

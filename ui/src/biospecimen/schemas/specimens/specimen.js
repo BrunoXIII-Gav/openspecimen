@@ -115,12 +115,8 @@ export default {
       "name": "specimen.availableQty",
       "entity": "specimen",
       "measure": "quantity",
-      "validations": {
-        "requiredIf": {
-          "expr": "specimen.lineage == 'Aliquot' && cp.aliquotQtyReq",
-          "messageCode": "specimens.available_quantity_req"
-        }
-      }
+      "disableWhen": "true",
+      "readOnly": "true"
     },
     {
       "type": "booleanCheckbox",
@@ -137,8 +133,7 @@ export default {
       "maxFractionDigits": 8,
       "minFractionDigits": 0,
       "showWhen": "specimen.lineage == 'Derived' && specimen.parentId > 0 && !specimen.processAllParent",
-      "showInOverviewWhen": "specimen.lineage == 'Derived' && specimen.parentConsumedQty != null",
-      "disableWhen": "!!specimen.id && specimen.status == 'Collected'"
+      "showInOverviewWhen": "specimen.lineage == 'Derived' && specimen.parentConsumedQty != null"
     },
     {
       "type": "specimen-measure",

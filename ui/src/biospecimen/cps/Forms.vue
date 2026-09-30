@@ -90,9 +90,31 @@
         </template>
 
         <template #default="{item}">
-          <span>{{item.caption}}</span>
+          <div class="specimen-form-item">
+            <span>{{item.caption}}</span>
+            <label class="batch-form-option" :title="batchGeneralHelp(item)" @click.stop>
+              <input type="checkbox" :checked="isBatchGeneral(item)"
+                :disabled="batchSettingsSaving || item.$batchGeneralBlocked"
+                @change="toggleBatchGeneral(item, $event)" @click.stop />
+              <span>{{ $t('cps.general_in_multiple_specimens') }}</span>
+              <span class="unsafe-warning" v-if="item.$batchGeneralBlocked">⚠</span>
+            </label>
+          </div>
         </template>
       </os-list-group>
+
+      <div class="primary-extension-setting" v-if="primaryExtensionForm">
+        <div class="extension-caption">
+          {{ $t('cps.primary_specimen_custom_fields') }}
+        </div>
+        <label class="batch-form-option" :title="batchGeneralHelp(primaryExtensionForm)">
+          <input type="checkbox" :checked="batchFormSettings.generalExtension"
+            :disabled="batchSettingsSaving || primaryExtensionForm.$batchGeneralBlocked"
+            @change="toggleBatchGeneral(primaryExtensionForm, $event, true)" />
+          <span>{{ $t('cps.general_in_multiple_specimens') }}</span>
+          <span class="unsafe-warning" v-if="primaryExtensionForm.$batchGeneralBlocked">⚠</span>
+        </label>
+      </div>
     </os-grid-column>
 
     <os-grid-column :width="9" style="overflow-y: auto;">
@@ -143,6 +165,7 @@ import alertsSvc from '@/common/services/Alerts.js';
 import cpSvc     from '@/biospecimen/services/CollectionProtocol.js';
 import formSvc   from '@/forms/services/Form.js';
 import formUtil  from '@/common/services/FormUtil.js';
+import specimenSvc from '@/biospecimen/services/Specimen.js';
 import util      from '@/common/services/Util.js';
 
 import cpResources from './Resources.js';
@@ -171,6 +194,15 @@ export default {
       specimenForm: null,
 
       specimenForms: [],
+
+      primaryExtensionForm: null,
+
+      batchFormSettings: {
+        generalFormIds: [],
+        generalExtension: false
+      },
+
+      batchSettingsSaving: false,
 
       sortCtx: {},
 
@@ -262,14 +294,95 @@ export default {
       formsCache[form.formId].then(formSchema => this.selectedFormSchema = formSchema);
     },
 
-    _loadForms: function() {
+    _loadForms: async function() {
       const entityTypes = ['CommonParticipant', 'Participant', 'SpecimenCollectionGroup', 'Specimen'];
-      cpSvc.getForms(this.cp.id, entityTypes).then(
-        (forms) => {
-          this.forms = forms;
-          this._sortForms(forms);
+      const [forms, settings, extensionForm] = await Promise.all([
+        cpSvc.getForms(this.cp.id, entityTypes),
+        cpSvc.getWorkflow(this.cp.id, 'multipleSpecimenForms'),
+        specimenSvc.getCustomFieldsForm(this.cp.id, 'New')
+      ]);
+
+      this.batchFormSettings = {
+        generalFormIds: ((settings && settings.generalFormIds) || []).map(id => +id),
+        generalExtension: !!(settings && settings.generalExtension)
+      };
+
+      if (extensionForm) {
+        this.primaryExtensionForm = {
+          formId: extensionForm.id,
+          caption: extensionForm.caption,
+          definition: extensionForm,
+          $batchGeneralBlocked: this._isUnsafeToShare(extensionForm)
+        };
+        if (this.primaryExtensionForm.$batchGeneralBlocked) {
+          this.batchFormSettings.generalExtension = false;
         }
-      );
+      }
+
+      this.forms = forms;
+      await this._sortForms(forms);
+      await Promise.all(this.specimenForms.map(async form => {
+        const formDef = await this._getFormDefinition(form.formId);
+        form.$isPrimaryExtension = extensionForm && +form.formId == +extensionForm.id;
+        form.$batchGeneralBlocked = form.$isPrimaryExtension || this._isUnsafeToShare(formDef);
+      }));
+    },
+
+    batchGeneralHelp: function(form) {
+      if (form.$isPrimaryExtension) {
+        return this.$t('cps.multiple_specimen_form_is_extension');
+      }
+
+      return form.$batchGeneralBlocked ?
+        this.$t('cps.multiple_specimen_form_not_shareable') :
+        this.$t('cps.multiple_specimen_form_help');
+    },
+
+    _getFormDefinition: function(formId) {
+      const cache = this.formDefinitions = this.formDefinitions || {};
+      cache[formId] = cache[formId] || formSvc.getDefinition(formId);
+      return cache[formId];
+    },
+
+    _isUnsafeToShare: function(formDef) {
+      return (formDef.rows || []).some(row => (row || []).some(field =>
+        ['fileUpload', 'signature', 'subForm'].includes(field.type) ||
+        field.unique == true || field.uniqueConstraint == true
+      ));
+    },
+
+    isBatchGeneral: function(form) {
+      return !form.$batchGeneralBlocked &&
+        this.batchFormSettings.generalFormIds.includes(+form.formId);
+    },
+
+    toggleBatchGeneral: async function(form, event, extension) {
+      if (form.$batchGeneralBlocked || this.batchSettingsSaving) {
+        return;
+      }
+
+      const previous = util.clone(this.batchFormSettings);
+      if (extension) {
+        this.batchFormSettings.generalExtension = event.target.checked;
+      } else {
+        const formId = +form.formId;
+        const ids = this.batchFormSettings.generalFormIds;
+        if (event.target.checked && !ids.includes(formId)) {
+          ids.push(formId);
+        } else if (!event.target.checked) {
+          this.batchFormSettings.generalFormIds = ids.filter(id => id != formId);
+        }
+      }
+
+      this.batchSettingsSaving = true;
+      try {
+        await cpSvc.saveWorkflow(this.cp.id, 'multipleSpecimenForms', this.batchFormSettings);
+        alertsSvc.success({code: 'cps.multiple_specimen_form_settings_saved'});
+      } catch (e) {
+        this.batchFormSettings = previous;
+      } finally {
+        this.batchSettingsSaving = false;
+      }
     },
 
     _sortForms: async function(forms) {
@@ -312,6 +425,43 @@ export default {
 
 .os-cp-no-forms {
   margin: 1rem;
+}
+
+.specimen-form-item {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.batch-form-option {
+  align-items: center;
+  color: #555;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.4rem;
+}
+
+.batch-form-option input:disabled {
+  cursor: not-allowed;
+}
+
+.unsafe-warning {
+  color: #a66a00;
+}
+
+.primary-extension-setting {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 0 0 1.25rem;
+  padding: 0.8rem 1rem;
+}
+
+.extension-caption {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
 </style>

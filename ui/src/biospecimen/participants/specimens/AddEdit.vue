@@ -99,6 +99,11 @@ export default {
 
       ctx: {
         addEditFs: {rows: []},
+        quantityBaseline: {
+          initialQty: specimen.initialQty,
+          availableQty: specimen.availableQty
+        },
+
 
         header: {}
       }
@@ -116,6 +121,7 @@ export default {
         const formSchema = this.ctx.addEditFs = formUtil.getFormSchema(fields, layout);
         if (!this.specimen.id || this.specimen.id <= 0) {
           formUtil.setDefaultValues(formSchema, this.dataCtx);
+          this.dataCtx.specimen.availableQty = this.dataCtx.specimen.initialQty;
         }
       }
     );
@@ -183,9 +189,26 @@ export default {
   },
 
   methods: {
-    handleInput: function() {
-    },
+    handleInput: function({field, value}) {
+      if (field.name != 'specimen.initialQty') {
+        return;
+      }
 
+      const specimen = this.dataCtx.specimen;
+      if (!specimen.id || specimen.id <= 0) {
+        specimen.availableQty = value;
+      } else if (value == null || value === '') {
+        specimen.availableQty = null;
+      } else {
+        const {initialQty, availableQty} = this.ctx.quantityBaseline;
+        if (initialQty != null && availableQty != null) {
+          specimen.availableQty = +availableQty + (+value - +initialQty);
+        } else {
+          specimen.availableQty = value;
+        }
+      }
+
+    },
     saveOrUpdate: function() {
       if (!this.$refs.spmnForm.validate()) {
         return;

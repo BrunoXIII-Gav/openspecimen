@@ -37,6 +37,18 @@ class Workflow {
     }
   }
 
+  async addMultipleSpecimens(cp, visit) {
+    const cpId = (visit && visit.cpId) || (cp && cp.id);
+    const cprId = visit && visit.cprId;
+    const visitId = visit && visit.id;
+
+    if (!cprId || !visitId || visitId <= 0) {
+      return this.addSpecimen(cp, visit);
+    }
+
+    routerSvc.goto('SpecimenCreateMultiple', {cpId, cprId, visitId, specimenId: -1});
+  }
+
   async createAliquots(specimens) {
     const {cpId, cprId, visitId, id: parentId} = specimens[0];
     routerSvc.goto('SpecimenCreateChildren', {cpId, cprId, visitId, specimenId: -1}, {parentId, lineage: 'Aliquot'});

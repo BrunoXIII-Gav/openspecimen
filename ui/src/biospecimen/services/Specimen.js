@@ -92,6 +92,10 @@ class Specimen {
     return http.post('specimens/collect', specimens);
   }
 
+  createMultiple(batch) {
+    return http.post('specimens/batch', batch);
+  }
+
   async deleteSpecimen(specimenId, forceDelete, reason) {
     return http.delete('specimens/' + specimenId, {}, {forceDelete, reason});
   }
@@ -254,6 +258,14 @@ class Specimen {
 
         fields = fields.filter(field => field.name.indexOf('specimen.events') == -1)
         for (let field of fields) {
+          if (field.name == 'specimen.availableQty') {
+            field.disableWhen = 'true';
+            field.readOnly = 'true';
+            field.validations = {};
+            field.required = false;
+            delete field.requiredTooltip;
+          }
+
           if (field.href) {
             continue;
           }

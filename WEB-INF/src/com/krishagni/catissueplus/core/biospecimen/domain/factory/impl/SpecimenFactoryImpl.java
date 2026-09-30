@@ -151,7 +151,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		setPathologicalStatus(detail, existing, specimen, ose);
 		setSpecimenClass(detail, existing, specimen, ose);
 		setSpecimenType(detail, existing, specimen, ose);
-		lockParentForConsumption(existing, specimen);
+		lockForQuantityUpdate(detail, existing, specimen);
 		setQuantity(detail, existing, specimen, ose);
 		validateQuantityAgainstChildren(detail, existing, specimen, ose);
 		setParentConsumption(detail, existing, specimen, ose);
@@ -179,14 +179,21 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		return specimen;
 	}
 
-	private void lockParentForConsumption(Specimen existing, Specimen specimen) {
+	private void lockForQuantityUpdate(SpecimenDetail detail, Specimen existing, Specimen specimen) {
 		Specimen parent = specimen.getParentSpecimen();
-		if (parent == null || parent.getId() == null || !specimen.isCollected() ||
-			!specimen.isAliquot() && !specimen.isDerivative() || existing != null && existing.isCollected()) {
-			return;
+		boolean consumesParent = specimen.isCollected() || existing != null && existing.isCollected();
+		boolean parentQtyUpdated = parent != null && parent.getId() != null && consumesParent &&
+			(specimen.isAliquot() || specimen.isDerivative());
+		if (parentQtyUpdated) {
+			daoFactory.getSpecimenDao().lockForQuantityUpdate(parent);
 		}
 
-		daoFactory.getSpecimenDao().lockForQuantityUpdate(parent);
+		boolean specimenQtyUpdated = existing != null && existing.getId() != null &&
+			(parentQtyUpdated || detail.isAttrModified("initialQty") || detail.isAttrModified("status") ||
+				detail.isAttrModified("parentConsumedQty") || detail.isAttrModified("processAllParent"));
+		if (specimenQtyUpdated) {
+			daoFactory.getSpecimenDao().lockForQuantityUpdate(existing);
+		}
 	}
 
 	private void setParentConsumption(SpecimenDetail detail, Specimen existing, Specimen specimen,
@@ -205,42 +212,25 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 			return;
 		}
 
-		if (existing != null && existing.isCollected()) {
-			if ((detail.isAttrModified("parentConsumedQty") &&
-				!sameQuantity(detail.getParentConsumedQty(), existing.getParentConsumedQuantity())) ||
-				(detail.isAttrModified("processAllParent") &&
-				!Objects.equals(detail.getProcessAllParent(), existing.getProcessAllParent()))) {
-				ose.addError(SpecimenErrorCode.PARENT_CONSUMED_QTY_IMMUTABLE);
-			}
-			specimen.setParentConsumedQuantity(existing.getParentConsumedQuantity());
-			specimen.setProcessAllParent(existing.getProcessAllParent());
-			return;
-		}
-
 		Specimen parent = specimen.getParentSpecimen();
 		boolean processAll = existing != null && !detail.isAttrModified("processAllParent") ?
 			Boolean.TRUE.equals(existing.getProcessAllParent()) : Boolean.TRUE.equals(detail.getProcessAllParent());
+		if (existing != null && existing.isCollected() && detail.isAttrModified("processAllParent") &&
+			!Objects.equals(detail.getProcessAllParent(), existing.getProcessAllParent())) {
+			ose.addError(SpecimenErrorCode.PARENT_CONSUMED_QTY_IMMUTABLE);
+			processAll = Boolean.TRUE.equals(existing.getProcessAllParent());
+		}
+
 		BigDecimal requested = existing != null && !detail.isAttrModified("parentConsumedQty") ?
 			existing.getParentConsumedQuantity() : detail.getParentConsumedQty();
-		BigDecimal consumed = processAll && parent != null ? parent.getAvailableQuantity() : requested;
+		BigDecimal consumed = processAll ?
+			(existing != null && existing.isCollected() ? existing.getParentConsumedQuantity() :
+				parent != null ? parent.getAvailableQuantity() : null) :
+			requested;
 		specimen.setParentConsumedQuantity(consumed);
 		specimen.setProcessAllParent(processAll);
-		if (consumed != null && consumed.compareTo(BigDecimal.ZERO) <= 0) {
-			ose.addError(SpecimenErrorCode.INVALID_QTY);
-		}
 
-		if (!specimen.isCollected() || parent == null || existing != null && existing.isCollected()) return;
-		if (parent.getInitialQuantity() == null || parent.getAvailableQuantity() == null) {
-			ose.addError(SpecimenErrorCode.PARENT_QTY_REQUIRED, parent.getLabel());
-		} else if (consumed == null) {
-			ose.addError(SpecimenErrorCode.PARENT_CONSUMED_QTY_REQUIRED);
-		} else if (consumed.compareTo(parent.getAvailableQuantity()) > 0) {
-			ose.addError(SpecimenErrorCode.PARENT_QTY_INSUFFICIENT, parent.getLabel());
-		}
-	}
-
-	private boolean sameQuantity(BigDecimal lhs, BigDecimal rhs) {
-		return lhs == rhs || lhs != null && rhs != null && lhs.compareTo(rhs) == 0;
+		validateParentBalance(existing, specimen, consumed, ose);
 	}
 
 	private void validateQuantityAgainstChildren(SpecimenDetail detail, Specimen existing, Specimen specimen,
@@ -248,7 +238,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		if (existing == null || !detail.isAttrModified("initialQty") && !detail.isAttrModified("availableQty")) return;
 		BigDecimal consumed = BigDecimal.ZERO;
 		for (Specimen child : existing.getChildCollection()) {
-			if (!child.isCollected()) continue;
+			if (!child.isCollected() || child.isDeleted()) continue;
 			BigDecimal qty = child.isAliquot() ? child.getInitialQuantity() :
 				child.isDerivative() ? child.getParentConsumedQuantity() : null;
 			if (qty != null) consumed = consumed.add(qty);
@@ -264,12 +254,31 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 	private void validateParentBalance(Specimen existing, Specimen specimen, BigDecimal consumed,
 		OpenSpecimenException ose) {
 		Specimen parent = specimen.getParentSpecimen();
-		if (!specimen.isCollected() || parent == null || existing != null && existing.isCollected()) return;
+		if (!specimen.isCollected() || parent == null) return;
 		if (parent.getInitialQuantity() == null || parent.getAvailableQuantity() == null) {
 			ose.addError(SpecimenErrorCode.PARENT_QTY_REQUIRED, parent.getLabel());
-		} else if (consumed == null || consumed.compareTo(BigDecimal.ZERO) <= 0) {
-			ose.addError(SpecimenErrorCode.ALIQUOT_QTY_REQ);
-		} else if (consumed != null && consumed.compareTo(parent.getAvailableQuantity()) > 0) {
+			return;
+		}
+		if (consumed == null) {
+			ose.addError(specimen.isAliquot() ? SpecimenErrorCode.ALIQUOT_QTY_REQ :
+				SpecimenErrorCode.PARENT_CONSUMED_QTY_REQUIRED);
+			return;
+		}
+		if (consumed.signum() <= 0) {
+			ose.addError(SpecimenErrorCode.INVALID_QTY);
+			return;
+		}
+
+		BigDecimal usableQty = parent.getAvailableQuantity();
+		if (existing != null && existing.isCollected()) {
+			BigDecimal previousConsumption = existing.isAliquot() ?
+				existing.getInitialQuantity() : existing.getParentConsumedQuantity();
+			if (previousConsumption != null) {
+				usableQty = usableQty.add(previousConsumption);
+			}
+		}
+
+		if (consumed.compareTo(usableQty) > 0) {
 			ose.addError(SpecimenErrorCode.PARENT_QTY_INSUFFICIENT, parent.getLabel());
 		}
 	}
@@ -730,11 +739,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 			specimen.setInitialQuantity(existing.getInitialQuantity());
 		}
 		
-		if (existing == null || existing.isPending() || detail.isAttrModified("availableQty")) {
-			setAvailableQty(detail, existing, specimen, ose);
-		} else {
-			specimen.setAvailableQuantity(existing.getAvailableQuantity());
-		}		
+		setAvailableQty(detail, existing, specimen, ose);
 	}
 	
 	private void setInitialQty(SpecimenDetail detail, Specimen specimen, OpenSpecimenException ose) {
@@ -759,12 +764,23 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 	}
 	
 	private void setAvailableQty(SpecimenDetail detail, Specimen existing, Specimen specimen, OpenSpecimenException ose) {
-		BigDecimal availableQty = detail.getAvailableQty();
-		if (availableQty == null && (existing == null || existing.isPending())) {
+		BigDecimal availableQty;
+		if (existing == null || !existing.isCollected() && specimen.isCollected()) {
 			availableQty = specimen.getInitialQuantity();
+		} else {
+			availableQty = existing.getAvailableQuantity();
+			if (detail.isAttrModified("initialQty")) {
+				BigDecimal oldInitialQty = existing.getInitialQuantity();
+				BigDecimal newInitialQty = specimen.getInitialQuantity();
+				if (availableQty != null && oldInitialQty != null && newInitialQty != null) {
+					availableQty = availableQty.add(newInitialQty.subtract(oldInitialQty));
+				} else if (availableQty == null && oldInitialQty == null) {
+					availableQty = newInitialQty;
+				}
+			}
 		}
-		
-		if (NumUtil.lessThanZero(availableQty)){
+
+		if (NumUtil.lessThanZero(availableQty)) {
 			ose.addError(SpecimenErrorCode.INVALID_QTY);
 			return;
 		}

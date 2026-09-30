@@ -8,6 +8,7 @@ import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.biospecimen.events.CpEntityDeleteCriteria;
 import com.krishagni.catissueplus.core.biospecimen.events.PrintSpecimenLabelDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenAliquotsSpec;
+import com.krishagni.catissueplus.core.biospecimen.events.SpecimenBatchDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenInfo;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenQueryCriteria;
@@ -50,6 +51,8 @@ public interface SpecimenService {
 	
 	public ResponseEvent<List<SpecimenDetail>> collectSpecimens(RequestEvent<List<SpecimenDetail>> req);
 	
+	public ResponseEvent<List<SpecimenDetail>> createSpecimenBatch(RequestEvent<SpecimenBatchDetail> req);
+
 	public ResponseEvent<List<SpecimenDetail>> createAliquots(RequestEvent<SpecimenAliquotsSpec> req);
 
 	public ResponseEvent<SpecimenDetail> createDerivative(RequestEvent<SpecimenDetail> derivedReq);

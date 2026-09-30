@@ -56,7 +56,9 @@ import com.krishagni.catissueplus.core.biospecimen.events.CpEntityDeleteCriteria
 import com.krishagni.catissueplus.core.biospecimen.events.PrintSpecimenLabelDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.ReceivedEventDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenAliquotsSpec;
+import com.krishagni.catissueplus.core.biospecimen.events.SpecimenBatchDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenDetail;
+import com.krishagni.catissueplus.core.biospecimen.events.SpecimenFormRecordDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenInfo;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenQueryCriteria;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenServiceDetail;
@@ -96,9 +98,12 @@ import com.krishagni.catissueplus.core.common.util.NumUtil;
 import com.krishagni.catissueplus.core.common.util.Status;
 import com.krishagni.catissueplus.core.common.util.Utility;
 import com.krishagni.catissueplus.core.de.domain.DeObject;
+import com.krishagni.catissueplus.core.de.services.FormService;
 import com.krishagni.catissueplus.core.exporter.domain.ExportJob;
 import com.krishagni.catissueplus.core.exporter.services.ExportService;
 import com.krishagni.rbac.common.errors.RbacErrorCode;
+
+import edu.common.dynamicextensions.napi.FormData;
 
 public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, ConfigChangeListener, InitializingBean {
 
@@ -123,6 +128,8 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 	private LabelGenerator additionalLabelGenerator;
 
 	private ExportService exportSvc;
+
+	private FormService formSvc;
 
 	private AsyncTaskExecutor taskExecutor;
 
@@ -156,6 +163,10 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 
 	public void setExportSvc(ExportService exportSvc) {
 		this.exportSvc = exportSvc;
+	}
+
+	public void setFormSvc(FormService formSvc) {
+		this.formSvc = formSvc;
 	}
 
 	public void setTaskExecutor(AsyncTaskExecutor taskExecutor) {
@@ -398,6 +409,9 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 				ose.checkAndThrow();
 
 				AccessCtrlMgr.getInstance().ensureCreateOrUpdateSpecimenRights(specimen, false);
+				if (Status.ACTIVITY_STATUS_DISABLED.getStatus().equals(detail.getStatus())) {
+					lockParentsForQtyReconciliation(specimen, true);
+				}
 				specimen.updateStatus(detail.getStatus(), user, date, detail.getReason(), detail.getComments(), detail.isForceUpdate());
 
 				if (specimen.isDeleted()) {
@@ -433,6 +447,7 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 			AccessCtrlMgr.getInstance().ensureDeleteSpecimenRights(specimen);
 
 			specimen.setOpComments(criteria.getReason());
+			lockParentsForQtyReconciliation(specimen, true);
 			specimen.disable(!criteria.isForceDelete());
 
 			DeleteLogUtil.getInstance().log(specimen);
@@ -471,6 +486,65 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 			for (SpecimenDetail detail : req.getPayload()) {
 				Specimen specimen = collectSpecimen(detail, null, new HashMap<>());
 				specimens.add(specimen);
+			}
+
+			getLabelPrinter().print(getSpecimenPrintItems(specimens));
+			return ResponseEvent.response(
+				specimens.stream()
+					.map(spmn -> SpecimenDetail.from(spmn, false, false))
+					.collect(Collectors.toList())
+			);
+		} catch (OpenSpecimenException ose) {
+			return ResponseEvent.error(ose);
+		} catch (Exception e) {
+			return ResponseEvent.serverError(e);
+		}
+	}
+
+	@Override
+	@PlusTransactional
+	@SuppressWarnings("unchecked")
+	public ResponseEvent<List<SpecimenDetail>> createSpecimenBatch(RequestEvent<SpecimenBatchDetail> req) {
+		try {
+			SpecimenBatchDetail batch = req.getPayload();
+			if (batch == null || CollectionUtils.isEmpty(batch.getSpecimens())) {
+				return ResponseEvent.userError(CommonErrorCode.INVALID_INPUT, "At least one specimen is required");
+			}
+
+			List<Specimen> specimens = new ArrayList<>();
+			for (SpecimenDetail detail : batch.getSpecimens()) {
+				specimens.add(collectSpecimen(detail, null, new HashMap<>()));
+			}
+
+			List<FormData> formDataList = new ArrayList<>();
+			if (CollectionUtils.isNotEmpty(batch.getFormRecords())) {
+				for (SpecimenFormRecordDetail input : batch.getFormRecords()) {
+					Integer specimenIndex = input.getSpecimenIndex();
+					if (specimenIndex == null || specimenIndex < 0 || specimenIndex >= specimens.size() ||
+						input.getFormId() == null || input.getFormCtxtId() == null) {
+						return ResponseEvent.userError(CommonErrorCode.INVALID_INPUT, "Invalid specimen form record");
+					}
+
+					Map<String, Object> data = input.getData() == null ?
+						new HashMap<>() : new HashMap<>(input.getData());
+					data.remove("id");
+
+					Map<String, Object> appData = new HashMap<>();
+					if (data.get("appData") instanceof Map) {
+						appData.putAll((Map<String, Object>) data.get("appData"));
+					}
+
+					appData.put("objectId", specimens.get(specimenIndex).getId());
+					appData.put("formCtxtId", input.getFormCtxtId());
+					appData.put("formId", input.getFormId());
+					appData.put("formStatus", "COMPLETE");
+					data.put("appData", appData);
+					formDataList.add(FormData.fromValueMap(input.getFormId(), data));
+				}
+			}
+
+			if (CollectionUtils.isNotEmpty(formDataList)) {
+				formSvc.saveBulkFormData(RequestEvent.wrap(formDataList)).throwErrorIfUnsuccessful();
 			}
 
 			getLabelPrinter().print(getSpecimenPrintItems(specimens));
@@ -905,6 +979,7 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 			//
 			Specimen spmn = daoFactory.getSpecimenDao().getById(specimenId);
 			spmn.setOpComments(crit.paramString("comments"));
+			lockParentsForQtyReconciliation(spmn, crit.isIncludeChildren());
 			spmn.undelete(crit.isIncludeChildren());
 			return ResponseEvent.response(SpecimenDetail.from(spmn, false, true));
 		} catch (OpenSpecimenException ose) {
@@ -1433,6 +1508,27 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 		}
 		
 		return specimens;		
+	}
+
+	private void lockParentsForQtyReconciliation(Specimen specimen, boolean includeChildren) {
+		Collection<Specimen> affected = includeChildren ?
+			specimen.getDescendants() : Collections.singletonList(specimen);
+		Map<Long, Specimen> parents = new HashMap<>();
+		for (Specimen affectedSpecimen : affected) {
+			if (!affectedSpecimen.isCollected() ||
+				!affectedSpecimen.isAliquot() && !affectedSpecimen.isDerivative()) {
+				continue;
+			}
+
+			Specimen parent = affectedSpecimen.getParentSpecimen();
+			if (parent != null && parent.getId() != null) {
+				parents.put(parent.getId(), parent);
+			}
+		}
+
+		parents.values().stream()
+			.sorted(Comparator.comparingLong(Specimen::getId))
+			.forEach(daoFactory.getSpecimenDao()::lockForQuantityUpdate);
 	}
 
 	/**

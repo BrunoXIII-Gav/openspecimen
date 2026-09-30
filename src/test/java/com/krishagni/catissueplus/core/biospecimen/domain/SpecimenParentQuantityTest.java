@@ -49,6 +49,62 @@ public class SpecimenParentQuantityTest {
 		assertEquals(0, BigDecimal.ONE.compareTo(parent.getAvailableQuantity()));
 	}
 
+	@Test
+	public void increasingDerivativeConsumptionDebitsOnlyTheDifference() {
+		Specimen parent = parent("20", "16");
+		Specimen derivative = child(parent, Specimen.DERIVED, "2");
+		derivative.setParentConsumedQuantity(new BigDecimal("3"));
+
+		derivative.reconcileParentSpecimenQty(new BigDecimal("2"));
+
+		assertEquals(0, new BigDecimal("15").compareTo(parent.getAvailableQuantity()));
+	}
+
+	@Test
+	public void reducingDerivativeConsumptionRestoresOnlyTheDifference() {
+		Specimen parent = parent("20", "15");
+		Specimen derivative = child(parent, Specimen.DERIVED, "3");
+		derivative.setParentConsumedQuantity(new BigDecimal("2"));
+
+		derivative.reconcileParentSpecimenQty(new BigDecimal("3"));
+
+		assertEquals(0, new BigDecimal("16").compareTo(parent.getAvailableQuantity()));
+	}
+
+	@Test
+	public void editingAliquotQuantityAdjustsParentByTheDifference() {
+		Specimen parent = parent("20", "16");
+		Specimen aliquot = child(parent, Specimen.ALIQUOT, null);
+		aliquot.setInitialQuantity(new BigDecimal("3"));
+
+		aliquot.reconcileParentSpecimenQty(new BigDecimal("2"));
+
+		assertEquals(0, new BigDecimal("15").compareTo(parent.getAvailableQuantity()));
+	}
+
+	@Test
+	public void changingChildToPendingRestoresItsConsumption() {
+		Specimen parent = parent("20", "16");
+		Specimen derivative = child(parent, Specimen.DERIVED, "2");
+		derivative.setCollectionStatus(Specimen.PENDING);
+
+		derivative.reconcileParentSpecimenQty(new BigDecimal("2"));
+
+		assertEquals(0, new BigDecimal("18").compareTo(parent.getAvailableQuantity()));
+	}
+
+	@Test
+	public void rejectsEditedConsumptionOverdrawWithoutChangingBalance() {
+		Specimen parent = parent("20", "1");
+		Specimen derivative = child(parent, Specimen.DERIVED, "4");
+
+		assertThrows(
+			OpenSpecimenException.class,
+			() -> derivative.reconcileParentSpecimenQty(new BigDecimal("2"))
+		);
+		assertEquals(0, BigDecimal.ONE.compareTo(parent.getAvailableQuantity()));
+	}
+
 	private Specimen parent(String initial, String available) {
 		Specimen parent = new Specimen();
 		if (initial != null) parent.setInitialQuantity(new BigDecimal(initial));

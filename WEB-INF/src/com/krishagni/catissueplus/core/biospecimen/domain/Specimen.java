@@ -1148,6 +1148,7 @@ public class Specimen extends BaseExtensionEntity {
 		if (getActivityStatus().equals(Status.ACTIVITY_STATUS_DISABLED.getStatus())) {
 			return;
 		}
+		BigDecimal previousParentConsumption = getParentConsumptionForBalance();
 
 		if (checkChildSpecimens) {
 			ensureNoActiveChildSpecimens();
@@ -1164,6 +1165,7 @@ public class Specimen extends BaseExtensionEntity {
 		setActivityStatus(Status.ACTIVITY_STATUS_DISABLED.getStatus());
 		virtualize(null, "Specimen deleted");
 		updateAvailableStatus();
+		reconcileParentSpecimenQty(previousParentConsumption);
 		FormUtil.getInstance().deleteRecords(getCpId(), Arrays.asList(
 			"Specimen", "SpecimenEvent", EXTN, PRIMARY_EXTN, DERIVATIVE_EXTN, ALIQUOT_EXTN), getId());
 		getDeleteEvents().add(SpecimenDeleteEvent.deleteEvent(this, getOpComments()));
@@ -1174,10 +1176,12 @@ public class Specimen extends BaseExtensionEntity {
 			throw OpenSpecimenException.userError(SpecimenErrorCode.PARENT_DELETED, getLabel(), getParentSpecimen().getId());
 		}
 
+		BigDecimal previousParentConsumption = BigDecimal.ZERO;
 		setLabel(Utility.stripTs(getLabel()));
 		setAdditionalLabel(Utility.stripTs(getAdditionalLabel()));
 		setBarcode(Utility.stripTs(getBarcode()));
 		setActivityStatus(Status.ACTIVITY_STATUS_ACTIVE.getStatus());
+		reconcileParentSpecimenQty(previousParentConsumption);
 		updateAvailableStatus();
 		FormUtil.getInstance().undeleteRecords(getCpId(), Arrays.asList(
 			"Specimen", "SpecimenEvent", EXTN, PRIMARY_EXTN, DERIVATIVE_EXTN, ALIQUOT_EXTN), getId());
@@ -1410,6 +1414,7 @@ public class Specimen extends BaseExtensionEntity {
 
 		boolean wasCollected = isCollected();
 		boolean wasReceived  = isReceived();
+		BigDecimal previousParentConsumption = getParentConsumptionForBalance();
 
 		setForceDelete(specimen.isForceDelete());
 		setAutoCollectParents(specimen.isAutoCollectParents());
@@ -1420,12 +1425,10 @@ public class Specimen extends BaseExtensionEntity {
 			reason = specimen.getComment();
 		}
 
-		// Collection changes debit the parent. Use the quantities supplied in this update,
-		// not the values from the previous pending version of this specimen.
+		updateStatus(specimen, reason);
 		setInitialQuantity(specimen.getInitialQuantity());
 		setParentConsumedQuantity(specimen.getParentConsumedQuantity());
 		setProcessAllParent(specimen.getProcessAllParent());
-		updateStatus(specimen, reason);
 
 		//
 		// NOTE: This has been commented to allow retrieving distributed specimens from the holding tanks
@@ -1466,7 +1469,7 @@ public class Specimen extends BaseExtensionEntity {
 		}
 
 		setCreatedOn(specimen.getCreatedOn()); // required for auto-collection of parent specimens
-		updateCollectionStatus(specimen.getCollectionStatus());
+		updateCollectionStatus(specimen.getCollectionStatus(), false);
 
 		setCheckout(specimen.getCheckout());
 		updatePosition(specimen.getPosition(), specimen.getTransferUser(), specimen.getTransferTime(), specimen.getTransferComments());
@@ -1508,6 +1511,10 @@ public class Specimen extends BaseExtensionEntity {
 		setFreezeThawCycles(specimen.getFreezeThawCycles());
 		setShipmentReceiveQuality(specimen.getShipmentReceiveQuality());
 		setUpdated(true);
+
+		if (!isDeleted()) {
+			reconcileParentSpecimenQty(previousParentConsumption);
+		}
 	}
 
 	public void updateRequirement(SpecimenRequirement sr) {
@@ -1561,6 +1568,10 @@ public class Specimen extends BaseExtensionEntity {
 	}
 	
 	public void updateCollectionStatus(String collectionStatus) {
+		updateCollectionStatus(collectionStatus, true);
+	}
+
+	private void updateCollectionStatus(String collectionStatus, boolean reconcileParentQty) {
 		if (collectionStatus.equals(getCollectionStatus())) {
 			//
 			// no change in collection status; therefore nothing needs to be done
@@ -1568,13 +1579,16 @@ public class Specimen extends BaseExtensionEntity {
 			return;
 		}
 
+		BigDecimal previousParentConsumption = reconcileParentQty ? getParentConsumptionForBalance() : null;
+		boolean hierarchyUpdated = false;
 		if (isMissed(collectionStatus)) {
 			if (!getVisit().isCompleted() && !getVisit().isMissed()) {
 				throw OpenSpecimenException.userError(VisitErrorCode.COMPL_OR_MISSED_VISIT_REQ);
 			} else if (getParentSpecimen() != null && !getParentSpecimen().isCollected() && !getParentSpecimen().isMissed()) {
 				throw OpenSpecimenException.userError(SpecimenErrorCode.COLL_OR_MISSED_PARENT_REQ);
 			} else {
-				updateHierarchyStatus(collectionStatus);
+				updateHierarchyStatus(collectionStatus, reconcileParentQty);
+				hierarchyUpdated = true;
 			}
 		} else if (isNotCollected(collectionStatus)) {
 			if (!getVisit().isCompleted() && !getVisit().isNotCollected()) {
@@ -1582,7 +1596,8 @@ public class Specimen extends BaseExtensionEntity {
 			} else if (getParentSpecimen() != null && !getParentSpecimen().isCollected() && !getParentSpecimen().isNotCollected()) {
 				throw OpenSpecimenException.userError(SpecimenErrorCode.COLL_OR_NC_PARENT_REQ);
 			} else {
-				updateHierarchyStatus(collectionStatus);
+				updateHierarchyStatus(collectionStatus, reconcileParentQty);
+				hierarchyUpdated = true;
 			}
 		} else if (isPending(collectionStatus)) {
 			if (!getVisit().isCompleted() && !getVisit().isPending()) {
@@ -1590,7 +1605,8 @@ public class Specimen extends BaseExtensionEntity {
 			} else if (getParentSpecimen() != null && !getParentSpecimen().isCollected() && !getParentSpecimen().isPending()) {
 				throw OpenSpecimenException.userError(SpecimenErrorCode.COLL_OR_PENDING_PARENT_REQ);
 			} else {
-				updateHierarchyStatus(collectionStatus);
+				updateHierarchyStatus(collectionStatus, reconcileParentQty);
+				hierarchyUpdated = true;
 			}
 		} else if (isCollected(collectionStatus)) {
 			if (!getVisit().isCompleted()) {
@@ -1601,11 +1617,13 @@ public class Specimen extends BaseExtensionEntity {
 				}
 
 				setCollectionStatus(collectionStatus);
-				decChildQtyFromParent();
 				addServices();
 			}
 		}
 
+		if (reconcileParentQty && !hierarchyUpdated) {
+			reconcileParentSpecimenQty(previousParentConsumption);
+		}
 		setStatusChanged(true);
 	}
 
@@ -1740,7 +1758,7 @@ public class Specimen extends BaseExtensionEntity {
 				}
 
 				if (StringUtils.isBlank(recvQuality)) {
-					recvQuality = Specimen.ACCEPTABLE;
+					recvQuality = Specimen.TO_BE_RECEIVED;
 				}
 			}
 
@@ -2252,9 +2270,19 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	public void decChildQtyFromParent() {
-		if (isCollected() && (isAliquot() || isDerivative())) {
-			adjustParentSpecimenQty(isAliquot() ? initialQuantity : parentConsumedQuantity);
+		adjustParentSpecimenQty(BigDecimal.ZERO, getParentConsumptionForBalance());
+	}
+
+	void reconcileParentSpecimenQty(BigDecimal previousConsumption) {
+		adjustParentSpecimenQty(previousConsumption, getParentConsumptionForBalance());
+	}
+
+	private BigDecimal getParentConsumptionForBalance() {
+		if (parentSpecimen == null || !isCollected() || isDeleted() || !isAliquot() && !isDerivative()) {
+			return BigDecimal.ZERO;
 		}
+
+		return isAliquot() ? initialQuantity : parentConsumedQuantity;
 	}
 	
 	public void occupyPosition() {
@@ -2451,11 +2479,15 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	public void updateHierarchyStatus() {
-		updateHierarchyStatus(getCollectionStatus());
+		updateHierarchyStatus(getCollectionStatus(), true);
 	}
 
 	public void updateHierarchyStatus(String collectionStatus) {
-		updateHierarchyStatus0(collectionStatus);
+		updateHierarchyStatus(collectionStatus, true);
+	}
+
+	private void updateHierarchyStatus(String collectionStatus, boolean reconcileParentQty) {
+		updateHierarchyStatus0(collectionStatus, reconcileParentQty);
 
 		List<Specimen> createdSpmns = null;
 		if (isMissed(collectionStatus)) {
@@ -2734,22 +2766,37 @@ public class Specimen extends BaseExtensionEntity {
 		getTransferEvents().forEach(SpecimenTransferEvent::delete);
 	}
 
-	private void adjustParentSpecimenQty(BigDecimal qty) {
-		if (qty == null) {
+	private void adjustParentSpecimenQty(BigDecimal previousConsumption, BigDecimal currentConsumption) {
+		if (parentSpecimen == null || sameQuantity(previousConsumption, currentConsumption)) {
+			return;
+		}
+
+		if (previousConsumption == null || currentConsumption == null) {
 			throw OpenSpecimenException.userError(isAliquot() ? SpecimenErrorCode.ALIQUOT_QTY_REQ :
 				SpecimenErrorCode.PARENT_CONSUMED_QTY_REQUIRED);
 		}
-		if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+		if (previousConsumption.signum() < 0 || currentConsumption.signum() < 0) {
 			throw OpenSpecimenException.userError(SpecimenErrorCode.INVALID_QTY);
 		}
+
 		BigDecimal parentQty = parentSpecimen.getAvailableQuantity();
 		if (parentSpecimen.getInitialQuantity() == null || parentQty == null) {
 			throw OpenSpecimenException.userError(SpecimenErrorCode.PARENT_QTY_REQUIRED, parentSpecimen.getLabel());
 		}
-		if (qty.compareTo(parentQty) > 0) {
+
+		BigDecimal updatedQty = parentQty.add(previousConsumption).subtract(currentConsumption);
+		if (updatedQty.signum() < 0) {
 			throw OpenSpecimenException.userError(SpecimenErrorCode.PARENT_QTY_INSUFFICIENT, parentSpecimen.getLabel());
 		}
-		parentSpecimen.setAvailableQuantity(parentQty.subtract(qty));
+		if (updatedQty.compareTo(parentSpecimen.getInitialQuantity()) > 0) {
+			throw OpenSpecimenException.userError(SpecimenErrorCode.AVBL_QTY_GT_INIT_QTY);
+		}
+
+		parentSpecimen.setAvailableQuantity(updatedQty);
+	}
+
+	private boolean sameQuantity(BigDecimal lhs, BigDecimal rhs) {
+		return lhs == rhs || lhs != null && rhs != null && lhs.compareTo(rhs) == 0;
 	}
 
 	private void addCollectionDetails() {
@@ -2779,7 +2826,10 @@ public class Specimen extends BaseExtensionEntity {
 		return daoFactory.getPermissibleValueDao().getByValue(attribute, NOT_SPECIFIED);
 	}
 
-	private void updateHierarchyStatus0(String status) {
+	private void updateHierarchyStatus0(String status, boolean reconcileParentQty) {
+		BigDecimal previousParentConsumption = reconcileParentQty ? getParentConsumptionForBalance() : null;
+		getChildCollection().forEach(child -> child.updateHierarchyStatus0(status, true));
+
 		setCollectionStatus(status);
 		setStatusChanged(true);
 		updateAvailableStatus();
@@ -2800,7 +2850,9 @@ public class Specimen extends BaseExtensionEntity {
 			deleteServices();
 		}
 
-		getChildCollection().forEach(child -> child.updateHierarchyStatus0(status));
+		if (reconcileParentQty) {
+			reconcileParentSpecimenQty(previousParentConsumption);
+		}
 	}
 
 	private List<Specimen> createMissedChildSpecimens() {

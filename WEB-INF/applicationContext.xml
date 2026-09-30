@@ -386,6 +386,7 @@
     <property name="specimenBarcodeGenerator" ref="specimenBarcodeGenerator"/>
     <property name="additionalLabelGenerator" ref="specimenAddlLabelGenerator"/>
     <property name="exportSvc" ref="exportSvc"/>
+    <property name="formSvc" ref="formSvc"/>
     <property name="taskExecutor" ref="taskExecutor"/>
   </bean>
 

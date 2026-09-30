@@ -23,6 +23,7 @@ import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.SpecimenErrorCode;
 import com.krishagni.catissueplus.core.biospecimen.events.CpEntityDeleteCriteria;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenAliquotsSpec;
+import com.krishagni.catissueplus.core.biospecimen.events.SpecimenBatchDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenInfo;
 import com.krishagni.catissueplus.core.biospecimen.events.SpecimenQueryCriteria;
@@ -402,6 +403,15 @@ public class SpecimensController {
 	@ResponseBody	
 	public List<SpecimenDetail> collectSpecimens(@RequestBody List<SpecimenDetail> specimens) {		
 		ResponseEvent<List<SpecimenDetail>> resp = specimenSvc.collectSpecimens(getRequest(specimens));
+		resp.throwErrorIfUnsuccessful();
+		return resp.getPayload();
+	}
+
+	@RequestMapping(method = RequestMethod.POST, value="/batch")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public List<SpecimenDetail> createSpecimenBatch(@RequestBody SpecimenBatchDetail batch) {
+		ResponseEvent<List<SpecimenDetail>> resp = specimenSvc.createSpecimenBatch(getRequest(batch));
 		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}

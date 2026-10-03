@@ -129,6 +129,10 @@
 
     <property name="receivedComments" column="RECEIVED_COMMENTS" />
 
+    <property name="receivedQuantity" column="RECEIVED_QUANTITY" />
+
+    <property name="receivedQuantityReason" column="RECEIVED_QUANTITY_REASON" />
+
     <many-to-one name="parentEvent" column="PARENT_EVENT_ID" fetch="join"/>
 
     <set name="childrenEvents" table="OS_CHILD_SPMN_EVENTS" inverse="true" cascade="all-delete-orphan" order-by="id">

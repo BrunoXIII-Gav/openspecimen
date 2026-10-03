@@ -859,6 +859,22 @@
                     "caption": "Received Quality",
                     "type": "pvs",
                     "attr": "receive_quality"
+                },
+                {
+                    "name": "specimen.receivedEvent.receivedQtyDifferent",
+                    "caption": "Received Quantity is Different",
+                    "type": "toggle-checkbox"
+                },
+                {
+                    "name": "specimen.receivedEvent.receivedQty",
+                    "caption": "Received Initial Quantity",
+                    "type": "specimen-quantity"
+                },
+                {
+                    "name": "specimen.receivedEvent.receivedQtyReason",
+                    "caption": "Reason for Quantity Difference",
+                    "type": "textarea",
+                    "optional": true
                 }
             ]
         }

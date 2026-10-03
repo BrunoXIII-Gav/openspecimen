@@ -680,12 +680,12 @@ class Util {
         }
       }
     } else if (specimen.lineage == 'Derived') {
-      result += specimen.lineage;
+      result += i18n.msg('specimens.derived');
       if (isVisible('specimen.type') && isSpecified(specimen.type)) {
         result += ' ' + specimen.type;
       }
     } else if (specimen.lineage == 'Aliquot') {
-      result += specimen.lineage;
+      result += i18n.msg('specimens.aliquot');
       if (isVisible('specimen.type') && (opts.showAliquotType == 'true' || opts.showAliquotType == true)) {
         result += ' ' + specimen.type;
       }

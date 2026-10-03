@@ -190,10 +190,18 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 
 		boolean specimenQtyUpdated = existing != null && existing.getId() != null &&
 			(parentQtyUpdated || detail.isAttrModified("initialQty") || detail.isAttrModified("status") ||
-				detail.isAttrModified("parentConsumedQty") || detail.isAttrModified("processAllParent"));
+				detail.isAttrModified("parentConsumedQty") || detail.isAttrModified("processAllParent") ||
+				isReceivedQuantityUpdated(detail));
 		if (specimenQtyUpdated) {
 			daoFactory.getSpecimenDao().lockForQuantityUpdate(existing);
 		}
+	}
+
+	private boolean isReceivedQuantityUpdated(SpecimenDetail detail) {
+		ReceivedEventDetail event = detail.getReceivedEvent();
+		return event != null && (event.isAttrModified("receivedQuality") ||
+			event.isAttrModified("receivedQtyDifferent") || event.isAttrModified("receivedQty") ||
+			event.isAttrModified("receivedQtyReason"));
 	}
 
 	private void setParentConsumption(SpecimenDetail detail, Specimen existing, Specimen specimen,
@@ -244,8 +252,8 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 			if (qty != null) consumed = consumed.add(qty);
 		}
 		if (consumed.signum() == 0) return;
-		BigDecimal initial = specimen.getInitialQuantity();
 		BigDecimal available = specimen.getAvailableQuantity();
+		BigDecimal initial = existing.isReceived() ? existing.getAvailableQuantityBase() : specimen.getInitialQuantity();
 		if (initial == null || available == null || available.compareTo(initial.subtract(consumed)) > 0) {
 			ose.addError(SpecimenErrorCode.AVAILABLE_QTY_EXCEEDS_CHILD_BALANCE, specimen.getLabel());
 		}
@@ -769,7 +777,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 			availableQty = specimen.getInitialQuantity();
 		} else {
 			availableQty = existing.getAvailableQuantity();
-			if (detail.isAttrModified("initialQty")) {
+			if (detail.isAttrModified("initialQty") && !existing.isReceived()) {
 				BigDecimal oldInitialQty = existing.getInitialQuantity();
 				BigDecimal newInitialQty = specimen.getInitialQuantity();
 				if (availableQty != null && oldInitialQty != null && newInitialQty != null) {
@@ -790,7 +798,9 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 			return;
 		}
 
-		if (NumUtil.lessThan(specimen.getInitialQuantity(), availableQty)) {
+		BigDecimal availableQtyBase = existing != null && existing.isReceived() ?
+			existing.getAvailableQuantityBase() : specimen.getAvailableQuantityBase();
+		if (NumUtil.lessThan(availableQtyBase, availableQty)) {
 			ose.addError(SpecimenErrorCode.AVBL_QTY_GT_INIT_QTY);
 			return;
 		}

@@ -1,5 +1,7 @@
 package com.krishagni.catissueplus.core.biospecimen.events;
 
+import java.math.BigDecimal;
+
 import com.krishagni.catissueplus.core.administrative.domain.PermissibleValue;
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenCollectionReceiveDetail;
@@ -11,6 +13,12 @@ public class ReceivedEventDetail extends SpecimenEventDetail {
 	private String receivedQuality;
 
 	private String newLabel;
+
+	private Boolean receivedQtyDifferent;
+
+	private BigDecimal receivedQty;
+
+	private String receivedQtyReason;
 
 	public String getReceivedQuality() {
 		return receivedQuality;
@@ -28,6 +36,30 @@ public class ReceivedEventDetail extends SpecimenEventDetail {
 		this.newLabel = newLabel;
 	}
 
+	public Boolean getReceivedQtyDifferent() {
+		return receivedQtyDifferent;
+	}
+
+	public void setReceivedQtyDifferent(Boolean receivedQtyDifferent) {
+		this.receivedQtyDifferent = receivedQtyDifferent;
+	}
+
+	public BigDecimal getReceivedQty() {
+		return receivedQty;
+	}
+
+	public void setReceivedQty(BigDecimal receivedQty) {
+		this.receivedQty = receivedQty;
+	}
+
+	public String getReceivedQtyReason() {
+		return receivedQtyReason;
+	}
+
+	public void setReceivedQtyReason(String receivedQtyReason) {
+		this.receivedQtyReason = receivedQtyReason;
+	}
+
 	public static ReceivedEventDetail from(Specimen specimen) {
 		if (specimen == null) {
 			return null;
@@ -40,6 +72,10 @@ public class ReceivedEventDetail extends SpecimenEventDetail {
 		detail.setUser(UserSummary.from(specimen.getReceivedUser()));
 		detail.setTime(specimen.getReceivedTime());
 		detail.setComments(specimen.getReceivedComments());
+		detail.setReceivedQty(specimen.getReceivedQuantity());
+		detail.setReceivedQtyReason(specimen.getReceivedQuantityReason());
+		detail.setReceivedQtyDifferent(specimen.getReceivedQuantity() != null && specimen.getInitialQuantity() != null &&
+			specimen.getReceivedQuantity().compareTo(specimen.getInitialQuantity()) != 0);
 		return detail;
 	}
 
@@ -54,6 +90,7 @@ public class ReceivedEventDetail extends SpecimenEventDetail {
 		re.setTime(cre.getRecvTime());
 		re.setUser(UserSummary.from(cre.getReceiver()));
 		re.setComments(cre.getRecvComments());
+		re.setReceivedQtyDifferent(false);
 		return re;
 	}
 }

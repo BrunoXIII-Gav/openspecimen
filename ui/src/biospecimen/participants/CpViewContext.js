@@ -266,7 +266,7 @@ export default class CpViewContext {
   }
 
   async getSpecimenAddEditLayout(lineage) {
-    return this.getSpecimenDict(true, lineage).then(dict => specimenSvc.getLayout(this.cpId, dict));
+    return this.getSpecimenDict(true, lineage).then(dict => specimenSvc.getLayout(this.cpId, dict, lineage));
   }
 
   async getSpecimenEventForms(context) {

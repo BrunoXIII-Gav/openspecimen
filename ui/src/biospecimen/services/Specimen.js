@@ -196,31 +196,43 @@ class Specimen {
     return null;
   }
 
-  getEvents({id}) {
+  getEvents({id, lineage, createdOn}) {
+    const processedAt = ['Derived', 'Aliquot'].includes(lineage) && createdOn
+      ? new Date(createdOn)
+      : null;
+    const processingTime = processedAt && !Number.isNaN(processedAt.getTime())
+      ? processedAt
+      : null;
+
     return http.get('specimens/' + id + '/events').then(
       records => {
         const result = [];
         for (let ev of records) {
           for (let record of ev.records) {
-            let user = null, time = null;
+            let eventName = ev.caption, user = null, time = null;
             for (let {name, value} of record.fieldValues) {
               if (name == 'user') {
                 user = value;
               } else if (name == 'time') {
                 time = value && new Date(value);
+              } else if (name == 'processingForm' && value) {
+                eventName = value;
               }
             }
 
             result.push({
               id: record.recordId,
               formId: ev.id,
+              formName: ev.name,
               formCtxtId: record.fcId,
               sysForm: record.sysForm,
-              name: ev.caption,
+              name: eventName,
               updatedBy: record.user,
               updateTime: record.updateTime,
               user: user,
-              time: time,
+              // A custom specimen-event form can omit its own date field. In that
+              // case, the event took place when this child specimen was processed.
+              time: time || (!record.sysForm ? processingTime : null),
               isEditable: !record.sysForm || ev.name == 'SpecimenCollectionEvent' || ev.name == 'SpecimenReceivedEvent'
             });
           }
@@ -247,12 +259,25 @@ class Specimen {
       specimenSchema, (id) => this.getCustomFieldsForm(id, lineage)
     ).then(
       fields => {
-        for (const name of ['specimen.processAllParent', 'specimen.parentConsumedQty']) {
+        const mandatoryFieldNames = ['specimen.processAllParent', 'specimen.parentConsumedQty'];
+        if (['Derived', 'Aliquot'].includes(lineage)) {
+          mandatoryFieldNames.push('specimen.createdOn');
+        }
+
+        for (const name of mandatoryFieldNames) {
           if (!fields.some(field => field.name == name)) {
             const systemField = specimenSchema.fields.find(field => field.name == name);
             if (systemField) {
               fields.push(util.clone(systemField));
             }
+          }
+        }
+
+        if (['Derived', 'Aliquot'].includes(lineage)) {
+          const processingTime = fields.find(field => field.name == 'specimen.createdOn');
+          if (processingTime) {
+            processingTime.labelCode = 'specimens.processing_event_date_time';
+            processingTime.showInOverviewWhen = '!!specimen.createdOn';
           }
         }
 
@@ -300,11 +325,23 @@ class Specimen {
     );
   }
 
-  async getLayout(cpId, specimenFields) {
+  async getLayout(cpId, specimenFields, lineage) {
     const layout = await cpSvc.getLayoutFor(cpId, 'specimen', 'specimen.extensionDetail', addEditLayout.layout, specimenFields);
+    layout.rows = layout.rows.map(
+      row => ({
+        ...row,
+        fields: row.fields.filter(field => field.name.indexOf('specimen.receivedEvent.') != 0)
+      })
+    ).filter(row => row.fields.length > 0);
+
     // These inputs are required to account for material consumed by a new derivative,
     // including protocols that defined a custom specimen layout before they existed.
-    for (const name of ['specimen.processAllParent', 'specimen.parentConsumedQty']) {
+    const mandatoryFieldNames = ['specimen.processAllParent', 'specimen.parentConsumedQty'];
+    if (['Derived', 'Aliquot'].includes(lineage)) {
+      mandatoryFieldNames.push('specimen.createdOn');
+    }
+
+    for (const name of mandatoryFieldNames) {
       if (!layout.rows.some(row => row.fields.some(field => field.name == name))) {
         layout.rows.push({fields: [{name}]});
       }
@@ -337,8 +374,38 @@ class Specimen {
     return specimenSchema.fields.filter(field => field.name.indexOf('specimen.receivedEvent.') == 0);
   }
 
-  getReceivedEventAddEditFs() {
-    return formUtil.getFormSchema(specimenSchema.fields, recvEventLayout.layout);
+  getReceivedEventAddEditFs(fields) {
+    fields = fields || specimenSchema.fields;
+    const mandatoryEventFieldNames = [
+      'specimen.receivedEvent.receivedQuality',
+      'specimen.receivedEvent.receivedQtyDifferent',
+      'specimen.receivedEvent.receivedQty',
+      'specimen.receivedEvent.receivedQtyReason'
+    ];
+    const receivedFieldNames = new Set(
+      mandatoryEventFieldNames.concat(
+        fields.filter(field => field.name.indexOf('specimen.receivedEvent.') == 0)
+          .map(field => field.name)
+      )
+    );
+
+    const eventFields = specimenSchema.fields.filter(
+      field => receivedFieldNames.has(field.name)
+    ).map(field => {
+      const configuredField = fields.find(configuredField => configuredField.name == field.name);
+      return Object.assign(util.clone(field), util.clone(configuredField));
+    });
+
+    const layout = {
+      ...recvEventLayout.layout,
+      rows: recvEventLayout.layout.rows.filter(
+        row => row.fields.some(field =>
+          field.name == 'specimen.receivedEvent.newLabel' || receivedFieldNames.has(field.name)
+        )
+      )
+    };
+
+    return formUtil.getFormSchema(eventFields, layout);
   }
 
   async getEventForms(spmnId) {

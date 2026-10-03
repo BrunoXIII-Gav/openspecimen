@@ -104,6 +104,7 @@ import com.krishagni.catissueplus.core.exporter.services.ExportService;
 import com.krishagni.rbac.common.errors.RbacErrorCode;
 
 import edu.common.dynamicextensions.napi.FormData;
+import edu.common.dynamicextensions.domain.nui.Container;
 
 public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, ConfigChangeListener, InitializingBean {
 
@@ -523,6 +524,14 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 					if (specimenIndex == null || specimenIndex < 0 || specimenIndex >= specimens.size() ||
 						input.getFormId() == null || input.getFormCtxtId() == null) {
 						return ResponseEvent.userError(CommonErrorCode.INVALID_INPUT, "Invalid specimen form record");
+					}
+					Container form = Container.getContainer(input.getFormId());
+					if (form == null) {
+						return ResponseEvent.userError(CommonErrorCode.INVALID_INPUT, "Invalid specimen event form");
+					}
+
+					if (specimens.get(specimenIndex).getParentEvent() != null) {
+						specimens.get(specimenIndex).getParentEvent().setProcessingForm(form.getCaption());
 					}
 
 					Map<String, Object> data = input.getData() == null ?

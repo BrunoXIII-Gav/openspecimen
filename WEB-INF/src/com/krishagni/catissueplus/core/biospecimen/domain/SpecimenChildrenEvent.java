@@ -17,6 +17,7 @@ public class SpecimenChildrenEvent extends BaseEntity {
 
 	private String comments;
 
+	private String processingForm;
 	private Set<Specimen> children = new LinkedHashSet<>();
 
 	public SpecimenChildrenEvent() {
@@ -61,6 +62,14 @@ public class SpecimenChildrenEvent extends BaseEntity {
 
 	public void setComments(String comments) {
 		this.comments = comments;
+	}
+
+	public String getProcessingForm() {
+		return processingForm;
+	}
+
+	public void setProcessingForm(String processingForm) {
+		this.processingForm = processingForm;
 	}
 
 	public Set<Specimen> getChildren() {

@@ -22,6 +22,8 @@
     <property name="time" column="CREATION_TIME"/>
 
     <property name="comments" column="COMMENTS"/>
+    <property name="processingForm" column="PROCESSING_FORM"/>
+
 
     <set name="children" inverse="true">
       <key column="PARENT_EVENT_ID"/>

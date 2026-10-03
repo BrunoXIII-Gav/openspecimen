@@ -248,14 +248,14 @@ export default {
       "labelCode": "specimens.receive_date",
       "name": "specimen.receivedEvent.time",
       "showTime": true,
-      "showWhen": "specimen.lineage == 'New' && specimen.receivedEvent.receivedQuality && specimen.receivedEvent.receivedQuality != 'To be Received'",
+      "showWhen": "true == false",
       "showInOverviewWhen": "!!specimen.receivedEvent.time"
     },
     {
       "type": "user",
       "labelCode": "specimens.receiver",
       "name": "specimen.receivedEvent.user",
-      "showWhen": "specimen.lineage == 'New' && specimen.receivedEvent.receivedQuality && specimen.receivedEvent.receivedQuality != 'To be Received'",
+      "showWhen": "true == false",
       "showInOverviewWhen": "!!specimen.receivedEvent.user"
     },
     {
@@ -264,14 +264,52 @@ export default {
       "name": "specimen.receivedEvent.receivedQuality",
       "attribute": "receive_quality",
       "selectProp": "value",
-      "showWhen": "specimen.lineage == 'New'",
+      "showWhen": "true == false",
       "showInOverviewWhen": "!!specimen.receivedEvent.receivedQuality"
+    },
+    {
+      "type": "radio",
+      "labelCode": "specimens.received_quantity_different",
+      "name": "specimen.receivedEvent.receivedQtyDifferent",
+      "options": [
+        { "captionCode": "common.no", "value": false },
+        { "captionCode": "common.yes", "value": true }
+      ],
+      "defaultValue": false,
+      "showWhen": "true == false",
+      "showInOverviewWhen": "false"
+    },
+    {
+      "type": "specimen-measure",
+      "labelCode": "specimens.received_quantity",
+      "name": "specimen.receivedEvent.receivedQty",
+      "entity": "specimen",
+      "measure": "quantity",
+      "showWhen": "true == false",
+      "showInOverviewWhen": "!!specimen.receivedEvent.receivedQtyDifferent",
+      "validations": {
+        "required": {
+          "messageCode": "specimens.received_quantity_req"
+        }
+      }
+    },
+    {
+      "type": "textarea",
+      "labelCode": "specimens.received_quantity_reason",
+      "name": "specimen.receivedEvent.receivedQtyReason",
+      "showWhen": "true == false",
+      "showInOverviewWhen": "!!specimen.receivedEvent.receivedQtyDifferent",
+      "validations": {
+        "required": {
+          "messageCode": "specimens.received_quantity_reason_req"
+        }
+      }
     },
     {
       "type": "textarea",
       "labelCode": "specimens.receive_comments",
       "name": "specimen.receivedEvent.comments",
-      "showWhen": "specimen.lineage == 'New' && specimen.receivedEvent.receivedQuality && specimen.receivedEvent.receivedQuality != 'To be Received'",
+      "showWhen": "true == false",
       "showInOverviewWhen": "!!specimen.receivedEvent.comments"
     },
   ]

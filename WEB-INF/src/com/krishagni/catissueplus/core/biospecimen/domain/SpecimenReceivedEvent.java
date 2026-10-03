@@ -1,5 +1,6 @@
 package com.krishagni.catissueplus.core.biospecimen.domain;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 import com.krishagni.catissueplus.core.administrative.domain.PermissibleValue;
@@ -29,5 +30,13 @@ public class SpecimenReceivedEvent {
 
 	public String getComments() {
 		return specimen.getReceivedComments();
+	}
+
+	public BigDecimal getReceivedQuantity() {
+		return specimen.getReceivedQuantity();
+	}
+
+	public String getReceivedQuantityReason() {
+		return specimen.getReceivedQuantityReason();
 	}
 }

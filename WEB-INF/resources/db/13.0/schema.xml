@@ -192,4 +192,15 @@
       <column name="PROCESS_ALL_PARENT" type="${boolean.type}" />
     </addColumn>
   </changeSet>
+  <changeSet author="codex" id="Specimen received quantity">
+    <addColumn tableName="CATISSUE_SPECIMEN">
+      <column name="RECEIVED_QUANTITY" type="${decimal.type}(24,8)" />
+      <column name="RECEIVED_QUANTITY_REASON" type="${text.type}(512)" />
+    </addColumn>
+  </changeSet>
+  <changeSet author="codex" id="Specimen children processing form">
+    <addColumn tableName="OS_CHILD_SPMN_EVENTS">
+      <column name="PROCESSING_FORM" type="${text.type}(255)" />
+    </addColumn>
+  </changeSet>
 </databaseChangeLog>

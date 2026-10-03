@@ -54,7 +54,8 @@ export default {
       ctx: {
         cp,
 
-        formDef: {}
+        formDef: {},
+        receivedEventFields: null
       },
 
       eventCtx: { wasReceived: false, allowSpmnRelabeling: false }
@@ -67,7 +68,11 @@ export default {
     }
 
     const {receivedEvent: re} = this.specimen || {};
-    const settings = await settingSvc.getSetting('administrative', 'allow_spmn_relabeling');
+    const [settings, receivedEventFields] = await Promise.all([
+      settingSvc.getSetting('administrative', 'allow_spmn_relabeling'),
+      this.cpViewCtx.getSpecimenDict(true, 'New')
+    ]);
+    this.ctx.receivedEventFields = receivedEventFields;
     this.eventCtx = {
       wasReceived: re && re.receivedQuality && re.receivedQuality != 'To be Received',
       allowSpmnRelabeling: util.isTrue(settings[0].value),
@@ -120,8 +125,11 @@ export default {
       if (this.recordId == 'SpecimenCollectionEvent') {
         return spmnSvc.getCollectionEventAddEditFs();
       } else if (this.recordId == 'SpecimenReceivedEvent') {
-        const {wasReceived, allowSpmnRelabeling} = this.ctx;
-        return spmnSvc.getReceivedEventAddEditFs(!wasReceived && allowSpmnRelabeling);
+        if (!this.ctx.receivedEventFields) {
+          return {rows: []};
+        }
+
+        return spmnSvc.getReceivedEventAddEditFs(this.ctx.receivedEventFields);
       }
 
       return {rows: []};

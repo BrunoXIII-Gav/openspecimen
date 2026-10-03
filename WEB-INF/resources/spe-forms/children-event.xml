@@ -44,6 +44,16 @@
         <mandatory>true</mandatory>
       </datePicker>
     </row>
+    <row>
+      <textField>
+        <name>processingForm</name>
+        <udn>processingForm</udn>
+        <caption>#getMessage("children_event_processing_form")</caption>
+        <column>PROCESSING_FORM</column>
+        <showInGrid>true</showInGrid>
+      </textField>
+    </row>
+
 
     <row>
       <subForm>

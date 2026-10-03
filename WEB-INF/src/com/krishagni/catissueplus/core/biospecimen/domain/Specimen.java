@@ -218,6 +218,14 @@ public class Specimen extends BaseExtensionEntity {
 	private String receivedComments;
 
 	//
+	// The quantity physically confirmed during receipt. The initial quantity
+	// continues to represent what was recorded at collection time.
+	//
+	private BigDecimal receivedQuantity;
+
+	private String receivedQuantityReason;
+
+	//
 	// record the DP for which this specimen is currently reserved
 	//
 	private SpecimenReservedEvent reservedEvent;
@@ -777,6 +785,26 @@ public class Specimen extends BaseExtensionEntity {
 
 	public void setReceivedComments(String receivedComments) {
 		this.receivedComments = receivedComments;
+	}
+
+	public BigDecimal getReceivedQuantity() {
+		return receivedQuantity;
+	}
+
+	public void setReceivedQuantity(BigDecimal receivedQuantity) {
+		this.receivedQuantity = receivedQuantity;
+	}
+
+	public String getReceivedQuantityReason() {
+		return receivedQuantityReason;
+	}
+
+	public void setReceivedQuantityReason(String receivedQuantityReason) {
+		this.receivedQuantityReason = receivedQuantityReason;
+	}
+
+	public BigDecimal getAvailableQuantityBase() {
+		return isReceived() && receivedQuantity != null ? receivedQuantity : initialQuantity;
 	}
 
 	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
@@ -1739,6 +1767,8 @@ public class Specimen extends BaseExtensionEntity {
 			setReceivedUser(null);
 			setReceivedTime(null);
 			setReceivedComments(null);
+			setReceivedQuantity(null);
+			setReceivedQuantityReason(null);
 			setNewLabel(null);
 			return;
 		}
@@ -1774,6 +1804,7 @@ public class Specimen extends BaseExtensionEntity {
 
 		PermissibleValue recvQualityPv = getReceivedQuality();
 		if (recvQualityPv == null || TO_BE_RECEIVED.equals(recvQualityPv.getValue())) {
+			setReceivedQuantityDetails(existing, input);
 			return;
 		}
 
@@ -1816,6 +1847,60 @@ public class Specimen extends BaseExtensionEntity {
 		} else {
 			setNewLabel(existing.getNewLabel());
 		}
+		setReceivedQuantityDetails(existing, input);
+
+	}
+
+	private void setReceivedQuantityDetails(Specimen existing, ReceivedEventDetail input) {
+		boolean quantityUpdated = existing == null || input.isAttrModified("receivedQtyDifferent") ||
+			input.isAttrModified("receivedQty") || input.isAttrModified("receivedQtyReason");
+
+		if (!isReceived()) {
+			setReceivedQuantity(null);
+			setReceivedQuantityReason(null);
+		} else if (!quantityUpdated) {
+			BigDecimal existingReceivedQty = existing.getReceivedQuantity();
+			setReceivedQuantity(existingReceivedQty != null ? existingReceivedQty : existing.getInitialQuantity());
+			setReceivedQuantityReason(existing.getReceivedQuantityReason());
+		} else if (Boolean.TRUE.equals(input.getReceivedQtyDifferent())) {
+			BigDecimal receivedQty = input.getReceivedQty();
+			if (receivedQty == null) {
+				throw OpenSpecimenException.userError(SpecimenErrorCode.RECEIVED_QTY_REQUIRED);
+			}
+			if (receivedQty.signum() < 0) {
+				throw OpenSpecimenException.userError(SpecimenErrorCode.INVALID_QTY);
+			}
+			if (sameQuantity(receivedQty, getInitialQuantity())) {
+				throw OpenSpecimenException.userError(SpecimenErrorCode.RECEIVED_QTY_NOT_DIFFERENT);
+			}
+			if (StringUtils.isBlank(input.getReceivedQtyReason())) {
+				throw OpenSpecimenException.userError(SpecimenErrorCode.RECEIVED_QTY_REASON_REQUIRED);
+			}
+
+			setReceivedQuantity(receivedQty);
+			setReceivedQuantityReason(input.getReceivedQtyReason());
+		} else {
+			setReceivedQuantity(getInitialQuantity());
+			setReceivedQuantityReason(null);
+		}
+
+		reconcileAvailableQuantityForReceipt(existing);
+	}
+
+	private void reconcileAvailableQuantityForReceipt(Specimen existing) {
+		BigDecimal previousBase = existing != null ? existing.getAvailableQuantityBase() : getInitialQuantity();
+		BigDecimal currentBase = getAvailableQuantityBase();
+		if (sameQuantity(previousBase, currentBase) || getAvailableQuantity() == null ||
+			previousBase == null || currentBase == null) {
+			return;
+		}
+
+		BigDecimal updatedQty = getAvailableQuantity().add(currentBase).subtract(previousBase);
+		if (updatedQty.signum() < 0) {
+			throw OpenSpecimenException.userError(SpecimenErrorCode.RECEIVED_QTY_INSUFFICIENT, getLabel());
+		}
+
+		setAvailableQuantity(updatedQty);
 	}
 
 	private boolean isPendingPrimaryWithoutCollectionEvent(CollectionEventDetail input) {
@@ -1849,6 +1934,8 @@ public class Specimen extends BaseExtensionEntity {
 		setReceivedUser(other.getReceivedUser());
 		setReceivedTime(other.getReceivedTime());
 		setReceivedComments(other.getReceivedComments());
+		setReceivedQuantity(other.getReceivedQuantity());
+		setReceivedQuantityReason(other.getReceivedQuantityReason());
 
 		if (getReceivedQuality() != null && !getReceivedQuality().getValue().equals(TO_BE_RECEIVED)) {
 			if (getReceivedUser() == null) {
@@ -1943,8 +2030,8 @@ public class Specimen extends BaseExtensionEntity {
 			setAvailableQuantity(getAvailableQuantity().add(item.getQuantity()));
 		}
 
-		if (NumUtil.greaterThan(getAvailableQuantity(), getInitialQuantity())) {
-			setAvailableQuantity(getInitialQuantity());
+		if (NumUtil.greaterThan(getAvailableQuantity(), getAvailableQuantityBase())) {
+			setAvailableQuantity(getAvailableQuantityBase());
 		}
 
 		SpecimenDistributionEvent.createForDistributionOrderItem(item).delete();
@@ -2780,7 +2867,8 @@ public class Specimen extends BaseExtensionEntity {
 		}
 
 		BigDecimal parentQty = parentSpecimen.getAvailableQuantity();
-		if (parentSpecimen.getInitialQuantity() == null || parentQty == null) {
+		BigDecimal parentQtyBase = parentSpecimen.getAvailableQuantityBase();
+		if (parentQtyBase == null || parentQty == null) {
 			throw OpenSpecimenException.userError(SpecimenErrorCode.PARENT_QTY_REQUIRED, parentSpecimen.getLabel());
 		}
 
@@ -2788,7 +2876,7 @@ public class Specimen extends BaseExtensionEntity {
 		if (updatedQty.signum() < 0) {
 			throw OpenSpecimenException.userError(SpecimenErrorCode.PARENT_QTY_INSUFFICIENT, parentSpecimen.getLabel());
 		}
-		if (updatedQty.compareTo(parentSpecimen.getInitialQuantity()) > 0) {
+		if (updatedQty.compareTo(parentQtyBase) > 0) {
 			throw OpenSpecimenException.userError(SpecimenErrorCode.AVBL_QTY_GT_INIT_QTY);
 		}
 
@@ -2820,6 +2908,8 @@ public class Specimen extends BaseExtensionEntity {
 		setReceivedUser(null);
 		setReceivedTime(null);
 		setReceivedComments(null);
+		setReceivedQuantity(null);
+		setReceivedQuantityReason(null);
 	}
 
 	private PermissibleValue getNotSpecifiedPv(String attribute) {

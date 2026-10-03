@@ -33,6 +33,17 @@
 
       <os-overview :schema="ctx.dict" :object="ctx" :reference-prefix="'specimen-view-' + specimen.id" v-if="ctx.dict.length > 0" />
 
+      <os-section class="processing-event-details" v-for="eventRecord in ctx.processingEventRecords"
+        :key="eventRecord.record.id">
+        <template #title>
+          <span>{{ eventRecord.caption }}</span>
+        </template>
+        <template #content>
+          <os-form-record-overview :record="eventRecord.record"
+            :reference-prefix="'processing-event-view-' + eventRecord.record.id" />
+        </template>
+      </os-section>
+
       <os-section class="storage-hierarchy" v-if="storageHierarchy.length > 0">
         <template #title>
           <span v-t="'containers.storage_hierarchy'">Storage Hierarchy</span>
@@ -199,6 +210,8 @@ export default {
 
         pluginOptions: [],
 
+        processingEventRecords: [],
+
         event: {}
       },
 
@@ -216,7 +229,8 @@ export default {
 
   async created() {
     this._setupSpecimen();
-    this.ctx.dict = await this.cpViewCtx.getSpecimenDict(false, this.specimen.lineage);
+    const fields = await this.cpViewCtx.getSpecimenDict(false, this.specimen.lineage);
+    this.ctx.dict = this._getOverviewFields(fields, this.specimen.lineage);
     if (typeof this.action == 'string') {
       const [view, formId, recordId] = this.action.split(',');
       if (view == 'show_event' && formId > 0 && recordId > 0) {
@@ -338,6 +352,21 @@ export default {
   },
 
   methods: {
+    _getOverviewFields: function(fields, lineage) {
+      if (!['Derived', 'Aliquot'].includes(lineage)) {
+        return fields;
+      }
+
+      // Collection and reception values belong to the primary specimen. Do not
+      // present them as default fields of a derived specimen or aliquot.
+      return (fields || []).filter(
+        field => !field.name || (
+          field.name.indexOf('specimen.collectionEvent.') != 0 &&
+          field.name.indexOf('specimen.receivedEvent.') != 0
+        )
+      );
+    },
+
     getContainerUrl: function(container) {
       return container && container.id > 0
         ? routerSvc.getUrl('ContainerDetail.Locations', {containerId: container.id})
@@ -419,9 +448,10 @@ export default {
       } else {
         formSvc.getRecord({formId, recordId}, {includeMetadata: true}).then(
           record => {
+            this._localizeSystemEventRecord(record, event);
             const sysForm = record.appData && record.appData.sysForm;
             this.ctx.event = {
-              name: record.caption,
+              name: event.name || record.caption,
               id: record.id,
               formId: record.containerId,
               formCtxtId: record.appData && record.appData.formCtxtId,
@@ -631,11 +661,50 @@ export default {
               }
             }
 
+            this._loadProcessingEventRecords(events, specimen.id);
             this.ctx.events = events
           }
         );
       }
     },
+
+    _loadProcessingEventRecords: function(events, specimenId) {
+      const processingEvents = events.filter(event => !event.sysForm);
+      if (processingEvents.length == 0) {
+        this.ctx.processingEventRecords = [];
+        return;
+      }
+
+      Promise.all(
+        processingEvents.map(event => formSvc.getRecord(
+          {formId: event.formId, recordId: event.id}, {includeMetadata: true}
+        ).then(record => ({caption: event.name, record})))
+      ).then(
+        records => {
+
+          if (this.specimen.id == specimenId) {
+            this.ctx.processingEventRecords = records;
+          }
+        }
+      );
+    },
+    _localizeSystemEventRecord: function(record, event) {
+      if (event.formName != 'SpecimenChildrenEvent' || !record.fields) {
+        return;
+      }
+
+      const lineage = record.fields.find(field => field.name == 'lineage');
+      const lineageMsgCodes = {
+        Derived: 'specimens.derived',
+        Aliquot: 'specimens.aliquot'
+      };
+      const msgCode = lineage && lineageMsgCodes[lineage.value];
+      if (msgCode) {
+        lineage.displayValue = this.$t(msgCode);
+      }
+    },
+
+
 
     _loadMoreMenuPluginOptions: function() {
       if (!this.$refs.moreMenuPluginViews) {

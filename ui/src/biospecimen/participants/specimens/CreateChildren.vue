@@ -27,6 +27,22 @@
           </div>
         </div>
 
+        <section class="event-form-setup" v-if="eventForms.length > 0">
+          <div class="field">
+            <label>{{ $t('specimens.processing_event_form') }}</label>
+            <select v-model="selectedEventFormId" @change="eventFormChanged">
+              <option :value="null">{{ $t('specimens.no_processing_event_form') }}</option>
+              <option v-for="form in eventForms" :key="form.formCtxtId" :value="form.formId">
+                {{ form.formCaption || form.caption || form.formName || form.name }}
+              </option>
+            </select>
+          </div>
+          <label class="share-event-data" v-if="selectedEventForm">
+            <input type="checkbox" v-model="shareEventData" @change="eventDataSharingChanged" />
+            {{ $t('specimens.same_processing_event_data') }}
+          </label>
+        </section>
+
         <div class="batch-options">
           <div class="field">
             <label>{{ lineage == 'Aliquot' ? $t('specimens.aliquot_count') : $t('specimens.derivative_count') }}</label>
@@ -45,7 +61,29 @@
             <label>{{ $t('specimens.quantity_per_aliquot') }}</label>
             <os-input-number v-model="qtyPerAliquot" :max-fraction-digits="8" :unit="parentUnit" />
           </div>
+
+          <div class="field" v-if="lineage == 'Derived'">
+            <label>
+              <input type="checkbox" v-model="shareSpecimenType" @change="specimenTypeSharingChanged" />
+              {{ $t('specimens.same_specimen_type') }}
+            </label>
+          </div>
+
+          <div class="field" v-if="lineage == 'Derived' && shareSpecimenType">
+            <label>{{ $t('specimens.type') }}</label>
+            <os-specimen-type v-model="sharedType.type" :context="{specimen: sharedType}"
+              entity="specimen" @update:model-value="applySharedSpecimenType" />
+          </div>
+          <div class="field">
+            <label>{{ $t('specimens.processing_event_date_time') }}</label>
+            <os-date-picker v-model="eventTime" :show-time="true" />
+          </div>
+
+          <div class="event-form-data" v-if="selectedEventForm && shareEventData && eventFormSchema.rows.length > 0">
+            <os-form ref="sharedEventForm" :schema="eventFormSchema" :data="sharedEventFormData" />
+          </div>
         </div>
+
 
         <div class="help-text">
           {{ $t(status == 'Pending' ? 'specimens.batch_pending_help' : 'specimens.batch_collected_help') }}
@@ -64,13 +102,16 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, index) in rows" :key="row.uid">
+              <template v-for="(row, index) in rows" :key="row.uid">
+              <tr>
                 <td>{{ index + 1 }}</td>
                 <td v-if="manualLabels">
                   <os-input-text v-model="row.label" />
                 </td>
                 <td v-if="lineage == 'Derived'">
-                  <os-specimen-type v-model="row.type" :context="{specimen: row}" entity="specimen" />
+                  <os-specimen-type v-if="!shareSpecimenType" v-model="row.type"
+                    :context="{specimen: row}" entity="specimen" />
+                  <span v-else>{{ sharedType.type || '-' }}</span>
                 </td>
                 <td v-if="lineage == 'Derived'">
                   <div v-if="rows.length == 1" class="process-all">
@@ -90,6 +131,13 @@
                   {{ quantityDisplay(qtyPerAliquot, parent) }}
                 </td>
               </tr>
+              <tr class="individual-event-row" v-if="selectedEventForm && !shareEventData && eventFormSchema.rows.length > 0">
+                <td :colspan="lineage == 'Derived' ? (manualLabels ? 5 : 4) : (manualLabels ? 3 : 2)">
+                  <h5>{{ lineage == 'Aliquot' ? $t('specimens.aliquot') : $t('specimens.derived') }} #{{ index + 1 }}</h5>
+                  <os-form ref="eventForms" :schema="eventFormSchema" :data="row.eventFormData" />
+                </td>
+              </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -121,6 +169,7 @@ import alertsSvc  from '@/common/services/Alerts.js';
 import cpSvc      from '@/biospecimen/services/CollectionProtocol.js';
 import routerSvc  from '@/common/services/Router.js';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
+import formSvc     from '@/forms/services/Form.js';
 import formUtil    from '@/common/services/FormUtil.js';
 import util       from '@/common/services/Util.js';
 
@@ -139,7 +188,16 @@ export default {
       saving: false,
       customFieldsSchema: {rows: []},
       customFieldsDefaultValues: {},
-      customFieldsFormId: null
+      customFieldsFormId: null,
+      eventForms: [],
+      selectedEventFormId: null,
+      eventFormSchema: {rows: []},
+      eventFormDefaultValues: {},
+      sharedEventFormData: {},
+      shareEventData: true,
+      eventTime: new Date(),
+      shareSpecimenType: false,
+      sharedType: {type: null, specimenClass: null}
     };
   },
 
@@ -160,6 +218,10 @@ export default {
     manualLabels() {
       const cp = this.cpViewCtx.getCp() || {};
       return cp.manualSpecLabelEnabled || !this.specimen.labelFmt;
+    },
+
+    selectedEventForm() {
+      return this.eventForms.find(form => +form.formId == +this.selectedEventFormId);
     },
 
     totalParentConsumption() {
@@ -204,11 +266,15 @@ export default {
   },
 
   async created() {
-    const [parent, formDef] = await Promise.all([
+    const [parent, formDef, eventForms] = await Promise.all([
       specimenSvc.getById(this.specimen.parentId),
-      specimenSvc.getCustomFieldsForm(this.specimen.cpId, this.lineage)
+      specimenSvc.getCustomFieldsForm(this.specimen.cpId, this.lineage),
+      specimenSvc.getEventForms(this.specimen.parentId)
     ]);
     this.parent = parent;
+    this.eventForms = (eventForms || []).filter(
+      form => form.entityType == 'SpecimenEvent' && !form.sysForm
+    );
     if (formDef) {
       const {schema, defaultValues} = formUtil.fromDeToStdSchema(
         formDef, 'specimen.extensionDetail.attrsMap.'
@@ -231,6 +297,7 @@ export default {
         parentConsumedQty: null,
         processAllParent: false,
         initialQty: null,
+        eventFormData: util.clone(this.eventFormDefaultValues),
         extensionDetail: this.customFieldsFormId ? {
           formId: this.customFieldsFormId,
           attrsMap: util.clone(this.customFieldsDefaultValues)
@@ -251,6 +318,10 @@ export default {
       if (count < 1) count = 1;
       if (count > 100) count = 100;
       while (this.rows.length < count) this.rows.push(this.newRow());
+      if (this.lineage == 'Derived' && this.shareSpecimenType) {
+        this.applySharedSpecimenType(this.sharedType.type);
+      }
+
       if (this.rows.length > count) this.rows.splice(count);
       if (this.rows.length > 1) this.rows.forEach(row => row.processAllParent = false);
     },
@@ -312,6 +383,75 @@ export default {
       return null;
     },
 
+    async eventFormChanged() {
+      this.eventFormSchema = {rows: []};
+      this.eventFormDefaultValues = {};
+      this.sharedEventFormData = {};
+      this.rows.forEach(row => row.eventFormData = {});
+
+      const form = this.selectedEventForm;
+      if (!form) return;
+
+      const formDef = await formSvc.getDefinition(form.formId);
+      if (+this.selectedEventFormId != +form.formId) return;
+
+      const {schema, defaultValues} = formUtil.fromDeToStdSchema(formDef);
+      this.eventFormSchema = schema;
+      this.eventFormDefaultValues = defaultValues || {};
+      this.sharedEventFormData = util.clone(this.eventFormDefaultValues);
+      this.rows.forEach(row => row.eventFormData = util.clone(this.eventFormDefaultValues));
+    },
+
+    eventDataSharingChanged() {
+      if (this.shareEventData) {
+        this.sharedEventFormData = util.clone(
+          (this.rows[0] && this.rows[0].eventFormData) || this.eventFormDefaultValues
+        );
+      } else {
+        this.rows.forEach(row => row.eventFormData = util.clone(this.sharedEventFormData));
+      }
+    },
+
+    validateFormRefs(refName) {
+      const refs = this.$refs[refName];
+      if (!refs) return true;
+      return (Array.isArray(refs) ? refs : [refs]).every(form => form.validate());
+    },
+
+    getEventFormRecords() {
+      const form = this.selectedEventForm;
+      if (!form) return [];
+
+      return this.rows.map((row, specimenIndex) => {
+        const data = util.clone(this.shareEventData ? this.sharedEventFormData : row.eventFormData);
+        delete data.id;
+        delete data.recordId;
+        delete data.appData;
+        return {specimenIndex, formId: form.formId, formCtxtId: form.formCtxtId, data};
+      });
+    },
+    specimenTypeSharingChanged() {
+      if (!this.shareSpecimenType) return;
+
+      const firstRow = this.rows[0] || {};
+      this.sharedType = {
+        type: firstRow.type || null,
+        specimenClass: firstRow.specimenClass || null
+      };
+      this.applySharedSpecimenType(this.sharedType.type);
+    },
+
+    applySharedSpecimenType(type) {
+      this.sharedType.type = type || null;
+      const selectedType = util.getSpecimenTypes().find(specimenType => specimenType.type == type);
+      this.sharedType.specimenClass = selectedType ? selectedType.specimenClass : null;
+      this.rows.forEach(row => {
+        row.type = this.sharedType.type;
+        row.specimenClass = this.sharedType.specimenClass;
+      });
+    },
+
+
     async createAll() {
       if (this.saving) return;
 
@@ -319,6 +459,11 @@ export default {
       if (!customFieldForms.every(form => form.validate())) {
         return;
       }
+
+      const eventFormsValid = !this.selectedEventForm || this.validateFormRefs(
+        this.shareEventData ? 'sharedEventForm' : 'eventForms'
+      );
+      if (!eventFormsValid) return;
 
       const error = this.validate();
       if (error) {
@@ -336,7 +481,7 @@ export default {
           lineage: this.lineage,
           parentId: this.parent.id,
           status: this.status,
-          createdOn: new Date(),
+          createdOn: this.eventTime,
           printLabel: false
         };
 
@@ -351,7 +496,7 @@ export default {
           availableQty: this.lineage == 'Aliquot' ? this.qtyPerAliquot : row.initialQty,
           extensionDetail: row.extensionDetail
         }));
-        const saved = await specimenSvc.createChildren(children);
+        const saved = await specimenSvc.createMultiple({specimens: children, formRecords: this.getEventFormRecords()});
 
         alertsSvc.success({
           code: this.lineage == 'Aliquot' ? 'specimens.aliquots_created' : 'specimens.derivatives_created',
@@ -474,9 +619,38 @@ export default {
   margin: 0.75rem 0 0;
 }
 
+.event-form-setup {
+  display: flex;
+  align-items: end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.event-form-setup .field {
+  width: min(560px, 100%);
+}
+
+.share-event-data {
+  padding-bottom: 0.5rem;
+}
+
+.event-form-data {
+  grid-column: 1 / -1;
+}
+
+.individual-event-row td {
+  background: #fafafa;
+  padding: 1rem;
+}
+
+.individual-event-row h5 {
+  margin: 0 0 0.5rem;
+}
+
 @media (max-width: 800px) {
   .parent-summary, .batch-options {
     grid-template-columns: 1fr;
   }
+
 }
 </style>

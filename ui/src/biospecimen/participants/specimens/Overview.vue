@@ -33,6 +33,32 @@
 
       <os-overview :schema="ctx.dict" :object="ctx" :reference-prefix="'specimen-view-' + specimen.id" v-if="ctx.dict.length > 0" />
 
+      <os-section v-if="specimen.specimensPool && specimen.specimensPool.length > 0">
+        <template #title>
+          <span>{{ $t('specimens.pool_sources') }}</span>
+        </template>
+        <template #content>
+          <ul>
+            <li v-for="item in specimen.specimensPool" :key="item.id">
+              <os-specimen-description :specimen="item" :show-status="true" />
+            </li>
+          </ul>
+        </template>
+      </os-section>
+
+      <os-section v-if="specimen.pooledSpecimens && specimen.pooledSpecimens.length > 0">
+        <template #title>
+          <span>{{ $t('specimens.pooled_in') }}</span>
+        </template>
+        <template #content>
+          <ul>
+            <li v-for="item in specimen.pooledSpecimens" :key="item.id">
+              <os-specimen-description :specimen="item" :show-status="true" />
+            </li>
+          </ul>
+        </template>
+      </os-section>
+
       <os-section class="processing-event-details" v-for="eventRecord in ctx.processingEventRecords"
         :key="eventRecord.record.id">
         <template #title>

@@ -7,7 +7,8 @@
 
       <span class="os-title">
         <h3>
-          <span v-if="!dataCtx.specimen.id" v-t="'specimens.add_specimen'">Add Specimen</span>
+          <span v-if="isPooling" v-t="'specimens.create_pooled_specimen'">Create Pooled Specimen</span>
+          <span v-else-if="!dataCtx.specimen.id" v-t="'participants.add_specimen'">Add Specimen</span>
           <span v-else-if="!ctx.header.leftTitle" v-t="{path: 'common.update', args: {name: specimenLabel}}"></span>
           <span class="custom-title" v-else>
             <span v-t="{path: 'common.buttons.update'}">Update</span>
@@ -26,6 +27,36 @@
     </os-page-head>
 
     <os-page-body>
+      <section class="pool-sources" v-if="isPooling">
+        <h4>{{ $t('specimens.pool_sources') }}</h4>
+        <p>{{ $t('specimens.pool_sources_help') }}</p>
+        <div class="pool-table">
+          <table class="os-table">
+            <thead>
+              <tr>
+                <th>{{ $t('specimens.label') }}</th>
+                <th>{{ $t('specimens.type') }}</th>
+                <th>{{ $t('specimens.available_quantity') }}</th>
+                <th>{{ $t('specimens.consume_pool_source') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in dataCtx.specimen.specimensPool" :key="item.id">
+                <td>{{ item.label || item.barcode || item.id }}</td>
+                <td>{{ item.type }}</td>
+                <td>
+                  <os-specimen-measure :model-value="item.availableQty" :context="{specimen: item}"
+                    entity="specimen" :read-only="true" />
+                </td>
+                <td>
+                  <input type="checkbox" v-model="item.closeAfterPooledCreation"
+                    :aria-label="$t('specimens.consume_pool_source') + ': ' + (item.label || item.id)" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
       <os-form ref="spmnForm" :schema="ctx.addEditFs" :data="dataCtx"
         :reference-prefix="'specimen-edit-' + cpr.id + '-' + dataCtx.specimen.id" @input="handleInput($event)">
         <template #static-fields>
@@ -34,7 +65,8 @@
             :target-prefix="'specimen-edit-' + cpr.id + '-' + dataCtx.specimen.id" />
         </template>
         <div>
-          <os-button primary :label="$t(!dataCtx.specimen.id ? 'common.buttons.add' : 'common.buttons.update')"
+          <os-button primary :label="$t(isPooling ? 'specimens.create_pooled_specimen' :
+            (!dataCtx.specimen.id ? 'common.buttons.add' : 'common.buttons.update'))" :disabled="ctx.saving"
             @click="saveOrUpdate()" />
 
           <os-button text :label="$t('common.buttons.cancel')" @click="cancel" />
@@ -50,6 +82,7 @@ import cpSvc        from '@/biospecimen/services/CollectionProtocol.js';
 import specimenSvc  from '@/biospecimen/services/Specimen.js';
 
 import authSvc    from '@/common/services/Authorization.js';
+import alertsSvc  from '@/common/services/Alerts.js';
 import formUtil   from '@/common/services/FormUtil.js';
 import routerSvc  from '@/common/services/Router.js';
 import util       from '@/common/services/Util.js';
@@ -99,6 +132,7 @@ export default {
 
       ctx: {
         addEditFs: {rows: []},
+        saving: false,
         quantityBaseline: {
           initialQty: specimen.initialQty,
           availableQty: specimen.availableQty
@@ -136,6 +170,10 @@ export default {
   },
 
   computed: {
+    isPooling: function() {
+      return !this.specimen.id && Array.isArray(this.specimen.specimensPool);
+    },
+
     specimenLabel: function() {
       const {label, barcode, specimenClass, type} = this.specimen;
       let result = label || '';
@@ -209,13 +247,38 @@ export default {
       }
 
     },
-    saveOrUpdate: function() {
-      if (!this.$refs.spmnForm.validate()) {
+    saveOrUpdate: async function() {
+      if (this.ctx.saving || !this.$refs.spmnForm.validate()) {
+        return;
+      }
+
+      if (this.isPooling && !this._validatePool()) {
         return;
       }
 
       const toSave = this._getSavePayload();
-      specimenSvc.saveOrUpdate(toSave).then(saved => this._navToOverview(saved));
+      this.ctx.saving = true;
+      try {
+        const saved = this.isPooling ? await specimenSvc.createPooled(toSave) : await specimenSvc.saveOrUpdate(toSave);
+        this._navToOverview(saved);
+      } finally {
+        this.ctx.saving = false;
+      }
+    },
+
+    _validatePool: function() {
+      const items = this.dataCtx.specimen.specimensPool || [];
+      if (new Set(items.map(item => item.id)).size < 2) {
+        alertsSvc.error({code: 'common.specimen_actions.select_for_pooling'});
+        return false;
+      }
+
+      if (items.some(item => item.cpId != this.dataCtx.cp.id || item.status != 'Collected' || item.activityStatus != 'Active')) {
+        alertsSvc.error({code: 'specimens.invalid_pool_sources'});
+        return false;
+      }
+
+      return true;
     },
 
     cancel: function() {
@@ -233,6 +296,16 @@ export default {
     _getSavePayload: function() {
       const toSave = util.clone(this.dataCtx.specimen);
       const cp = this.dataCtx.cp || {};
+      if (this.isPooling) {
+        toSave.lineage = 'New';
+        toSave.status = 'Collected';
+        delete toSave.parentId;
+        delete toSave.parentLabel;
+        toSave.specimensPool = toSave.specimensPool.map(item => ({
+          id: item.id,
+          closeAfterPooledCreation: item.closeAfterPooledCreation !== false
+        }));
+      }
       if (!toSave.id && cp.specimenCentric) {
         if (!toSave.cprId || toSave.cprId <= 0) {
           delete toSave.cprId;
@@ -254,3 +327,18 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.pool-sources {
+  margin-bottom: 1.5rem;
+}
+
+.pool-table {
+  overflow-x: auto;
+}
+
+.pool-table th,
+.pool-table td {
+  padding: 0.5rem 1rem;
+}
+</style>

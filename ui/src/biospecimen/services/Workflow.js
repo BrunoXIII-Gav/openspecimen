@@ -60,8 +60,10 @@ class Workflow {
   }
 
   async createPooledSpecimens(specimens) {
-    const {cpId, cprId, visitId, id: specimenId} = specimens[0];
-    routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1}, {parentId: specimenId, lineage: 'Pooled'});
+    const {cpId, cprId, visitId} = specimens[0];
+    return routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1}, {
+      poolIds: specimens.map(specimen => specimen.id).join(',')
+    });
   }
 
   async transferSpecimens(specimens) {

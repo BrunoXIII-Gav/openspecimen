@@ -84,6 +84,10 @@ class Specimen {
     return http.post('specimens/aliquots', spec);
   }
 
+  createPooled(specimen) {
+    return http.post('specimens/pooled', specimen);
+  }
+
   createDerivatives(specimens) {
     return http.post('specimens/collect', specimens);
   }

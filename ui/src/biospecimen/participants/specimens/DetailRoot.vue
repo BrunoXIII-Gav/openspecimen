@@ -41,11 +41,18 @@ export default {
 
       const parentId = this.$route && this.$route.query && this.$route.query.parentId;
       const lineage = this.$route && this.$route.query && this.$route.query.lineage;
-      return 'new-' + this.cpr.id + '-' + this.visit.id + '-' + (parentId || '0') + '-' + (lineage || 'New');
+      const poolIds = this.$route && this.$route.query && this.$route.query.poolIds;
+      return 'new-' + this.cpr.id + '-' + this.visit.id + '-' + (parentId || '0') + '-' + (lineage || 'New') + '-' + (poolIds || '');
     }
   },
 
   watch: {
+    '$route.query.poolIds': function(newVal, oldVal) {
+      if (!(this.specimenId > 0) && newVal != oldVal) {
+        this._loadBlank();
+      }
+    },
+
     '$route.params.specimenId': function(newVal, oldVal) {
       if (newVal == oldVal || newVal == this.specimen.id) {
         return;
@@ -81,14 +88,16 @@ export default {
     },
 
     _loadBlank: async function() {
+      this.loaded = false;
       const cp = await cpSvc.getCpById(this.cpr.cpId);
       
       // Leer query params directamente del hash para mayor compatibilidad
       const hash = window.location.hash;
       const queryStr = hash.split('?')[1] || '';
       const params = new URLSearchParams(queryStr);
-      const parentId = params.get('parentId') ? parseInt(params.get('parentId')) : null;
-      const lineage = params.get('lineage') || 'New';
+      const pooling = params.has('poolIds');
+      const parentId = !pooling && params.get('parentId') ? parseInt(params.get('parentId')) : null;
+      const lineage = pooling ? 'New' : params.get('lineage') || 'New';
       let labelFmt = cp.specimenLabelFmt || '';
       if (lineage === 'Aliquot') {
         labelFmt = cp.aliquotLabelFmt || cp.aliquotLabelFmtToUse || '';
@@ -113,6 +122,19 @@ export default {
         labelFmt,
         children: []
       };
+      if (pooling) {
+        const ids = [...new Set(params.get('poolIds').split(',').map(Number))];
+        this.specimen.specimensPool = [];
+        if (ids.length >= 2 && ids.every(id => Number.isSafeInteger(id) && id > 0)) {
+          const specimens = await spmnSvc.getByIds(ids, false);
+          if (specimens.length == ids.length && ids.every(id => specimens.some(item => item.id == id))) {
+            this.specimen.specimensPool = ids.map(id => ({
+              ...specimens.find(item => item.id == id),
+              closeAfterPooledCreation: true
+            }));
+          }
+        }
+      }
       this.loaded = true;
     },
 

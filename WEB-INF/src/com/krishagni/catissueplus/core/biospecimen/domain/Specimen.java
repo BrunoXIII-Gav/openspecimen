@@ -2307,7 +2307,17 @@ public class Specimen extends BaseExtensionEntity {
 			pooledEvent.setUser(AuthUtil.getCurrentUser());
 			pooledEvent.setTime(Calendar.getInstance().getTime());
 			pooledEvent.setComments(getOpComments());
+			// Receipt lookups may flush the session, so persist the referenced
+			// pooled event before setting the automatic receipt details.
 			daoFactory.getSpecimenDao().savedPooledEvent(pooledEvent);
+
+			// A pool is received when it is assembled. Share the exact timestamp
+			// and operator with the pooled event without changing its collection event.
+			ReceivedEventDetail receivedEvent = new ReceivedEventDetail();
+			receivedEvent.setReceivedQuality(ACCEPTABLE);
+			receivedEvent.setUser(UserSummary.from(pooledEvent.getUser()));
+			receivedEvent.setTime(pooledEvent.getTime());
+			setReceivedDetails(null, receivedEvent);
 		}
 
 		String comments = "Consumed for creating pooled specimen: " + getLabel();

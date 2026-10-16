@@ -56,6 +56,8 @@ import com.krishagni.catissueplus.core.administrative.domain.factory.UserErrorCo
 import com.krishagni.catissueplus.core.audit.domain.UserApiCallLog;
 import com.krishagni.catissueplus.core.audit.domain.factory.AuditErrorCode;
 import com.krishagni.catissueplus.core.audit.events.AuditDetail;
+import com.krishagni.catissueplus.core.audit.events.AuditRecordDetail;
+import com.krishagni.catissueplus.core.audit.events.AuditRecordsPage;
 import com.krishagni.catissueplus.core.audit.events.AuditEntityQueryCriteria;
 import com.krishagni.catissueplus.core.audit.events.FormDataRevisionDetail;
 import com.krishagni.catissueplus.core.audit.events.RevisionDetail;
@@ -154,6 +156,31 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 
 	@Override
 	@PlusTransactional
+	public ResponseEvent<AuditRecordsPage> searchRecords(RequestEvent<RevisionsListCriteria> req) {
+		if (!AuthUtil.isAdmin()) {
+			return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
+		}
+
+		RevisionsListCriteria criteria = req.getPayload();
+		int maxPeriod = ConfigUtil.getInstance().getIntSetting("common", "max_audit_report_period", 90);
+		int pageSize = AuditSearchCriteria.validate(criteria, maxPeriod, new Date());
+		List<AuditRecordDetail> records;
+		if (criteria.recordType().equals("core")) {
+			records = daoFactory.getAuditDao().getRevisionRecords(criteria).stream()
+				.flatMap(revision -> revision.getRecords().stream().map(record -> AuditRecordDetail.from(revision, record)))
+				.collect(Collectors.toList());
+		} else {
+			List<FormDataRevisionDetail> revisions = criteria.recordType().equals("form")
+				? daoFactory.getAuditDao().getFormRevisions(criteria)
+				: daoFactory.getAuditDao().getFormDataRecords(criteria);
+			records = revisions.stream().map(AuditRecordDetail::from).collect(Collectors.toList());
+		}
+
+		return ResponseEvent.response(AuditRecordsPage.from(records, pageSize));
+	}
+
+	@Override
+	@PlusTransactional
 	public ResponseEvent<ExportedFileDetail> exportRevisions(RequestEvent<RevisionsListCriteria> req) {
 		if (!AuthUtil.isAdmin()) {
 			return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
@@ -173,9 +200,7 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 		if (StringUtils.isNotBlank(criteria.recordType())) {
 			// When either of "core", "form" or "form_data" is chosen
 			criteria.reportTypes(Collections.singletonList("data"));
-			if (CollectionUtils.isEmpty(criteria.records())) {
-				return ResponseEvent.userError(AuditErrorCode.RECORDS_REQ);
-			}
+			// An empty records list means all records within the selected scope.
 		}
 
 		List<User> users = null;
@@ -686,7 +711,7 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 					}
 
 					for (FormDataRevisionDetail revision : revisions) {
-						writeRow(context, revision, csvWriter);
+						writeRow(context, revision, csvWriter, false);
 						lastRevId = revision.getId();
 						++totalRecords;
 
@@ -732,7 +757,9 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 				while (true) {
 					long t1 = System.currentTimeMillis();
 
-					List<FormDataRevisionDetail> revisions = daoFactory.getAuditDao().getFormDataRevisions(criteria);
+					List<FormDataRevisionDetail> revisions = "form_data".equals(criteria.recordType())
+						? daoFactory.getAuditDao().getFormDataRecords(criteria)
+						: daoFactory.getAuditDao().getFormDataRevisions(criteria);
 					System.err.println(criteria.lastId() + ", " + (System.currentTimeMillis() - t1) + " ms");
 
 					if (revisions.isEmpty()) {
@@ -740,7 +767,7 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 					}
 
 					for (FormDataRevisionDetail revision : revisions) {
-						writeRow(context, revision, csvWriter);
+						writeRow(context, revision, csvWriter, true);
 						lastRevId = revision.getId();
 						++totalRecords;
 
@@ -768,7 +795,7 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 			writer.writeNext(Stream.of(headerColumns).map(MessageUtil.getInstance()::getMessage).toArray(String[]::new));
 		}
 
-		private void writeRow(Map<String, String> context, FormDataRevisionDetail revision, CsvWriter writer) {
+		private void writeRow(Map<String, String> context, FormDataRevisionDetail revision, CsvWriter writer, boolean formData) {
 			String revId     = revision.getId().toString();
 			String dateTime  = Utility.getDateTimeString(revision.getTime());
 
@@ -801,7 +828,7 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 			String ipAddress = revision.getIpAddress();
 			String data = revision.getData();
 
-			if (entityType != null) {
+			if (formData) {
 				writer.writeNext(new String[] {revId, dateTime, user, userEmail, domain, userLogin, institute, ipAddress, opDisplay, entityType, formName, entityId, recordId, data});
 			} else {
 				writer.writeNext(new String[] {revId, dateTime, user, userEmail, domain, userLogin, institute, ipAddress, opDisplay, formName, recordId, data});

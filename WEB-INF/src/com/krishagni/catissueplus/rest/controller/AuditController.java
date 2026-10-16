@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.krishagni.catissueplus.core.audit.events.AuditDetail;
+import com.krishagni.catissueplus.core.audit.events.AuditRecordsPage;
 import com.krishagni.catissueplus.core.audit.events.AuditEntityQueryCriteria;
 import com.krishagni.catissueplus.core.audit.events.RevisionDetail;
 import com.krishagni.catissueplus.core.audit.repository.RevisionsListCriteria;
@@ -36,6 +37,13 @@ public class AuditController {
 
 	@Autowired
 	private AuditService auditService;
+
+	@RequestMapping(method = RequestMethod.POST, value = "/records")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public AuditRecordsPage searchRecords(@RequestBody RevisionsListCriteria criteria) {
+		return ResponseEvent.unwrap(auditService.searchRecords(RequestEvent.wrap(criteria)));
+	}
 
 	@RequestMapping(method = RequestMethod.GET)
 	@ResponseStatus(HttpStatus.OK)

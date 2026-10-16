@@ -88,6 +88,15 @@ public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDa
 
 	@Override
 	public List<RevisionDetail> getRevisions(RevisionsListCriteria criteria) {
+		return getRevisions(criteria, false);
+	}
+
+	@Override
+	public List<RevisionDetail> getRevisionRecords(RevisionsListCriteria criteria) {
+		return getRevisions(criteria, true);
+	}
+
+	private List<RevisionDetail> getRevisions(RevisionsListCriteria criteria, boolean preserveRecords) {
 		Criteria<Object[]> query = createCriteria(RevisionEntityRecord.class, Object[].class, "re");
 		query.join("re.revision", "r")
 			.leftJoin("r.user", "u")
@@ -98,7 +107,17 @@ public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDa
 		setRevisionsListFields(query);
 
 		query.addOrder(query.desc("re.id"));
-		List<RevisionDetail> revisions = getRevisions(query.list(criteria.startAt(), criteria.maxResults()));
+		List<Object[]> rows = query.list(criteria.startAt(), criteria.maxResults());
+		List<RevisionDetail> revisions;
+		if (preserveRecords) {
+			// Keep one entry per cursor ID so a revision spanning two pages loses no records.
+			revisions = new ArrayList<>();
+			for (Object[] row : rows) {
+				revisions.addAll(getRevisions(java.util.Collections.singletonList(row)));
+			}
+		} else {
+			revisions = getRevisions(rows);
+		}
 		for (RevisionDetail revision : revisions) {
 			Map<String, List<RevisionEntityRecordDetail>> entitiesMap = new LinkedHashMap<>();
 			for (RevisionEntityRecordDetail entity : revision.getRecords()) {
@@ -121,7 +140,58 @@ public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDa
 
 	@Override
 	public List<FormDataRevisionDetail> getFormDataRevisions(RevisionsListCriteria criteria) {
-		List<Object[]> rows = buildFormDataRevisionsQuery(criteria).list();
+		return getFormDataRevisions(buildFormDataRevisionsQuery(criteria));
+	}
+
+	@Override
+	public List<FormDataRevisionDetail> getFormDataRecords(RevisionsListCriteria criteria) {
+		// Read events directly: current form associations may be missing after deletion,
+		// and filtering after the page limit can hide older matching events.
+		List<String> conditions = new ArrayList<>();
+		conditions.add("e.event_timestamp >= :startDate");
+		conditions.add("e.event_timestamp <= :endDate");
+		if (criteria.lastId() != null) conditions.add("e.identifier < :lastId");
+		if (CollectionUtils.isNotEmpty(criteria.userIds())) conditions.add("e.user_id in (:userIds)");
+		if (CollectionUtils.isNotEmpty(criteria.recordIds())) conditions.add("e.record_id in (:recordIds)");
+		if (CollectionUtils.isNotEmpty(criteria.records())) conditions.add("f.name in (:formNames)");
+		String sql = "select e.identifier, e.event_timestamp, e.event_type, e.ip_address, "
+			+ "e.record_id, e.form_data, f.caption, e.user_id, u.first_name, u.last_name, "
+			+ "u.email_address, u.login_name, i.name, d.domain_name "
+			+ "from dyextn_audit_events e "
+			+ "left join dyextn_containers f on f.identifier = e.form_id "
+			+ "left join catissue_user u on u.identifier = e.user_id "
+			+ "left join catissue_institution i on i.identifier = u.institute_id "
+			+ "left join os_auth_domains d on d.identifier = u.domain_id "
+			+ "where " + StringUtils.join(conditions, " and ") + " order by e.identifier desc ";
+		Query<Object[]> query = createNativeQuery(getLimitSql(sql, 0, criteria.maxResults(), DbSettingsFactory.isOracle()), Object[].class)
+			.addLongScalar("identifier").addTimestampScalar("event_timestamp").addStringScalar("event_type")
+			.addStringScalar("ip_address").addLongScalar("record_id").addStringScalar("form_data")
+			.addStringScalar("caption").addLongScalar("user_id").addStringScalar("first_name")
+			.addStringScalar("last_name").addStringScalar("email_address").addStringScalar("login_name")
+			.addStringScalar("name").addStringScalar("domain_name")
+			.setParameter("startDate", criteria.startDate()).setParameter("endDate", criteria.endDate());
+		if (criteria.lastId() != null) query.setParameter("lastId", criteria.lastId());
+		if (CollectionUtils.isNotEmpty(criteria.userIds())) query.setParameterList("userIds", criteria.userIds());
+		if (CollectionUtils.isNotEmpty(criteria.recordIds())) query.setParameterList("recordIds", criteria.recordIds());
+		if (CollectionUtils.isNotEmpty(criteria.records())) query.setParameterList("formNames", criteria.records());
+		List<FormDataRevisionDetail> result = new ArrayList<>();
+		for (Object[] row : query.list()) {
+			FormDataRevisionDetail record = new FormDataRevisionDetail();
+			record.setId((Long) row[0]); record.setTime((Date) row[1]); record.setOp((String) row[2]);
+			record.setIpAddress((String) row[3]); record.setRecordId((Long) row[4]);
+			record.setData((String) row[5]); record.setFormName((String) row[6]);
+			UserSummary user = new UserSummary();
+			user.setId((Long) row[7]); user.setFirstName((String) row[8]); user.setLastName((String) row[9]);
+			user.setEmailAddress((String) row[10]); user.setLoginName((String) row[11]);
+			user.setInstituteName((String) row[12]); user.setDomain((String) row[13]);
+			record.setUser(user);
+			result.add(record);
+		}
+		return result;
+	}
+
+	private List<FormDataRevisionDetail> getFormDataRevisions(Query<Object[]> query) {
+		List<Object[]> rows = query.list();
 
 		List<FormDataRevisionDetail> result = new ArrayList<>();
 		for (Object[] row : rows) {
@@ -413,6 +483,7 @@ public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDa
 		} else if (CollectionUtils.isNotEmpty(criteria.records())) {
 			query.setParameterList("formNames", criteria.records());
 		}
+		if (CollectionUtils.isNotEmpty(criteria.recordIds())) query.setParameterList("recordIds", criteria.recordIds());
 
 		return query;
 	}
@@ -434,6 +505,10 @@ public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDa
 
 		if (criteria.lastId() != null) {
 			whereClauses.add("r.rev < :lastId");
+		}
+
+		if (CollectionUtils.isNotEmpty(criteria.recordIds())) {
+			whereClauses.add("r.identifier in (:recordIds)");
 		}
 
 		if (CollectionUtils.isNotEmpty(criteria.entities())) {
@@ -467,6 +542,10 @@ public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDa
 
 		if (CollectionUtils.isNotEmpty(criteria.userIds())) {
 			query.setParameterList("userIds", criteria.userIds());
+		}
+
+		if (CollectionUtils.isNotEmpty(criteria.recordIds())) {
+			query.setParameterList("recordIds", criteria.recordIds());
 		}
 
 		if (criteria.startDate() != null) {
@@ -507,6 +586,10 @@ public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDa
 
 		if (criteria.lastId() != null) {
 			whereClauses.add("e.identifier < :lastId");
+		}
+		if (CollectionUtils.isNotEmpty(criteria.recordIds())) whereClauses.add("e.record_id in (:recordIds)");
+		if (CollectionUtils.isNotEmpty(criteria.records())) {
+			whereClauses.add("e.form_id in (" + GET_FORM_IDS_SQL + ")");
 		}
 
 		String result = GET_FORM_DATA_AUD_EVENTS_BASE_SQL;
@@ -669,9 +752,9 @@ public class AuditDaoImpl extends AbstractDao<UserApiCallLog> implements AuditDa
 		"  i.name, d.domain_name " +
 		"from " +
 		"  dyextn_containers_aud r" +
-		"  inner join catissue_user u on u.identifier = r.rev_by " +
-		"  inner join catissue_institution i on i.identifier = u.institute_id " +
-		"  inner join os_auth_domains d on d.identifier = u.domain_id";
+		"  left join catissue_user u on u.identifier = r.rev_by " +
+		"  left join catissue_institution i on i.identifier = u.institute_id " +
+		"  left join os_auth_domains d on d.identifier = u.domain_id";
 
 	private static final String GET_ENTITY_FORMS_SQL =
 		"select" +

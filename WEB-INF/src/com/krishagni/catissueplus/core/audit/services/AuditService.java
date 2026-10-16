@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.krishagni.catissueplus.core.audit.domain.UserApiCallLog;
 import com.krishagni.catissueplus.core.audit.events.AuditDetail;
+import com.krishagni.catissueplus.core.audit.events.AuditRecordsPage;
 import com.krishagni.catissueplus.core.audit.events.AuditEntityQueryCriteria;
 import com.krishagni.catissueplus.core.audit.events.RevisionDetail;
 import com.krishagni.catissueplus.core.audit.repository.RevisionsListCriteria;
@@ -14,6 +15,8 @@ import com.krishagni.catissueplus.core.common.events.RequestEvent;
 import com.krishagni.catissueplus.core.common.events.ResponseEvent;
 
 public interface AuditService {
+	ResponseEvent<AuditRecordsPage> searchRecords(RequestEvent<RevisionsListCriteria> req);
+
 	ResponseEvent<List<AuditDetail>> getEntityAuditDetail(RequestEvent<List<AuditEntityQueryCriteria>> req);
 
 	ResponseEvent<List<RevisionDetail>> getEntityRevisions(RequestEvent<List<AuditEntityQueryCriteria>> req);

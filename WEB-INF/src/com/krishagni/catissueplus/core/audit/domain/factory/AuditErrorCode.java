@@ -6,6 +6,8 @@ public enum AuditErrorCode implements ErrorCode {
 
 	ENTITY_NOT_FOUND,
 
+	INVALID_SEARCH_CRITERIA,
+
 	DATE_GT_TODAY,
 
 	DATE_INTERVAL_GT_ALLOWED,

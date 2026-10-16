@@ -40,6 +40,12 @@ public class RevisionsListCriteria extends AbstractListCriteria<RevisionsListCri
 		return this;
 	}
 
+	@Override
+	@JsonProperty("lastId")
+	public RevisionsListCriteria lastId(Long lastId) {
+		return super.lastId(lastId);
+	}
+
 	public Date startDate() {
 		return startDate;
 	}

@@ -329,6 +329,13 @@ export default {
       this.$refs.auditTrailDialog.open();
     },
 
+    viewAuditReport: function() {
+      routerSvc.goto('AuditReports', {}, {
+        entity: 'com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol',
+        recordId: this.cp.id
+      });
+    },
+
     _loadMoreMenuOptions: function() {
       const moreOptions = [];
       if (authSvc.isAllowed(cpResources.importOpts)) {
@@ -368,6 +375,9 @@ export default {
             }
 
             moreOptions.push({icon: 'history', caption: this.$t('audit.trail'), onSelect: this.viewAuditTrail});
+            if (authSvc.isAllowed('admin')) {
+              moreOptions.push({icon: 'download', caption: this.$t('audit.reports.detailed_report'), onSelect: this.viewAuditReport});
+            }
             this.ctx.moreOptions = moreOptions;
           }
         );

@@ -37,6 +37,12 @@ const routes = [
       },
 
       {
+        path: 'audit',
+        name: 'AuditReports',
+        component: () => import(/* webpackChunkName: "audit" */ '../audit/Reports.vue')
+      },
+
+      {
         path: 'user-notifs',
         name: 'UserNotificationsList',
         component: () => import(/* webpackChunkName: "common" */ '../users/views/NotificationsList.vue'),

@@ -143,6 +143,14 @@ export default {
       const ui = this.$ui;
       homePageSvc.registerCards([
         {
+          showIf: 'admin',
+          route: {name: 'AuditReports'},
+          icon: 'fa fa-history',
+          title: t('audit.reports.title'),
+          description: t('audit.reports.description')
+        },
+
+        {
           showIf: {resource: 'CollectionProtocol', operations: ['Read']},
           route: {name: 'CpsList'},
           icon: 'fa fa-calendar',

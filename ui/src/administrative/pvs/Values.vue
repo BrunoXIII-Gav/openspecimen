@@ -68,10 +68,18 @@ export default {
         totalCount: 0,
         loading: true,
         selectedPvs: []
-      },
-
-      valuesSchema
+      }
     };
+  },
+
+  computed: {
+    valuesSchema() {
+      return {
+        ...valuesSchema,
+        columns: valuesSchema.columns.filter(column =>
+          column.name != 'pv.props.abbreviation' || this.attribute == 'specimen_type')
+      };
+    }
   },
 
   watch: {
@@ -91,7 +99,7 @@ export default {
       this.ctx.loading = true;
       const opts = {attribute: this.attribute, activityStatus: 'all'};
       const [pvs, countResp] = await Promise.all([
-        pvAdminSvc.getPvs({...opts, maxResults: 1000}),
+        pvAdminSvc.getPvs({...opts, maxResults: 1000, includeProps: this.attribute == 'specimen_type'}),
         pvAdminSvc.getPvsCount(opts)
       ]);
       this.ctx.pvs = pvs.map(pv => ({pv}));

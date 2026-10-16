@@ -41,6 +41,7 @@ import formSvc    from '@/forms/services/Form.js';
 import routerSvc  from '@/common/services/Router.js';
 import settingSvc from '@/common/services/Setting.js';
 import spmnSvc    from '@/biospecimen/services/Specimen.js';
+import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 import util       from '@/common/services/Util.js';
 
 export default {
@@ -114,7 +115,7 @@ export default {
       bcrumb.push(
         {
           url: routerSvc.getUrl('ParticipantsListItemSpecimenDetail.Overview', {cpId, cprId, visitId, eventId, specimenId}),
-          label: this.specimen.label
+          label: specimenDisplay.label(this.specimen)
         }
       );
 

@@ -7,13 +7,14 @@
 
       <span class="os-title">
         <h3>
-          <os-dynamic-template v-if="ctx.header.leftTitle" :template="ctx.header.leftTitle"
+          <os-dynamic-template v-if="ctx.header.leftTitle && !specimen.intermediate" :template="ctx.header.leftTitle"
             :cp="ctx.cp" :cpr="cpr" :visit="visit" :specimen="specimen" :hasPhiAccess="hasPhiAccess" />
 
-          <span v-else>{{specimen.label || specimen.type}}</span>
+          <span v-else>{{displayLabel}}</span>
         </h3>
 
         <div class="accessories">
+          <os-tag v-if="specimen.intermediate" :value="$t('specimens.intermediate_material')" :rounded="true" />
           <os-tag :value="status" :rounded="true" :type="statusType" />
 
           <os-tag class="os-pooled-specimen" :value="$t('specimens.pooled')" :rounded="true"
@@ -28,7 +29,7 @@
         </div>
       </span>
 
-      <template #right v-if="ctx.header.rightTitle">
+      <template #right v-if="ctx.header.rightTitle && !specimen.intermediate">
         <h3>
           <os-dynamic-template :template="ctx.header.rightTitle" :cp="ctx.cp" :cpr="cpr" :visit="visit"
             :specimen="specimen" :hasPhiAccess="hasPhiAccess" />
@@ -83,6 +84,7 @@
 import authSvc   from '@/common/services/Authorization.js';
 import cpSvc     from '@/biospecimen/services/CollectionProtocol.js';
 import routerSvc from '@/common/services/Router.js';
+import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 
 export default {
   props: ['cpr', 'visit', 'specimen', 'noNavButton'],
@@ -113,10 +115,14 @@ export default {
   },
 
   computed: {
+    displayLabel() {
+      return specimenDisplay.label(this.specimen);
+    },
+
     bcrumb: function() {
       const cp = this.ctx.cp;
       const {query} = routerSvc.getCurrentRoute();
-      const {cpId, cprId, visitId, eventId, parentId, parentLabel} = this.specimen;
+      const {cpId, cprId, visitId, eventId, parentId} = this.specimen;
       const parentSpmnUrl = [];
       if (parentId > 0) {
         parentSpmnUrl.push({
@@ -125,7 +131,7 @@ export default {
             {cpId, cprId, visitId, specimenId: parentId},
             Object.assign({eventId}, query || {})
           ),
-          label: parentLabel
+          label: specimenDisplay.parentLabel(this.specimen)
         });
       }
 

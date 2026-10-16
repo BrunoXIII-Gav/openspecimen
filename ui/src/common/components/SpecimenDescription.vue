@@ -1,7 +1,7 @@
 <template>
   <a class="description" :href="link" :target="hrefTarget || '_self'" rel="noopener">
     <os-specimen-status-icon :specimen="object" :status="status" v-if="showStatus" />
-    <os-dynamic-template v-if="tmpl" :template="tmpl" :specimen="object" v-bind="$attrs" />
+    <os-dynamic-template v-if="tmpl && !object.intermediate" :template="tmpl" :specimen="object" v-bind="$attrs" />
     <span v-else>{{description}}</span>
     <os-tag class="pooled-specimen" :value="$t('specimens.pooled')" :rounded="true"
       v-if="showStatus && object.specimensPool && object.specimensPool.length > 0" />
@@ -13,6 +13,7 @@
 import cpSvc     from '@/biospecimen/services/CollectionProtocol.js';
 import routerSvc from '@/common/services/Router.js';
 import util      from '@/common/services/Util.js';
+import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 
 export default {
   props: ['model-value', 'specimen', 'show-status', 'status', 'href-target', 'no-link'],
@@ -60,6 +61,9 @@ export default {
     },
 
     description: function() {
+      if (this.object.intermediate) {
+        return specimenDisplay.label(this.object);
+      }
       return this._getDescription(this.object, this.$attrs);
     },
 

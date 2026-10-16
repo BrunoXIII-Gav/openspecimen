@@ -12,11 +12,15 @@
 
 <script>
 export default {
-  props: ['title', 'content'],
+  props: {
+    title: String,
+    content: String,
+    initialCollapsed: {type: Boolean, default: false}
+  },
 
   data() {
     return {
-      collapsed: false
+      collapsed: this.initialCollapsed
     }
   }
 }

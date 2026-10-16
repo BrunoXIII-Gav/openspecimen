@@ -6,7 +6,7 @@
 
     <template #primary-actions>
       <os-button left-icon="edit" :label="$t('common.buttons.edit')" @click="switchToEditMode"
-        v-show-if-allowed="cpResources.updateOpts" v-if="!editMode" />
+        v-show-if-allowed="cpResources.updateOpts" v-if="!editMode" :disabled="!abbreviationsReady" />
 
       <os-button-link class="btn" left-icon="question-circle" :label="$t('common.buttons.help')"
         url="https://openspecimen.atlassian.net/wiki/x/TgBvG" :new-tab="true" />
@@ -26,13 +26,19 @@
       </os-section>
     </div>
 
-    <div v-else>
-      <os-form ref="labelsForm" :schema="addEditFs" :data="dataCtx">
-        <div>
-          <os-button primary :label="$t('common.buttons.update')" @click="update" />
-          <os-button text :label="$t('common.buttons.cancel')" @click="switchToViewMode" />
+    <fieldset v-else :disabled="saving" class="label-settings-fields">
+      <os-form ref="labelsForm" :schema="addEditFs" :data="dataCtx" />
+    </fieldset>
+    <div class="label-settings-supplement" :class="{'label-settings-supplement-edit': editMode}">
+      <os-specimen-type-abbreviations v-if="cp && cp.id" :key="'abbreviations-' + cp.id" :cp="cp" ref="abbreviations"
+        :edit-mode="editMode" :saving="saving" @ready="abbreviationsReady = $event" />
+      <div v-if="editMode" class="label-settings-actions">
+        <os-divider />
+        <div class="label-settings-buttons">
+          <os-button primary :label="$t('common.buttons.update')" :disabled="saving || !abbreviationsReady" @click="update" />
+          <os-button text :label="$t('common.buttons.cancel')" :disabled="saving" @click="switchToViewMode" />
         </div>
-      </os-form>
+      </div>
     </div>
   </os-panel>
 </template>
@@ -49,8 +55,11 @@ import formUtil  from '@/common/services/FormUtil.js';
 import util      from '@/common/services/Util.js';
 
 import cpResources from './Resources.js';
+import SpecimenTypeAbbreviations from './SpecimenTypeAbbreviations.vue';
 
 export default {
+  components: {'os-specimen-type-abbreviations': SpecimenTypeAbbreviations},
+
   props: ['cp'],
 
   emits: ['cp-saved'],
@@ -62,6 +71,10 @@ export default {
     const addEditFs = formUtil.getFormSchema(fields, addEditLayout.layout);
     return {
       editMode: false,
+
+      saving: false,
+
+      abbreviationsReady: false,
 
       addEditFs,
 
@@ -89,6 +102,11 @@ export default {
 
   methods: {
     switchToEditMode: function() {
+      if (!this.abbreviationsReady || this.saving) {
+        return;
+      }
+
+      this.$refs.abbreviations.edit();
       const cp = this.dataCtx.cp = util.clone(this.cp);
       formUtil.createCustomFieldsMap(cp);
 
@@ -104,8 +122,8 @@ export default {
       this.editMode = false;
     },
 
-    update: function() {
-      if (!this.$refs.labelsForm.validate()) {
+    update: async function() {
+      if (this.saving || !this.abbreviationsReady || !this.$refs.labelsForm.validate()) {
         return;
       }
 
@@ -114,13 +132,16 @@ export default {
         toSave.setQtyToZero = null;
       }
 
-      cpSvc.saveOrUpdate(toSave).then(
-        savedCp => {
-          this.$emit('cp-saved', savedCp);
-          alertsSvc.success({code: 'cps.label_fmt_n_print_saved'});
-          this.switchToViewMode();
-        }
-      );
+      this.saving = true;
+      try {
+        const savedCp = await cpSvc.saveOrUpdate(toSave);
+        await this.$refs.abbreviations.save();
+        this.$emit('cp-saved', savedCp);
+        alertsSvc.success({code: 'cps.label_fmt_n_print_saved'});
+        this.switchToViewMode();
+      } finally {
+        this.saving = false;
+      }
     },
 
     _setupCp: function() {
@@ -142,3 +163,41 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.label-settings-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.label-settings-actions {
+  margin-bottom: 1rem;
+}
+
+.label-settings-supplement-edit {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 1rem auto 0;
+  padding: 0 1rem;
+}
+
+.label-settings-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (min-width: 576px) {
+  .label-settings-supplement-edit {
+    width: 90%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .label-settings-supplement-edit {
+    width: 80%;
+  }
+}
+</style>

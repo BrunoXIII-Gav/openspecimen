@@ -31,7 +31,12 @@
         </template>
       </os-page-toolbar>
 
-      <os-overview :schema="ctx.dict" :object="ctx" :reference-prefix="'specimen-view-' + specimen.id" v-if="ctx.dict.length > 0" />
+      <os-overview :schema="overviewFields" :object="ctx" :reference-prefix="'specimen-view-' + specimen.id" v-if="ctx.dict.length > 0" />
+
+      <details v-if="specimen.intermediate && specimen.label" class="intermediate-identifier">
+        <summary>{{ $t('specimens.technical_details') }}</summary>
+        <p><strong>{{ $t('specimens.internal_identifier') }}:</strong> <code>{{ specimen.label }}</code></p>
+      </details>
 
       <os-section v-if="specimen.specimensPool && specimen.specimensPool.length > 0">
         <template #title>
@@ -188,6 +193,7 @@ import SpecimenTree from '@/biospecimen/components/SpecimenTree.vue';
 import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 
 import specimenSvc from '@/biospecimen/services/Specimen.js';
+import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 import wfSvc from '@/biospecimen/services/Workflow.js';
 
 import alertsSvc from '@/common/services/Alerts.js';
@@ -281,6 +287,12 @@ export default {
   },
 
   computed: {
+    overviewFields() {
+      return this.ctx.dict.filter(field => !this.specimen.intermediate || field.name != 'specimen.label')
+        .map(field => field.name == 'specimen.parentLabel' && this.specimen.parentIntermediate ?
+          {...field, value: ({specimen}) => specimenDisplay.parentLabel(specimen)} : field);
+    },
+
     moreOptions: function() {
       const {specimen} = this.ctx;
       const options = [];
@@ -629,7 +641,7 @@ export default {
 
         this.ctx.deleteOpts = {
           type: this.$t('specimens.specimen'),
-          title: specimen.label + (specimen.barcode ? ' (' + specimen.barcode + ')' : ''),
+          title: specimenDisplay.label(specimen) + (specimen.barcode ? ' (' + specimen.barcode + ')' : ''),
           dependents: () => specimenSvc.getDependents(specimen),
           headerCode: 'specimens.void_record_title',
           confirmCode: 'specimens.confirm_void_record',
@@ -746,6 +758,14 @@ export default {
 </script>
 
 <style scoped>
+.intermediate-identifier {
+  margin: 1rem 0;
+}
+
+.intermediate-identifier summary {
+  cursor: pointer;
+}
+
 .storage-hierarchy {
   margin-top: 1rem;
 }

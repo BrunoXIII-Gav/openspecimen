@@ -6,6 +6,7 @@
 <script>
 import cpSvc      from '@/biospecimen/services/CollectionProtocol.js';
 import routerSvc  from '@/common/services/Router.js';
+import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 
 export default {
   props: ['cpr', 'visit', 'specimen', 'formId', 'formCtxtId', 'recordId'],
@@ -60,7 +61,7 @@ export default {
 
       bcrumb.push({
         url: routerSvc.getUrl('ParticipantsListItemSpecimenDetail.Overview', {cpId, cprId, visitId, eventId, specimenId}),
-        label: this.specimen.label
+        label: specimenDisplay.label(this.specimen)
       });
       return bcrumb;
     },

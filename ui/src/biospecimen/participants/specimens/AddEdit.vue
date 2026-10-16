@@ -9,7 +9,7 @@
         <h3>
           <span v-if="isPooling" v-t="'specimens.create_pooled_specimen'">Create Pooled Specimen</span>
           <span v-else-if="!dataCtx.specimen.id" v-t="'participants.add_specimen'">Add Specimen</span>
-          <span v-else-if="!ctx.header.leftTitle" v-t="{path: 'common.update', args: {name: specimenLabel}}"></span>
+          <span v-else-if="!ctx.header.leftTitle || specimen.intermediate" v-t="{path: 'common.update', args: {name: specimenLabel}}"></span>
           <span class="custom-title" v-else>
             <span v-t="{path: 'common.buttons.update'}">Update</span>
             <os-dynamic-template v-if="ctx.header.leftTitle" :template="ctx.header.leftTitle"
@@ -18,7 +18,7 @@
         </h3>
       </span>
 
-      <template #right v-if="ctx.header.rightTitle">
+      <template #right v-if="ctx.header.rightTitle && !specimen.intermediate">
         <h3>
           <os-dynamic-template :template="ctx.header.rightTitle" :cp="dataCtx.cp" :cpr="cpr" :visit="visit"
             :specimen="specimen" :hasPhiAccess="hasPhiAccess" />
@@ -80,6 +80,7 @@
 
 import cpSvc        from '@/biospecimen/services/CollectionProtocol.js';
 import specimenSvc  from '@/biospecimen/services/Specimen.js';
+import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 
 import authSvc    from '@/common/services/Authorization.js';
 import alertsSvc  from '@/common/services/Alerts.js';
@@ -175,6 +176,9 @@ export default {
     },
 
     specimenLabel: function() {
+      if (this.specimen.intermediate) {
+        return specimenDisplay.label(this.specimen);
+      }
       const {label, barcode, specimenClass, type} = this.specimen;
       let result = label || '';
       if (barcode) {

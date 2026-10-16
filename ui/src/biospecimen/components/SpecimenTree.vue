@@ -42,6 +42,7 @@ import exprUtil from '@/common/services/ExpressionUtil.js';
 import formUtil from '@/common/services/FormUtil.js';
 import settingSvc from '@/common/services/Setting.js';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
+import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 import util from '@/common/services/Util.js';
 import routerSvc from '@/common/services/Router.js';
 
@@ -135,7 +136,7 @@ export default {
     },
 
     fields: function() {
-      const configuredFields = this.treeCfg.fields && this.treeCfg.fields.length > 0 ? this.treeCfg.fields : [
+      let configuredFields = this.treeCfg.fields && this.treeCfg.fields.length > 0 ? this.treeCfg.fields : [
         {
           type: 'specimen-description',
           name: 'specimen',
@@ -154,6 +155,12 @@ export default {
           labelCode: 'specimens.location',
         }
       ];
+
+      configuredFields = configuredFields.map(field => field.name == 'specimen.label' ? {
+        ...field,
+        value: row => row.specimen.intermediate ? specimenDisplay.label(row.specimen) :
+          typeof field.value == 'function' ? field.value(row) : row.specimen.label
+      } : field);
 
       if (!this.specimen) {
         return configuredFields.concat({

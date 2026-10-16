@@ -15,7 +15,7 @@
         <div class="parent-summary">
           <div>
             <span class="summary-label">{{ $t('specimens.parent_specimen') }}</span>
-            <strong>{{ parent.label }}</strong>
+            <strong>{{ parentDisplayLabel }}</strong>
           </div>
           <div>
             <span class="summary-label">{{ $t('specimens.type') }}</span>
@@ -169,6 +169,7 @@ import alertsSvc  from '@/common/services/Alerts.js';
 import cpSvc      from '@/biospecimen/services/CollectionProtocol.js';
 import routerSvc  from '@/common/services/Router.js';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
+import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 import formSvc     from '@/forms/services/Form.js';
 import formUtil    from '@/common/services/FormUtil.js';
 import util       from '@/common/services/Util.js';
@@ -202,6 +203,10 @@ export default {
   },
 
   computed: {
+    parentDisplayLabel() {
+      return specimenDisplay.label(this.parent);
+    },
+
     lineage() {
       return this.specimen.lineage;
     },
@@ -251,7 +256,7 @@ export default {
         {
           url: routerSvc.getUrl('ParticipantsListItemSpecimenDetail.Overview',
             {cpId, cprId, visitId, specimenId: this.parent.id}),
-          label: this.parent.label
+          label: this.parentDisplayLabel
         }
       ];
     }

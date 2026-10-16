@@ -14,6 +14,10 @@ export default {
       href: (row) => routerSvc.getUrl('PvAddEdit', {pvId: row.rowObject.pv.id}, {attribute: row.rowObject.pv.attribute})
     },
     {
+      name: 'pv.props.abbreviation',
+      captionCode: 'pvs.abbreviation'
+    },
+    {
       name: 'pv.labelCode',
       captionCode: 'pvs.label_code'
     },

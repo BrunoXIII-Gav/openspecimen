@@ -44,7 +44,7 @@ export default {
       bcrumb: [
         {url: routerSvc.getUrl('PvsList', {attribute: '-'}), label: i18n.msg('pvs.list')}
       ],
-      pv: {activityStatus: 'Active', attribute: props.attribute || undefined},
+      pv: {activityStatus: 'Active', attribute: props.attribute || undefined, props: {}},
       specimenClasses: []
     });
 
@@ -66,7 +66,7 @@ export default {
 
     if (props.pvId && +props.pvId > 0) {
       pvAdminSvc.getPv(+props.pvId, {includeProps: true}).then(pv => {
-        ctx.pv = pv;
+        ctx.pv = {...pv, props: pv.props || {}};
       });
     }
 
@@ -125,6 +125,17 @@ export default {
         {
           fields: [
             {
+              name: 'pv.props.abbreviation',
+              labelCode: 'pvs.abbreviation',
+              tooltipCode: 'pvs.abbreviation_help',
+              type: 'text',
+              showWhen: "pv.attribute == 'specimen_type'"
+            }
+          ]
+        },
+        {
+          fields: [
+            {
               name: 'pv.labelCode',
               labelCode: 'pvs.label_code',
               type: 'text'
@@ -176,7 +187,17 @@ export default {
         return;
       }
 
-      const saved = await pvAdminSvc.saveOrUpdate(this.ctx.pv);
+      const pv = {...this.ctx.pv, props: {...this.ctx.pv.props}};
+      if (pv.attribute == 'specimen_type') {
+        const abbreviation = (pv.props.abbreviation || '').trim();
+        if (abbreviation) {
+          pv.props.abbreviation = abbreviation;
+        } else {
+          delete pv.props.abbreviation;
+        }
+      }
+
+      const saved = await pvAdminSvc.saveOrUpdate(pv);
       alertSvc.success({code: 'pvs.saved', args: saved});
       if (this.attribute) {
         routerSvc.goto('PvsListItemValues', {attribute: this.attribute});

@@ -1081,7 +1081,7 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	public boolean isPrintLabel() {
-		return printLabel;
+		return printLabel && !IntermediateSpecimens.isIntermediate(this);
 	}
 
 	public void setPrintLabel(boolean printLabel) {
@@ -1253,7 +1253,7 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	public boolean isPrePrintEnabled() {
-		return getSpecimenRequirement() != null &&
+		return !IntermediateSpecimens.isIntermediate(this) && getSpecimenRequirement() != null &&
 			getSpecimenRequirement().getLabelAutoPrintModeToUse() == CollectionProtocol.SpecimenLabelAutoPrintMode.PRE_PRINT;
 	}
 
@@ -1378,7 +1378,8 @@ public class Specimen extends BaseExtensionEntity {
 		}
 
 		List<PrintItem<Specimen>> result = new ArrayList<>();
-		if (requirement.getLabelAutoPrintModeToUse() == CollectionProtocol.SpecimenLabelAutoPrintMode.PRE_PRINT) {
+		if (!IntermediateSpecimens.isIntermediate(this) &&
+			requirement.getLabelAutoPrintModeToUse() == CollectionProtocol.SpecimenLabelAutoPrintMode.PRE_PRINT) {
 			Integer printCopies = requirement.getLabelPrintCopiesToUse();
 			result.add(PrintItem.make(this, printCopies));
 		}

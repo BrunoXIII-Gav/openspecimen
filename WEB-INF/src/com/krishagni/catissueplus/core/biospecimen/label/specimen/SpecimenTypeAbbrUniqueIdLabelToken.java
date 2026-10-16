@@ -7,14 +7,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
+import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenTypeAbbreviations;
 import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
 import com.krishagni.catissueplus.core.common.domain.AbstractUniqueIdToken;
 
 public class SpecimenTypeAbbrUniqueIdLabelToken extends AbstractUniqueIdToken<Specimen> {
 
 	private static List<String> ALLOWED_TYPES = Arrays.asList("registration", "visit", "parent_specimen", "primary_specimen");
-
-	private static final String ABBREVIATION = "abbreviation";
 
 	@Autowired
 	private DaoFactory daoFactory;
@@ -92,13 +91,8 @@ public class SpecimenTypeAbbrUniqueIdLabelToken extends AbstractUniqueIdToken<Sp
 				break;
 		}
 
-		String typeAbbr = getTypeAbbr(specimen);
+		String typeAbbr = SpecimenTypeAbbreviations.getAbbreviation(specimen);
 		Long uniqueId = daoFactory.getUniqueIdGenerator().getUniqueId(keyType, groupId + "_" + typeAbbr);
 		return uniqueId == 1L && !eqArg("output_one", 1, args) ? -1 : uniqueId;
-	}
-
-	private String getTypeAbbr(Specimen spmn) {
-		String abbr = spmn.getSpecimenType().getProps().get(ABBREVIATION);
-		return StringUtils.isBlank(abbr) ? StringUtils.EMPTY : abbr;
 	}
 }

@@ -67,6 +67,7 @@ import com.krishagni.catissueplus.core.biospecimen.domain.DerivedSpecimenRequire
 import com.krishagni.catissueplus.core.biospecimen.domain.Participant;
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenRequirement;
+import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenTypeAbbreviations;
 import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenTypeUnit;
 import com.krishagni.catissueplus.core.biospecimen.domain.Visit;
 import com.krishagni.catissueplus.core.biospecimen.domain.factory.CollectionProtocolFactory;
@@ -1546,6 +1547,8 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 					FieldReferenceRules.validate(cp.getId(), detail.getData(), deDaoFactory, formSvc);
 				} else if ("consentGroups".equals(detail.getName())) {
 					validateConsentGroups(cp, detail.getData());
+				} else if (SpecimenTypeAbbreviations.WORKFLOW.equals(detail.getName())) {
+					detail.setData(SpecimenTypeAbbreviations.validate(detail.getData(), daoFactory.getPermissibleValueDao()));
 				}
 				Workflow wf = new Workflow();
 				BeanUtils.copyProperties(detail, wf);

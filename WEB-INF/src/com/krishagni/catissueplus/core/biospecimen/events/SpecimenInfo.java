@@ -16,6 +16,7 @@ import com.krishagni.catissueplus.core.administrative.domain.StorageContainerPos
 import com.krishagni.catissueplus.core.administrative.events.StorageLocationSummary;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolEvent;
 import com.krishagni.catissueplus.core.biospecimen.domain.CpSpecimenLabelPrintSetting;
+import com.krishagni.catissueplus.core.biospecimen.domain.IntermediateSpecimens;
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenChildrenEvent;
 import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenCollectionReceiveDetail;
@@ -103,6 +104,16 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 	private Long parentId;
 	
 	private String parentLabel;
+
+	private boolean intermediate;
+
+	private String intermediateSourceLabel;
+
+	private boolean parentIntermediate;
+
+	private String parentType;
+
+	private String parentIntermediateSourceLabel;
 	
 	private StorageLocationSummary storageLocation;
 	
@@ -430,6 +441,31 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 		this.parentLabel = parentLabel;
 	}
 
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	public boolean isIntermediate() {
+		return intermediate;
+	}
+
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	public String getIntermediateSourceLabel() {
+		return intermediateSourceLabel;
+	}
+
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	public boolean isParentIntermediate() {
+		return parentIntermediate;
+	}
+
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	public String getParentType() {
+		return parentType;
+	}
+
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	public String getParentIntermediateSourceLabel() {
+		return parentIntermediateSourceLabel;
+	}
+
 	public StorageLocationSummary getStorageLocation() {
 		return storageLocation;
 	}
@@ -618,6 +654,8 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 		}
 
 		result.setLabel(specimen.getLabel());
+		result.intermediate = IntermediateSpecimens.isIntermediate(specimen);
+		result.intermediateSourceLabel = result.intermediate ? IntermediateSpecimens.getSourceLabel(specimen) : null;
 		result.setAdditionalLabel(specimen.getAdditionalLabel());
 		result.setBarcode(specimen.getBarcode());
 		result.setType(PermissibleValue.getValue(specimen.getSpecimenType()));
@@ -632,9 +670,17 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 		result.setParentConsumedQty(specimen.getParentConsumedQuantity());
 		result.setProcessAllParent(specimen.getProcessAllParent());
 		result.setConcentration(specimen.getConcentration());
+		result.parentIntermediate = false;
+		result.parentType = null;
+		result.parentIntermediateSourceLabel = null;
 		if (specimen.getParentSpecimen() != null) {
 			result.setParentId(specimen.getParentSpecimen().getId());
 			result.setParentLabel(specimen.getParentSpecimen().getLabel());
+			result.parentIntermediate = IntermediateSpecimens.isIntermediate(specimen.getParentSpecimen());
+			if (result.parentIntermediate) {
+				result.parentType = PermissibleValue.getValue(specimen.getParentSpecimen().getSpecimenType());
+				result.parentIntermediateSourceLabel = IntermediateSpecimens.getSourceLabel(specimen.getParentSpecimen());
+			}
 		}
 	
 		StorageLocationSummary location = null;
@@ -668,7 +714,9 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 			.map(externalId -> NameValuePair.create(externalId.getName(), externalId.getValue()))
 			.collect(Collectors.toList()));
 
-		if (sr != null && sr.getLabelAutoPrintModeToUse() != null) {
+		if (result.intermediate) {
+			result.setLabelAutoPrintMode("NONE");
+		} else if (sr != null && sr.getLabelAutoPrintModeToUse() != null) {
 			result.setLabelAutoPrintMode(sr.getLabelAutoPrintModeToUse().name());
 		} else {
 			CpSpecimenLabelPrintSetting setting = specimen.getCollectionProtocol()

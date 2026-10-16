@@ -147,13 +147,10 @@ public class Criteria<R> extends AbstractCriteria<Criteria<R>, R> {
 
 	public Criteria<R> addOrder(Order order) {
 		CriteriaQuery<R> cq = (CriteriaQuery<R>) query;
-		List<jakarta.persistence.criteria.Order> orderList = cq.getOrderList();
-		if (orderList == null || orderList.isEmpty()) {
-			orderList = new ArrayList<>();
-			cq.orderBy(orderList);
-		}
-
+		// Hibernate returns an immutable list and copies the list passed to orderBy.
+		List<jakarta.persistence.criteria.Order> orderList = new ArrayList<>(cq.getOrderList());
 		orderList.add(order.getOrder());
+		cq.orderBy(orderList);
 		return this;
 	}
 }

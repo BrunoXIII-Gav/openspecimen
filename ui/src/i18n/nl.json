@@ -584,6 +584,24 @@
   },
 
   "specimens": {
+    "collection_matrix": {
+      "title": "Geplande specimens verzamelen",
+      "visit_details": "Bezoekgegevens",
+      "help": "Vul de geselecteerde specimens en hun bovenliggende specimens in. Laat specimens op In afwachting staan om ze later te verwerken. Automatische labels worden bij het opslaan gegenereerd.",
+      "common_details": "Gemeenschappelijke verzamel- en ontvangstgegevens",
+      "apply_common": "Toepassen op primaire specimens",
+      "common_applied": "Gemeenschappelijke gegevens toegepast op primaire specimens.",
+      "details": "Details",
+      "automatic": "Automatisch",
+      "saved": "Specimens succesvol verzameld.",
+      "nothing_to_collect": "Er zijn geen geselecteerde specimens in afwachting om te verzamelen. Ga terug naar het bezoek en selecteer specimens in afwachting.",
+      "invalid_selection": "De selectie is ongeldig. Ga terug naar het bezoek en selecteer de specimens opnieuw.",
+      "load_failed": "De specimens konden niet worden geladen. Ga terug naar het bezoek en probeer het opnieuw.",
+      "parent_not_collected": "Een verzameld derivaat of aliquot moet een verzameld bovenliggend specimen hebben. Verzamel dit specimen of laat het kind in afwachting staan.",
+      "invalid_quantity": "Hoeveelheden en concentraties moeten geldige, niet-negatieve getallen zijn.",
+      "duplicate_label": "De selectie bevat dubbele specimenlabels.",
+      "duplicate_barcode": "De selectie bevat dubbele barcodes."
+    },
     "barcode": "Barcode",
     "collected_in": "afgenomen in {container}",
     "cp": "Afnameprotocol",

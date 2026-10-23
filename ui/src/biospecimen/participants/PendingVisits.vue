@@ -171,11 +171,7 @@ export default {
         const cpId = this.cp.id;
         const cprId = this.cpr.id;
         const visitId = visit.id > 0 ? visit.id : -1;
-        if (visitId === -1) {
-          routerSvc.goto('VisitAddEdit', {cpId, cprId, visitId: -1}, {eventId: visit.eventId});
-        } else {
-          routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1}, {eventId: visit.eventId});
-        }
+        routerSvc.goto('VisitCollectSpecimens', {cpId, cprId, visitId}, {eventId: visit.eventId});
       }
     },
 

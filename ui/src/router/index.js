@@ -1717,6 +1717,11 @@ const routes = [
                     props: ({params, query}) => ({visitId: params && params.visitId, eventId: query.eventId}),
                     children: [
                       {
+                        path: 'collect-specimens',
+                        name: 'VisitCollectSpecimens',
+                        component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/visits/CollectSpecimens.vue')
+                      },
+                      {
                         path: 'addedit',
                         name: 'VisitAddEdit',
                         component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/visits/AddEdit.vue')

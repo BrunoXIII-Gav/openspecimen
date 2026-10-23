@@ -3458,6 +3458,24 @@
   },
 
   "specimens": {
+    "collection_matrix": {
+      "title": "Collect planned specimens",
+      "visit_details": "Visit details",
+      "help": "Complete the selected specimens and their ancestors. Leave specimens as Pending to process them later. Labels marked Automatic are generated when you save.",
+      "common_details": "Common collection and reception details",
+      "apply_common": "Apply to primary specimens",
+      "common_applied": "Common details applied to primary specimens.",
+      "details": "Details",
+      "automatic": "Automatic",
+      "saved": "Specimens collected successfully.",
+      "nothing_to_collect": "There are no selected pending specimens to collect. Return to the visit and select pending specimens.",
+      "invalid_selection": "The specimen selection is invalid. Return to the visit and select the specimens again.",
+      "load_failed": "The specimens could not be loaded. Return to the visit and try again.",
+      "parent_not_collected": "A collected derivative or aliquot must have a collected parent. Complete its parent or leave the child pending.",
+      "invalid_quantity": "Quantities and concentrations must be valid non-negative numbers.",
+      "duplicate_label": "The selection contains duplicate specimen labels.",
+      "duplicate_barcode": "The selection contains duplicate barcodes."
+    },
     "intermediate_material": "Intermediate material",
     "intermediate_from": "{type} — from {source}",
     "intermediate_material_type": "{type} — intermediate material",

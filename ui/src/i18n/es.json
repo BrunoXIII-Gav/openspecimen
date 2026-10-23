@@ -3387,6 +3387,24 @@
     "type_required": "El tipo es obligatorio"
   },
   "specimens": {
+    "collection_matrix": {
+      "title": "Recolectar muestras planificadas",
+      "visit_details": "Datos de la visita",
+      "help": "Completa las muestras seleccionadas y sus padres. Deja como Pendiente las que procesarás después. Las etiquetas indicadas como Automática se generan al guardar.",
+      "common_details": "Datos comunes de recolección y recepción",
+      "apply_common": "Aplicar a muestras primarias",
+      "common_applied": "Se aplicaron los datos comunes a las muestras primarias.",
+      "details": "Detalles",
+      "automatic": "Automática",
+      "saved": "Se guardó la recolección de las muestras.",
+      "nothing_to_collect": "No hay muestras pendientes seleccionadas para recolectar. Vuelve a la visita y selecciona muestras pendientes.",
+      "invalid_selection": "La selección de muestras no es válida. Vuelve a la visita y selecciona las muestras nuevamente.",
+      "load_failed": "No se pudieron cargar las muestras. Vuelve a la visita e inténtalo nuevamente.",
+      "parent_not_collected": "Un derivado o una alícuota recolectados deben tener su muestra padre recolectada. Completa el padre o deja el hijo pendiente.",
+      "invalid_quantity": "Las cantidades y concentraciones deben ser números válidos, mayores o iguales a cero.",
+      "duplicate_label": "La selección contiene etiquetas de muestras repetidas.",
+      "duplicate_barcode": "La selección contiene códigos de barras repetidos."
+    },
     "intermediate_material": "Material intermedio",
     "intermediate_from": "{type} — procedente de {source}",
     "intermediate_material_type": "{type} — material intermedio",

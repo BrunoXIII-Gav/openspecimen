@@ -6,13 +6,13 @@ class Workflow {
     if (repeat) {
       routerSvc.goto('VisitAddEdit', {cpId, cprId, visitId: -1}, {eventId: visit.eventId});
     } else {
-      routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1});
+      routerSvc.goto('VisitCollectSpecimens', {cpId, cprId, visitId: visitId > 0 ? visitId : -1}, {eventId: visit.eventId});
     }
   }
 
   async collectPending(visit) {
     const {cpId, cprId, id: visitId} = visit;
-    routerSvc.goto('SpecimenAddEdit', {cpId, cprId, visitId, specimenId: -1});
+    routerSvc.goto('VisitCollectSpecimens', {cpId, cprId, visitId: visitId > 0 ? visitId : -1}, {eventId: visit.eventId});
   }
 
   async addSpecimen(cp, visit) {

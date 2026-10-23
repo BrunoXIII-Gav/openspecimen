@@ -314,7 +314,9 @@ export default {
         const instance = await wfInstanceSvc.createInstance({name: wfName}, null, null, null, [inputItem], opts);
         wfInstanceSvc.gotoInstance(instance.id);
       } else {
-        routerSvc.goto('SpecimenAddEdit', {cpId: this.cp.id, cprId: this.cpr.id, visitId: this.visit.id || -1, specimenId: -1});
+        routerSvc.goto('VisitCollectSpecimens',
+          {cpId: this.cp.id, cprId: this.cpr.id, visitId: this.visit.id > 0 ? this.visit.id : -1},
+          {eventId: this.visit.eventId, specimenIds: specimenIds.join(','), reqIds: reqIds.join(',')});
       }
     },
 

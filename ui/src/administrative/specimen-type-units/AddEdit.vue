@@ -124,12 +124,11 @@ export default {
         ...types.filter(pv => pv.parentValue === specimenClass).map(pv => ({name: pv.value, value: pv.value})));
     },
 
-    handleInput({data}) {
-      const oldClass = this.dataCtx.unit.specimenClass;
+    handleInput({field, oldValue, value, data}) {
       Object.assign(this.dataCtx, data);
-      if (oldClass !== this.dataCtx.unit.specimenClass) {
+      if (field.name === 'unit.specimenClass' && oldValue !== value) {
         this.dataCtx.unit.type = null;
-        this.loadTypes(this.dataCtx.unit.specimenClass);
+        this.loadTypes(value);
       }
     },
 

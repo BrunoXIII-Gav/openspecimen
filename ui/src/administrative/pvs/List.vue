@@ -4,10 +4,6 @@
       <span>
         <h3 v-t="'pvs.list'">Permissible Values</h3>
       </span>
-      <template #right>
-        <os-button left-icon="plus" :label="$t('common.buttons.create')"
-          @click="$goto('PvAddEdit', {pvId: -1}, {})" />
-      </template>
     </os-page-head>
 
     <os-page-body>

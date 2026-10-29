@@ -145,15 +145,6 @@ export default {
         {
           fields: [
             {
-              name: 'pv.conceptCode',
-              labelCode: 'pvs.concept_code',
-              type: 'text'
-            }
-          ]
-        },
-        {
-          fields: [
-            {
               name: 'pv.activityStatus',
               labelCode: 'pvs.status',
               type: 'dropdown',

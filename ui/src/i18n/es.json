@@ -3491,6 +3491,7 @@
     "derivative_count": "Número de derivados",
     "derivative_quantity": "Cantidad del derivado",
     "quantity_per_aliquot": "Cantidad por alícuota",
+    "individual_aliquot_quantities": "Cantidad diferente por alícuota",
     "resulting_quantity": "Cantidad resultante",
     "total_parent_quantity": "Consumo total de la muestra padre:",
     "process_all_parent_short": "Procesar todo",

@@ -22,10 +22,6 @@ export default {
       captionCode: 'pvs.label_code'
     },
     {
-      name: 'pv.conceptCode',
-      captionCode: 'pvs.concept_code'
-    },
-    {
       name: 'pv.activityStatus',
       captionCode: 'pvs.status'
     }

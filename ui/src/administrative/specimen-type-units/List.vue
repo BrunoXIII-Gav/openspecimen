@@ -3,9 +3,6 @@
     <os-page-head>
       <template #breadcrumb><os-breadcrumb :items="ctx.bcrumb" /></template>
       <span><h3 v-t="'specimen_type_units.list'">Specimen Type Units</h3></span>
-      <template #right>
-        <os-button left-icon="plus" :label="$t('common.buttons.create')" @click="createUnit" />
-      </template>
     </os-page-head>
 
     <os-page-body>
@@ -15,6 +12,10 @@
             Define the unit used to enter quantities. Protocol-specific rules take precedence over global rules.
           </span>
         </os-message>
+
+        <os-page-toolbar>
+          <os-button left-icon="plus" :label="$t('common.buttons.create')" @click="createUnit" />
+        </os-page-toolbar>
 
         <os-panel class="units-panel">
           <template #header>

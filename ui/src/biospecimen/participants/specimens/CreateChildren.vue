@@ -58,8 +58,13 @@
           </div>
 
           <div class="field" v-if="lineage == 'Aliquot'">
-            <label>{{ $t('specimens.quantity_per_aliquot') }}</label>
-            <os-input-number v-model="qtyPerAliquot" :max-fraction-digits="8" :unit="parentUnit" />
+            <label v-if="!individualAliquotQuantities">{{ $t('specimens.quantity_per_aliquot') }}</label>
+            <os-input-number v-if="!individualAliquotQuantities" v-model="qtyPerAliquot"
+              :max-fraction-digits="8" :unit="parentUnit" />
+            <label class="individual-quantities">
+              <input type="checkbox" v-model="individualAliquotQuantities" @change="aliquotQuantitiesChanged" />
+              {{ $t('specimens.individual_aliquot_quantities') }}
+            </label>
           </div>
 
           <div class="field" v-if="lineage == 'Derived'">
@@ -128,7 +133,9 @@
                     entity="specimen" measure="quantity" />
                 </td>
                 <td v-if="lineage == 'Aliquot'">
-                  {{ quantityDisplay(qtyPerAliquot, parent) }}
+                  <os-input-number v-if="individualAliquotQuantities" v-model="row.initialQty"
+                    :max-fraction-digits="8" :unit="parentUnit" />
+                  <span v-else>{{ quantityDisplay(qtyPerAliquot, parent) }}</span>
                 </td>
               </tr>
               <tr class="individual-event-row" v-if="selectedEventForm && !shareEventData && eventFormSchema.rows.length > 0">
@@ -184,6 +191,7 @@ export default {
       parent: {},
       count: 1,
       qtyPerAliquot: null,
+      individualAliquotQuantities: false,
       status: 'Collected',
       rows: [],
       saving: false,
@@ -231,7 +239,10 @@ export default {
 
     totalParentConsumption() {
       if (this.lineage == 'Aliquot') {
-        return this.roundQuantity(this.qtyPerAliquot > 0 ? this.qtyPerAliquot * this.rows.length : 0);
+        return this.roundQuantity(this.rows.reduce((total, row) => {
+          const quantity = +this.childQuantity(row);
+          return total + (quantity > 0 ? quantity : 0);
+        }, 0));
       }
 
       if (this.rows.length == 1 && this.rows[0].processAllParent) {
@@ -301,7 +312,7 @@ export default {
         type: null,
         parentConsumedQty: null,
         processAllParent: false,
-        initialQty: null,
+        initialQty: this.lineage == 'Aliquot' && this.individualAliquotQuantities ? this.qtyPerAliquot : null,
         eventFormData: util.clone(this.eventFormDefaultValues),
         extensionDetail: this.customFieldsFormId ? {
           formId: this.customFieldsFormId,
@@ -341,6 +352,18 @@ export default {
       return Math.round((+qty + Number.EPSILON) * 100000000) / 100000000;
     },
 
+    childQuantity(row) {
+      return this.lineage == 'Aliquot' && !this.individualAliquotQuantities ? this.qtyPerAliquot : row.initialQty;
+    },
+
+    aliquotQuantitiesChanged() {
+      if (this.individualAliquotQuantities) {
+        this.rows.forEach(row => {
+          if (row.initialQty == null) row.initialQty = this.qtyPerAliquot;
+        });
+      }
+    },
+
     validate() {
       const count = +this.count;
       if (!Number.isInteger(count) || count < 1 || count > 100) {
@@ -351,7 +374,8 @@ export default {
         return 'specimens.batch_labels_required';
       }
 
-      if (this.lineage == 'Aliquot' && !(this.qtyPerAliquot > 0)) {
+      if (this.lineage == 'Aliquot' && this.rows.some(row =>
+        !(this.childQuantity(row) > 0) || !Number.isFinite(+this.childQuantity(row)))) {
         return 'specimens.aliquot_quantity_required';
       }
 
@@ -497,8 +521,8 @@ export default {
           type: this.lineage == 'Derived' ? row.type : null,
           parentConsumedQty: this.lineage == 'Derived' && !row.processAllParent ? row.parentConsumedQty : null,
           processAllParent: this.lineage == 'Derived' ? row.processAllParent : false,
-          initialQty: this.lineage == 'Aliquot' ? this.qtyPerAliquot : row.initialQty,
-          availableQty: this.lineage == 'Aliquot' ? this.qtyPerAliquot : row.initialQty,
+          initialQty: this.childQuantity(row),
+          availableQty: this.childQuantity(row),
           extensionDetail: row.extensionDetail
         }));
         const saved = await specimenSvc.createMultiple({specimens: children, formRecords: this.getEventFormRecords()});
@@ -551,6 +575,10 @@ export default {
   border-radius: 4px;
   padding: 0 0.5rem;
   background: white;
+}
+
+.individual-quantities {
+  margin-top: 0.5rem;
 }
 
 .help-text {

@@ -3562,6 +3562,7 @@
     "derivative_count": "Number of Derivatives",
     "derivative_quantity": "Derivative Quantity",
     "quantity_per_aliquot": "Quantity per Aliquot",
+    "individual_aliquot_quantities": "Different quantity for each aliquot",
     "resulting_quantity": "Resulting Quantity",
     "total_parent_quantity": "Total Parent Consumption:",
     "process_all_parent_short": "Process All",

@@ -27,6 +27,7 @@
     </os-page-head>
 
     <os-page-body>
+      <os-message type="error" v-if="ctx.creationDenied">{{ $t('roles.content.creation_denied') }}</os-message>
       <section class="pool-sources" v-if="isPooling">
         <h4>{{ $t('specimens.pool_sources') }}</h4>
         <p>{{ $t('specimens.pool_sources_help') }}</p>
@@ -58,9 +59,10 @@
         </div>
       </section>
       <os-form ref="spmnForm" :schema="ctx.addEditFs" :data="dataCtx"
+        v-if="ctx.creationReady"
         :reference-prefix="'specimen-edit-' + cpr.id + '-' + dataCtx.specimen.id" @input="handleInput($event)">
         <template #static-fields>
-          <os-field-references :cp-id="dataCtx.cp.id" target="specimen" :cpr-id="cpr.id" :visit-id="visit.id"
+          <os-field-references v-if="!cpr.contextOnly && !visit.contextOnly" :cp-id="dataCtx.cp.id" target="specimen" :cpr-id="cpr.id" :visit-id="visit.id"
             :specimen-id="dataCtx.specimen.id" :parent-id="dataCtx.specimen.parentId"
             :target-prefix="'specimen-edit-' + cpr.id + '-' + dataCtx.specimen.id" />
         </template>
@@ -77,6 +79,7 @@
 </template>
 
 <script>
+import contentSvc from '@/common/services/ProtocolContent.js';
 
 import cpSvc        from '@/biospecimen/services/CollectionProtocol.js';
 import specimenSvc  from '@/biospecimen/services/Specimen.js';
@@ -132,6 +135,8 @@ export default {
       },
 
       ctx: {
+        creationReady: false,
+        creationDenied: false,
         addEditFs: {rows: []},
         saving: false,
         quantityBaseline: {
@@ -145,7 +150,15 @@ export default {
     };
   },
 
-  created() {
+  async created() {
+    if (!(this.specimen.id > 0) || this.specimen.status == 'Pending') {
+      const access = await contentSvc.getAccess(this.dataCtx.cp.id);
+      if (!contentSvc.canCreate(access, this.dataCtx.specimen.lineage || 'New')) {
+        this.ctx.creationDenied = true;
+        return;
+      }
+    }
+    this.ctx.creationReady = true;
     const cpCtx = this.cpViewCtx;
     const promises = [
       cpCtx.getSpecimenDict(true, this.dataCtx.specimen.lineage),

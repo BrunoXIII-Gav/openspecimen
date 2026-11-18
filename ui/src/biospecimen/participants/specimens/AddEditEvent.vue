@@ -18,6 +18,8 @@
     </os-page-head>
 
     <os-page-body>
+      <os-message type="error" v-if="ctx.accessChecked && !ctx.eventAllowed">{{ $t('roles.content.denied') }}</os-message>
+      <template v-if="ctx.eventAllowed">
       <os-form ref="eventForm" :schema="eventSchema" :data="eventCtx"
         v-if="recordId == 'SpecimenCollectionEvent' || recordId == 'SpecimenReceivedEvent'">
         <div>
@@ -29,6 +31,7 @@
       <os-addedit-form-record :entity="specimen" :form-def="ctx.formDef" :form-id="formId"
         :form-ctxt-id="formCtxtId" :record-id="recordId" :hide-panel="true"
         @saved="eventSaved" @cancelled="eventCancelled" v-else />
+      </template>
     </os-page-body>
   </os-page>
 </template>
@@ -36,6 +39,7 @@
 <script>
 
 import alertsSvc  from '@/common/services/Alerts.js';
+import contentSvc from '@/common/services/ProtocolContent.js';
 import cpSvc      from '@/biospecimen/services/CollectionProtocol.js';
 import formSvc    from '@/forms/services/Form.js';
 import routerSvc  from '@/common/services/Router.js';
@@ -56,6 +60,8 @@ export default {
         cp,
 
         formDef: {},
+        accessChecked: false,
+        eventAllowed: false,
         receivedEventFields: null
       },
 
@@ -64,6 +70,12 @@ export default {
   },
 
   async created() {
+    const access = await contentSvc.getAccess(this.ctx.cp.id);
+    const key = this.recordId == 'SpecimenCollectionEvent' ? 'collection' :
+      this.recordId == 'SpecimenReceivedEvent' ? 'receipt' : 'form:' + this.formId;
+    this.ctx.eventAllowed = contentSvc.allows(access, key);
+    this.ctx.accessChecked = true;
+    if (!this.ctx.eventAllowed) return;
     if (+this.formId > 0) {
       this.ctx.formDef = await formSvc.getDefinition(this.formId);
     }

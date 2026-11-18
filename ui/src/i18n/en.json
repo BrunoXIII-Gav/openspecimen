@@ -1886,6 +1886,7 @@
   },
 
   "participants": {
+    "no_list_access": "You do not have permission to view this list.",
     "add_participant": "Add Participant",
     "add_multiple_specimens": "Add Multiple Specimens",
     "add_specimen": "Add Specimen",
@@ -2642,6 +2643,32 @@
   },
 
   "roles": {
+    "content": {
+      "creation_title": "Can create",
+      "requires_content_permission": "This section is inactive. Assign Read, Create or Update on Participants, Visits or Specimens. Protocol configuration access alone does not grant access to those records. Saved selections are retained.",
+      "requires_create_permission": "These options are inactive because this role has no Create permission on Specimens or Primary Specimens. Saved selections will be available again when Create is enabled.",
+      "primary_create_only": "Create on Primary Specimens enables primaries only. To configure derivatives or aliquots, enable Create on Specimens.",
+      "creation_help": "Limits the specimen lineages that existing permissions allow this role to create.",
+      "creation_denied": "Your role cannot create or collect this specimen lineage in this protocol.",
+      "create_New": "Primary specimens",
+      "create_Derived": "Derivatives",
+      "create_Aliquot": "Aliquots",
+      "collection_common": "Common collection data",
+      "denied": "You do not have access to this event or form.",
+      "title": "Events and forms within collection protocols",
+      "help": "Additional restrictions on existing permissions.",
+      "legacy": "Current behavior: this role has no additional content restrictions.",
+      "protocol": "Collection protocol",
+      "all_protocols": "All protocols assigned to this role",
+      "select_all": "Select current options",
+      "select_none": "Clear selection",
+      "add": "Restrict events and forms",
+      "none": "No events or forms are allowed by this rule.",
+      "unavailable": "Saved permissions not currently associated with this protocol:",
+      "load_error": "Could not load protocols or available forms. Reload before editing permissions.",
+      "collection": "Collection",
+      "receipt": "Receipt"
+    },
     "create_role": "Create Role",
     "description": "Description",
     "description_req": "Description is mandatory",
@@ -3458,10 +3485,18 @@
   },
 
   "specimens": {
+    "context_unavailable": "The authorized context for this specimen could not be loaded.",
+    "receipt_matrix": {
+      "title": "Complete receipt", "common": "Common receipt data", "apply": "Apply to all specimens",
+      "save": "Save receipt", "saved": "Receipt saved.", "empty": "This selection has no collected primary specimens pending receipt.",
+      "skipped": "Skipped {count} specimens that are not pending receipt.",
+      "denied": "You do not have permission to complete receipt.", "required": "Complete this receipt field.",
+      "load_failed": "Specimens pending receipt could not be loaded."
+    },
     "collection_matrix": {
-      "title": "Collect planned specimens",
+      "title": "Planned specimen matrix",
       "visit_details": "Visit details",
-      "help": "Complete the selected specimens and their ancestors. Leave specimens as Pending to process them later. Labels marked Automatic are generated when you save.",
+      "help": "Complete the data assigned to you. Pending stages can be resumed in this same matrix.",
       "common_details": "Common collection and reception details",
       "apply_common": "Apply to primary specimens",
       "common_applied": "Common details applied to primary specimens.",
@@ -3474,7 +3509,9 @@
       "parent_not_collected": "A collected derivative or aliquot must have a collected parent. Complete its parent or leave the child pending.",
       "invalid_quantity": "Quantities and concentrations must be valid non-negative numbers.",
       "duplicate_label": "The selection contains duplicate specimen labels.",
-      "duplicate_barcode": "The selection contains duplicate barcodes."
+      "duplicate_barcode": "The selection contains duplicate barcodes.",
+      "open": "Complete information",
+      "no_authorized_pending": "There are no pending tasks available with your permissions."
     },
     "intermediate_material": "Intermediate material",
     "intermediate_from": "{type} — from {source}",
@@ -3876,5 +3913,16 @@
     "visit_names": "Visit Names",
     "visit_site": "Visit Site",
     "visit_site_req": "Visit Site is mandatory"
+  },
+  "navigation": {
+      "reference": "Reference",
+      "registration": "Registration #{id}",
+      "visit": "Visit #{id}",
+      "visits_and_specimens": "Visits and specimens",
+      "open_visits": "View visits",
+      "previous": "Previous",
+      "next": "Next",
+      "empty_registrations": "No records available.",
+      "empty_visits": "No visits available."
   }
 }

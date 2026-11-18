@@ -1,3 +1,4 @@
+import contentSvc from '@/common/services/ProtocolContent.js';
 
 import alertsSvc   from '@/common/services/Alerts.js';
 import cpSvc       from './CollectionProtocol.js';
@@ -32,6 +33,10 @@ class Specimen {
 
   getById(id) {
     return http.get('specimens/' + id);
+  }
+
+  getAuthorizedContext(id) {
+    return http.get('specimens/' + id + '/authorized-context');
   }
 
   getConsents(specimen) {
@@ -324,7 +329,8 @@ class Specimen {
           }
         }
 
-        return fields;
+        const extensionType = {New: 'SpecimenPrimaryExtension', Derived: 'SpecimenDerivedExtension', Aliquot: 'SpecimenAliquotExtension'}[lineage] || 'SpecimenExtension';
+        return contentSvc.filterFields(cpId, fields, extensionType);
       }
     );
   }
@@ -351,16 +357,18 @@ class Specimen {
       }
     }
 
-    return layout;
+    const extensionType = {New: 'SpecimenPrimaryExtension', Derived: 'SpecimenDerivedExtension', Aliquot: 'SpecimenAliquotExtension'}[lineage] || 'SpecimenExtension';
+    return contentSvc.filterLayout(cpId, layout, extensionType);
   }
 
   async getCustomFieldsForm(cpId, lineage) {
     return http.get('specimens/extension-form', { cpId, lineage }).then(
-      (resp) => {
+      async (resp) => {
         if (!resp || !resp.formId) {
           return null;
         }
 
+        if (!contentSvc.allowsExtension(await contentSvc.getAccess(cpId), ({New: 'SpecimenPrimaryExtension', Derived: 'SpecimenDerivedExtension', Aliquot: 'SpecimenAliquotExtension'}[lineage] || 'SpecimenExtension'), resp.formId)) return null;
         return formSvc.getDefinition(resp.formId);
       }
     );

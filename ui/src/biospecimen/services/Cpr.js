@@ -1,3 +1,4 @@
+import contentSvc from '@/common/services/ProtocolContent.js';
 
 import cpSvc    from '@/biospecimen/services/CollectionProtocol.js';
 import exprUtil from '@/common/services/ExpressionUtil.js';
@@ -63,20 +64,23 @@ class CollectionProtocolRegistration {
   }
 
   async getDict(cpId) {
-    return cpSvc.getDictFor(cpId, ['cpr', 'calcCpr'], 'cpr.participant.extensionDetail', cprSchema, this.getCustomFieldsForm);
+    return cpSvc.getDictFor(cpId, ['cpr', 'calcCpr'], 'cpr.participant.extensionDetail', cprSchema, this.getCustomFieldsForm)
+      .then(fields => contentSvc.filterFields(cpId, fields, 'ParticipantExtension'));
   }
 
   async getLayout(cpId, cprFields) {
-    return cpSvc.getLayoutFor(cpId, 'cpr', 'cpr.participant.extensionDetail', addEditLayout.layout, cprFields);
+    return cpSvc.getLayoutFor(cpId, 'cpr', 'cpr.participant.extensionDetail', addEditLayout.layout, cprFields)
+      .then(layout => contentSvc.filterLayout(cpId, layout, 'ParticipantExtension'));
   }
 
   async getCustomFieldsForm(cpId) {
     return http.get('collection-protocol-registrations/extension-form', { cpId }).then(
-      (resp) => {
+      async (resp) => {
         if (!resp || !resp.formId) {
           return null;
         }
 
+        if (!contentSvc.allowsExtension(await contentSvc.getAccess(cpId), 'ParticipantExtension', resp.formId)) return null;
         return formSvc.getDefinition(resp.formId);
       }
     );

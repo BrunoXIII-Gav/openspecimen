@@ -1,3 +1,4 @@
+import contentSvc from '@/common/services/ProtocolContent.js';
 
 import cpSvc from './CollectionProtocol.js';
 import http from '@/common/services/HttpClient.js';
@@ -59,20 +60,23 @@ class Visit {
 
   async getDict(cpId) {
     const aliases = ['visit', 'calcVisit'];
-    return cpSvc.getDictFor(cpId, aliases, 'visit.extensionDetail', visitSchema, this.getCustomFieldsForm);
+    return cpSvc.getDictFor(cpId, aliases, 'visit.extensionDetail', visitSchema, this.getCustomFieldsForm)
+      .then(fields => contentSvc.filterFields(cpId, fields, 'VisitExtension'));
   }
 
   async getLayout(cpId, visitFields) {
-    return cpSvc.getLayoutFor(cpId, 'visit', 'visit.extensionDetail', addEditLayout.layout, visitFields);
+    return cpSvc.getLayoutFor(cpId, 'visit', 'visit.extensionDetail', addEditLayout.layout, visitFields)
+      .then(layout => contentSvc.filterLayout(cpId, layout, 'VisitExtension'));
   }
 
   async getCustomFieldsForm(cpId) {
     return http.get('visits/extension-form', { cpId }).then(
-      (resp) => {
+      async (resp) => {
         if (!resp || !resp.formId) {
           return null;
         }
 
+        if (!contentSvc.allowsExtension(await contentSvc.getAccess(cpId), 'VisitExtension', resp.formId)) return null;
         return formSvc.getDefinition(resp.formId);
       }
     );

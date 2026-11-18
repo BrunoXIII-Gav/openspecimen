@@ -52,6 +52,7 @@ import org.springframework.dao.QueryTimeoutException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.administrative.domain.ScheduledJob;
 import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.administrative.domain.factory.UserErrorCode;
@@ -607,6 +608,7 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 	@Override
 	@PlusTransactional
 	public ResponseEvent<QueryDataExportResult> exportQueryData(RequestEvent<ExecuteQueryEventOp> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess(req.getPayload().getCpId());
 		boolean queryCntIncremented = false;
 		try {
 			ensureReadRights();
@@ -633,6 +635,7 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 	@Override
 	@PlusTransactional
 	public ResponseEvent<File> getExportDataFile(RequestEvent<String> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 		String fileId = req.getPayload();
 		try {
 			ensureReadRights();
@@ -987,6 +990,7 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
     @Override
     @PlusTransactional
     public ResponseEvent<QueryAuditLogDetail> getAuditLog(RequestEvent<Long> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 		try {
 			Long auditLogId = req.getPayload();
 			QueryAuditLog log = daoFactory.getQueryAuditLogDao().getById(auditLogId);
@@ -1087,6 +1091,7 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 
 	@Override
 	public ResponseEvent<File> getExportedAuditLogsFile(RequestEvent<String> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 		File auditDir = new File(ConfigUtil.getInstance().getDataDir(), "audit");
 		String filename = req.getPayload() + "_" + AuthUtil.getCurrentUser().getId();
 		return ResponseEvent.response(Utility.getFile(auditDir, filename));
@@ -1281,6 +1286,7 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 	}
 
 	private Query getQuery(ExecuteQueryEventOp op, String queryId) {
+		ProtocolContentAccess.getInstance().ensureQueryAllowed(op.getCpId(), op.getQuerySpace(), op.getAql());
 		boolean countQuery = "Count".equals(op.getRunType());
 		User user = AuthUtil.getCurrentUser();
 		TimeZone tz = AuthUtil.getUserTimeZone();
@@ -1882,6 +1888,7 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 
 		QueryResultData queryResult = null;
 		try {
+			ProtocolContentAccess.getInstance().ensureQueryAllowed(op.getCpId(), op.getQuerySpace(), aql);
 			query.compile(rootForm, aql, restriction);
 			QueryResponse queryResp = query.getData();
 			queryResult = queryResp.getResultData();

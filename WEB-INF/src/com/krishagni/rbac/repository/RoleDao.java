@@ -13,4 +13,8 @@ public interface RoleDao extends Dao<Role> {
 	List<Role> getRolesByNames(List<String> roleNames);
 
 	Role getRoleByName(String roleName);
+
+	List<Role> getProtocolContentRoles(Long userId, Long cpId, Long instituteId);
+
+	boolean hasContentPolicies(Long userId);
 }

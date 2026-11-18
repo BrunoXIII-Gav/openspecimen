@@ -139,6 +139,7 @@ public class SpecimenFactoryImpl implements SpecimenFactory {
 		setCollectionStatus(detail, existing, specimen, ose);
 		setLineage(detail, existing, specimen, ose);
 		setParentSpecimen(detail, existing, parent, specimen, ose);
+		com.krishagni.catissueplus.core.common.access.ProtocolContentAccess.getInstance().ensureCreationAllowed(existing, specimen);
 
 		setLabel(detail, existing, specimen, ose);
 		setAdditionalLabel(detail, existing, specimen, ose);

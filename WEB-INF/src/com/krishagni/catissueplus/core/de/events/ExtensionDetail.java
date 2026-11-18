@@ -15,6 +15,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.biospecimen.domain.BaseEntity;
 import com.krishagni.catissueplus.core.common.util.LogUtil;
 import com.krishagni.catissueplus.core.common.util.Utility;
@@ -177,6 +178,7 @@ public class ExtensionDetail implements Serializable {
 	}
 
 	public static ExtensionDetail from(DeObject extension, boolean excludePhi, boolean lenient) {
+		if (!ProtocolContentAccess.getInstance().isExtensionAllowed(extension)) return null;
 		if (extension == null || (!lenient && extension.getId() == null)) {
 			return null;
 		}

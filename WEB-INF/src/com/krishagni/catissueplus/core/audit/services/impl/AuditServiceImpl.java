@@ -50,6 +50,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.administrative.domain.Password;
 import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.administrative.domain.factory.UserErrorCode;
@@ -134,12 +135,14 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 	@Override
 	@PlusTransactional
 	public ResponseEvent<List<AuditDetail>> getEntityAuditDetail(RequestEvent<List<AuditEntityQueryCriteria>> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 		return ResponseEvent.response(getEntityAuditDetail(req.getPayload()));
 	}
 
 	@Override
 	@PlusTransactional
 	public ResponseEvent<List<RevisionDetail>> getEntityRevisions(RequestEvent<List<AuditEntityQueryCriteria>> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 		List<AuditEntityQueryCriteria> criteria = req.getPayload();
 		ensureReadAccess(criteria);
 
@@ -298,6 +301,7 @@ public class AuditServiceImpl implements AuditService, InitializingBean {
 
 	@Override
 	public ResponseEvent<File> getExportedRevisionsFile(RequestEvent<String> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 		String filename = req.getPayload() + "_" + AuthUtil.getCurrentUser().getId();
 		return ResponseEvent.response(Utility.getFile(getAuditDir(), filename));
 	}

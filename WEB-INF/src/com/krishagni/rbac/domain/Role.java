@@ -15,6 +15,12 @@ public class Role extends BaseEntity {
 	private String name;
 
 	private String description;
+
+	private String contentPoliciesJson;
+
+	public String getContentPoliciesJson() { return contentPoliciesJson; }
+
+	public void setContentPoliciesJson(String contentPoliciesJson) { this.contentPoliciesJson = contentPoliciesJson; }
 	
 	private Set<RoleAccessControl> acl = new HashSet<>();
 
@@ -59,6 +65,18 @@ public class Role extends BaseEntity {
 	public void updateRole(Role other) {
 		setName(other.getName());
 		setDescription(other.getDescription());
+		// Older clients omit this field. Do not silently remove restrictions.
+		if (other.getContentPoliciesJson() != null) {
+			var rules = com.krishagni.catissueplus.core.common.access.ProtocolContentAccess.policies(other);
+			var previous = com.krishagni.catissueplus.core.common.access.ProtocolContentAccess.policies(this);
+			for (var rule : rules) {
+				if (rule.getCreateLineages() == null) {
+					previous.stream().filter(old -> old.getCpId().equals(rule.getCpId())).findFirst()
+						.ifPresent(old -> rule.setCreateLineages(old.getCreateLineages()));
+				}
+			}
+			setContentPoliciesJson(com.krishagni.catissueplus.core.common.util.Utility.objectToJson(rules));
+		}
 		updateAcl(other);
 	}
 

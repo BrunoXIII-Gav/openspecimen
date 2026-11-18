@@ -660,14 +660,20 @@ public class CollectionProtocolRegistrationServiceImpl implements CollectionProt
 			boolean phiAccess = false, excludeChildren = true;
 
 			try {
-				phiAccess = AccessCtrlMgr.getInstance().ensureReadSpecimenRights(cpr, true);
+				AccessCtrlMgr.getInstance().ensureReadSpecimenRights(cpr, false);
 				excludeChildren = false;
 			} catch (OpenSpecimenException ose) {
 				if (!ose.containsError(RbacErrorCode.ACCESS_DENIED)) {
 					throw ose;
 				}
 
-				phiAccess = AccessCtrlMgr.getInstance().ensureReadPrimarySpecimenRights(cpr, true);
+				AccessCtrlMgr.getInstance().ensureReadPrimarySpecimenRights(cpr, false);
+			}
+
+			// Specimen access does not imply participant access. PHI is optional in this response.
+			try { phiAccess = AccessCtrlMgr.getInstance().ensurePhiRights(cpr, com.krishagni.catissueplus.core.common.events.Operation.READ); }
+			catch (OpenSpecimenException ose) {
+				if (!ose.containsError(RbacErrorCode.ACCESS_DENIED)) throw ose;
 			}
 
 			List<SpecimenDetail> specimens = Collections.emptyList();			

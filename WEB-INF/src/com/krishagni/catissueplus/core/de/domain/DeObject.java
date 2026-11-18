@@ -1,5 +1,7 @@
 package com.krishagni.catissueplus.core.de.domain;
 
+import com.krishagni.rbac.common.errors.RbacErrorCode;
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.time.LocalDate;
@@ -507,6 +509,12 @@ public abstract class DeObject {
 		DeObject extension = entity.createExtension();
 		if (extension == null) {
 			return null;
+		}
+		if (!ProtocolContentAccess.getInstance().isExtensionAllowed(extension)) {
+			if (CollectionUtils.isNotEmpty(detail.getAttrs())) {
+				throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
+			}
+			return entity.getExtension();
 		}
 
 		if (StringUtils.isNotBlank(detail.getDataEntryStatus())) {

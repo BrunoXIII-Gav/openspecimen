@@ -34,6 +34,8 @@ public enum RbacErrorCode implements ErrorCode {
 	
 	ACCESS_DENIED,
 
+	CONTENT_BULK_RESTRICTED,
+
 	INST_ADMIN_RIGHTS_REQ,
 
 	ADMIN_RIGHTS_REQUIRED,

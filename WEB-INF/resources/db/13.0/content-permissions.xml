@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+  <changeSet author="codex" id="Protocol event and form role allow lists">
+    <addColumn tableName="RBAC_ROLES">
+      <column name="CONTENT_POLICIES" type="${clob.type}" />
+    </addColumn>
+    <addColumn tableName="RBAC_ROLES_AUD">
+      <column name="CONTENT_POLICIES" type="${clob.type}" />
+      <column name="contentPoliciesJson_MOD" type="${boolean.type}" />
+    </addColumn>
+    <rollback>
+      <dropColumn tableName="RBAC_ROLES_AUD" columnName="contentPoliciesJson_MOD" />
+      <dropColumn tableName="RBAC_ROLES_AUD" columnName="CONTENT_POLICIES" />
+      <dropColumn tableName="RBAC_ROLES" columnName="CONTENT_POLICIES" />
+    </rollback>
+  </changeSet>
+</databaseChangeLog>

@@ -37,6 +37,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.administrative.domain.User;
 import com.krishagni.catissueplus.core.audit.repository.RevisionsListCriteria;
 import com.krishagni.catissueplus.core.audit.services.AuditService;
@@ -103,6 +104,7 @@ public class ExportServiceImpl implements ExportService, InitializingBean {
 
 	@Override
 	public ResponseEvent<ExportJobDetail> exportObjects(RequestEvent<ExportDetail> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 		Pair<ExportJob, Future<Integer>> result = exportObjects(req.getPayload());
 
 		try {
@@ -124,6 +126,7 @@ public class ExportServiceImpl implements ExportService, InitializingBean {
 	@Override
 	@PlusTransactional
 	public ResponseEvent<String> getExportFile(RequestEvent<Long> req) {
+		ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 		Long jobId = req.getPayload();
 		ExportJob job = exportJobDao.getById(jobId);
 		if (job == null) {

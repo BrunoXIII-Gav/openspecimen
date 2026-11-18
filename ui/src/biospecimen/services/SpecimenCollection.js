@@ -1,31 +1,52 @@
 import http from '@/common/services/HttpClient.js';
 import util from '@/common/services/Util.js';
+import contentSvc from '@/common/services/ProtocolContent.js';
+import receiptSvc from '@/biospecimen/services/SpecimenReceipt.js';
 
 const pending = specimen => !specimen.status || specimen.status == 'Pending';
 const populated = value => value !== null && value !== undefined && value !== '';
 
 class SpecimenCollection {
+  visibleVisitSpecimens(specimens, access) {
+    if (access?.unrestricted !== false || !Array.isArray(access.createLineages)) return specimens;
+    const visible = source => {
+      if (pending(source) && source.lineage !== 'New' && !access.createLineages.includes(source.lineage)) return null;
+      return {...source, children: (source.children || []).map(visible).filter(Boolean)};
+    };
+    return specimens.map(visible).filter(Boolean);
+  }
+
   // Reload the visit tree rather than passing editable objects through navigation.
   // Include the complete ancestry, including intermediate derivatives hidden in the overview.
-  prepareRows(specimens, selection, cp, cpr, visit) {
+  prepareRows(specimens, selection, cp, cpr, visit, access) {
     const ids = new Set((selection.specimenIds || []).map(String));
     const reqIds = new Set((selection.reqIds || []).map(String));
     const explicit = selection.explicit;
+    const resuming = specimens.some(specimen => specimen.status == 'Collected');
     const rows = [];
-    const walk = (source, parent, depth) => {
-      const selected = explicit ? ids.has(String(source.id)) || reqIds.has(String(source.reqId)) :
-        pending(source) && (cp.visitCollectionMode != 'PRIMARY_SPMNS' || source.lineage == 'New');
+    const walk = (source, parent, depth, selectedAncestor = false) => {
+      // A pending forbidden ancestor cannot be collected implicitly for an allowed child.
+      if (pending(source) && Array.isArray(access?.createLineages) && !access.createLineages.includes(source.lineage)) return [];
+      if (pending(source) && (access?.canCreate === false || (source.lineage == 'New' && access && !contentSvc.allows(access, 'collection')))) return [];
+      // Initial visit fields belong to the original visit collection flow.
+      if (pending(source) && source.lineage == 'New' && (cpr.contextOnly || visit.contextOnly) && visit.status != 'Complete' && !visit.collectionReady) return [];
+      const receiptEditable = source.id > 0 && source.lineage == 'New' && source.status == 'Collected' &&
+        (!source.activityStatus || source.activityStatus == 'Active') &&
+        (!source.receivedEvent?.receivedQuality || source.receivedEvent.receivedQuality == 'To be Received') &&
+        access?.canUpdate !== false && !!access && contentSvc.allows(access, 'receipt');
+      const selected = explicit ? ids.has(String(source.id)) || reqIds.has(String(source.reqId)) || selectedAncestor :
+        receiptEditable || source.status == 'Collected' || (pending(source) && (resuming || cp.visitCollectionMode != 'PRIMARY_SPMNS' || source.lineage == 'New'));
       const specimen = util.clone({...source, children: undefined});
       delete specimen.children;
       delete specimen.parent;
       const row = {
-        uid: source.id > 0 ? 's-' + source.id : 'r-' + source.reqId,
+        uid: (selection.uidPrefix || '') + (source.id > 0 ? 's-' + source.id : 'r-' + source.reqId),
         parentUid: parent && parent.uid,
         parentSpecimen: parent && parent.specimen,
         specimen, cp, cpr, visit, depth, expanded: true, show: true,
-        editable: pending(source), originalStatus: source.status || 'Pending'
+        editable: pending(source), receiptEditable, originalStatus: source.status || 'Pending'
       };
-      const children = (source.children || []).flatMap(child => walk(child, row, depth + 1));
+      const children = (source.children || []).flatMap(child => walk(child, row, depth + 1, selection.includeDescendants && selected));
       if (!selected && children.length == 0) return [];
 
       Object.assign(specimen, {
@@ -50,7 +71,7 @@ class SpecimenCollection {
   }
 
   validate(rows) {
-    if (!rows.some(row => row.editable && row.specimen.status != 'Pending')) {
+    if (!rows.some(row => (row.editable && row.specimen.status != 'Pending') || this.receiving(row))) {
       return 'specimens.collection_matrix.nothing_to_collect';
     }
     const labels = new Set();
@@ -137,6 +158,36 @@ class SpecimenCollection {
     };
     return rows.filter(row => !row.parentUid).map(build).filter(Boolean);
   }
+
+  receiving(row) {
+    return row.receiptEditable && row.specimen.receivedEvent?.receivedQuality && row.specimen.receivedEvent.receivedQuality != 'To be Received';
+  }
+
+  buildReceipts(rows) {
+    return receiptSvc.payload(rows.filter(row => this.receiving(row)));
+  }
+
+  async loadMatrix(cpId, query) {
+    const ids = query.ids ? String(query.ids).split(',').map(Number) : [];
+    const visitId = query.visitId ? Number(query.visitId) : undefined;
+    if ((!ids.length && !visitId) || ids.length > 500 || ids.some(id => !Number.isSafeInteger(id) || id <= 0) ||
+      (visitId !== undefined && (!Number.isSafeInteger(visitId) || visitId <= 0))) throw Error('Invalid matrix selection');
+    const contexts = ids.length ? await Promise.all(ids.map(id => http.get('specimens/' + id + '/authorized-context'))) :
+      [await http.get('specimens/matrix-context', {cpId, visitId})];
+    const groups = new Map();
+    for (const context of contexts) {
+      if (Number(context.cpId) !== Number(cpId) || !(context.visit?.id > 0) || !(context.cpr?.id > 0)) throw Error('Invalid matrix context');
+      if (!groups.has(context.visit.id)) groups.set(context.visit.id, {cpr: context.cpr,
+        visit: {...context.visit, status: context.visitStatus}, selectedIds: []});
+      if (context.specimenId) groups.get(context.visit.id).selectedIds.push(context.specimenId);
+    }
+    for (const group of groups.values()) {
+      group.specimens = await http.get('specimens', {cprId: group.cpr.id, visitId: group.visit.id});
+    }
+    return [...groups.values()];
+  }
+
+  saveMatrix(cpId, specimens, receipts) { return http.post('specimens/matrix', {cpId, specimens, receipts}); }
 
   async collect(visit, specimens) {
     if (!(visit.id > 0) || visit.status != 'Complete') {

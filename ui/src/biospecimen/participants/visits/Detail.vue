@@ -7,14 +7,14 @@
 
       <span class="os-title" v-if="visit">
         <h3>
-          <os-dynamic-template v-if="ctx.header.leftTitle" :template="ctx.header.leftTitle"
+          <os-dynamic-template v-if="!visit.contextOnly && !cpr.contextOnly && ctx.header.leftTitle" :template="ctx.header.leftTitle"
             :cp="ctx.cp" :cpr="cpr" :visit="visit" :hasPhiAccess="hasPhiAccess" />
 
           <os-visit-event-desc v-else :visit="visit" />
         </h3>
 
         <div class="accessories">
-          <os-tag :value="status" :rounded="true" :type="statusType" />
+          <os-tag v-if="!visit.contextOnly" :value="status" :rounded="true" :type="statusType" />
 
           <os-copy-link size="small"
             :route="{
@@ -25,7 +25,7 @@
         </div>
       </span>
 
-      <template #right v-if="ctx.header.rightTitle">
+      <template #right v-if="!visit.contextOnly && !cpr.contextOnly && ctx.header.rightTitle">
         <h3>
           <os-dynamic-template :template="ctx.header.rightTitle" :cp="ctx.cp" :cpr="cpr" :visit="visit"
             :hasPhiAccess="hasPhiAccess" />
@@ -43,28 +43,28 @@
               </router-link>
             </li>
 
-            <li v-if="!ctx.cp.consentsWaived && ctx.cp.visitLevelConsents && hasEc">
+            <li v-if="!visit.contextOnly && !ctx.cp.consentsWaived && ctx.cp.visitLevelConsents && hasEc">
               <router-link :to="getRoute('Consents')">
                 <os-icon name="file-signature" />
                 <span class="label" v-t="'participant_consents.list'">Consents</span>
               </router-link>
             </li>
 
-            <li v-if="ctx.showSpr && visit.status == 'Complete'">
+            <li v-if="!visit.contextOnly && ctx.showSpr && visit.status == 'Complete'">
               <router-link :to="getRoute('Report')">
                 <os-icon name="file" />
                 <span class="label" v-t="'visits.path_report'">Path Report</span>
               </router-link>
             </li>
 
-            <li v-if="visit.id > 0">
+            <li v-if="!visit.contextOnly && visit.id > 0">
               <router-link :to="getRoute('Forms')">
                 <os-icon name="file-alt" />
                 <span class="label" v-t="'common.forms'">Forms</span>
               </router-link>
             </li>
 
-            <os-plugin-views page="visit-detail" view="tab-menu" />
+            <os-plugin-views page="visit-detail" view="tab-menu" v-if="!visit.contextOnly" />
           </ul>
         </os-side-menu>
 
@@ -91,7 +91,7 @@ export default {
       ctx: {
         cp,
 
-        showSpr: true,
+        showSpr: false,
 
         header: {}
       }
@@ -106,12 +106,14 @@ export default {
       Object.assign(this.query, {filters: this.$route.query.filters});
     }
 
+    if (this.visit.contextOnly) return;
     this.cpViewCtx.isSaveSprEnabled().then(
       showSpr => {
         this.ctx.showSpr = showSpr && this.cpViewCtx.isReadSprAllowed(this.cpr);
       }
     );
 
+    if (this.cpr.contextOnly) return;
     cpSvc.getWorkflowProperty(this.ctx.cp.id, 'common', 'visitHeader').then(
       header => {
         if (header) {
@@ -131,7 +133,7 @@ export default {
         },
         {
           url: routerSvc.getUrl(
-                 this.noNavButton ? 'ParticipantsListItemDetail.Overview' : 'ParticipantDetail.Overview',
+                 'ParticipantsListItemDetail.Overview',
                  {cpId: cp.id, cprId: this.cpr.id}
                ),
           label: this.cpr.ppid
@@ -170,7 +172,7 @@ export default {
     },
 
     hasEc: function() {
-      return this.$osSvc.ecDocSvc != null;
+      return !this.visit.contextOnly && this.cpViewCtx.isReadConsentAllowed(this.cpr) && this.$osSvc.ecDocSvc != null;
     },
 
     hasPhiAccess: function() {

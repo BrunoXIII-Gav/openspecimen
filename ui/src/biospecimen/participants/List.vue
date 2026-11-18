@@ -20,14 +20,13 @@
       </template>
     </os-page-head>
     <os-page-body v-if="ctx.inited">
+      <os-message type="info" v-if="!currentViewAllowed">{{ $t('participants.no_list_access') }}</os-message>
+      <template v-else>
       <os-page-toolbar>
         <template #default v-if="ctx.view == 'participants_list'">
           <span v-if="!ctx.selectedItems || ctx.selectedItems.length == 0">
             <os-button left-icon="plus" :label="$t('participants.add_participant')"
-              @click="addParticipant" v-if="ctx.cp.activityStatus != 'Closed' && ctx.access.regAllowed" />
-
-            <os-button left-icon="flask" :label="$t('participants.view_specimens')"
-              @click="viewSpecimens" v-if="ctx.access.viewSpecimensAllowed" />
+              @click="addParticipant" v-if="!navigationOnly && ctx.cp.activityStatus != 'Closed' && ctx.access.regAllowed" />
 
             <os-button left-icon="calendar-alt" :label="$t('participants.view_cp_details')"
               @click="$goto('CpDetail.Overview', {cpId: ctx.cp.id})" />
@@ -35,7 +34,7 @@
             <os-button-link left-icon="procedures" :label="$t('participants.view_sop')"
               :url="sopUrl" :new-tab="true" v-if="sopUrl" />
 
-            <os-menu :label="$t('common.buttons.more')" :options="ctx.moreOptions" />
+            <os-menu :label="$t('common.buttons.more')" :options="ctx.moreOptions" v-if="!navigationOnly" />
           </span>
           <span v-else>
             <os-button left-icon="edit" :label="$t('common.buttons.edit')"
@@ -51,7 +50,7 @@
         <template #default v-else-if="ctx.view == 'specimens_list'">
           <span v-if="!ctx.selectedItems || ctx.selectedItems.length == 0">
             <os-button left-icon="user-friends" :label="$t('participants.view_participants')"
-              @click="viewParticipants" v-if="!ctx.cp.specimenCentric" />
+              @click="viewParticipants" v-if="!ctx.cp.specimenCentric && (ctx.access.viewParticipantsAllowed || ctx.access.viewSpecimensAllowed)" />
 
             <os-button left-icon="plus" :label="$t('participants.add_specimen')" @click="addSpecimen"
               v-else-if="ctx.cp.activityStatus != 'Closed' && ctx.access.createPrimarySpecimensAllowed" />
@@ -62,12 +61,13 @@
             <os-button-link left-icon="procedures" :label="$t('participants.view_sop')"
               :url="sopUrl" :new-tab="true" v-if="sopUrl" />
 
-            <os-menu :label="$t('common.buttons.more')" :options="ctx.moreOptions" />
+            <os-menu :label="$t('common.buttons.more')" :options="ctx.moreOptions" v-if="!navigationOnly" />
           </span>
           <span v-else>
             <os-specimen-actions :cp="ctx.cp" :specimens="selectedSpecimens" @reloadSpecimens="reloadList" />
 
             <os-add-to-cart :specimens="selectedSpecimens" />
+            <os-button :label="$t('specimens.collection_matrix.open')" @click="openSelectedMatrix" v-if="canOpenMatrix" />
           </span>
         </template>
 
@@ -82,7 +82,8 @@
         :query="ctx.query"
         :id-filter="'Participant.id'"
         :auto-search-open="true"
-        :allow-selection="true"
+        :allow-selection="!navigationOnly"
+        :data-source="navigationOnly ? navigationDataSource : undefined"
         :selected="ctx.selectedItem"
         :include-count="includeCount"
         :url="itemUrl"
@@ -113,11 +114,12 @@
         ref="list"
         v-else
       />
+      </template>
     </os-page-body>
 
-    <os-plugin-views ref="moreMenuPluginViews" page="participants-list" view="menu" :viewProps="ctx" />
+    <os-plugin-views ref="moreMenuPluginViews" page="participants-list" view="menu" :viewProps="ctx" v-if="!navigationOnly" />
 
-    <os-confirm-delete ref="deleteParticipantsDialog" :captcha="false" :collectReason="true">
+    <os-confirm-delete ref="deleteParticipantsDialog" :captcha="false" :collectReason="true" v-if="!navigationOnly">
       <template #message>
         <span v-t="'participants.delete_selected'">Are you sure you want to delete the selected participants along with their associated visits and specimens data?</span>
       </template>
@@ -135,6 +137,10 @@ import i18n      from '@/common/services/I18n.js';
 import routerSvc from '@/common/services/Router.js';
 import util      from '@/common/services/Util.js';
 import wfSvc     from '@/biospecimen/services/Workflow.js';
+import contentSvc from '@/common/services/ProtocolContent.js';
+import {resolveCpListView} from '@/biospecimen/services/cp-list-view.mjs';
+import navigationSvc from '@/biospecimen/services/SpecimenNavigation.js';
+import {matrixOrigin} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
 
 export default {
   name: 'ParticipantsList',
@@ -147,6 +153,9 @@ export default {
     const ui = this.ui;
     const cpViewCtx = this.cpViewCtx;
     const cp = cpViewCtx.getCp();
+    const viewParticipantsAllowed = cpViewCtx.isReadParticipantAllowed();
+    const viewSpecimensAllowed = cpViewCtx.isReadSpecimenAllowed();
+    const view = resolveCpListView(cp, this.view, viewParticipantsAllowed, viewSpecimensAllowed);
 
     console.log('List view initialisation: ' + JSON.stringify(this.$props));
     let ctx = {
@@ -158,9 +167,9 @@ export default {
 
       selectedItems: [],
 
-      query: this.filters,
+      query: view !== this.view || (view == 'participants_list' && !viewParticipantsAllowed) ? undefined : this.filters,
 
-      view: cp.specimenCentric ? 'specimens_list' : this.view,
+      view,
 
       listInfo: {
         list: [],
@@ -181,11 +190,12 @@ export default {
 
         createPrimarySpecimensAllowed: cpViewCtx.isCreatePrimarySpecimenAllowed(),
 
-        viewSpecimensAllowed: cpViewCtx.isReadSpecimenAllowed(),
+        viewSpecimensAllowed,
+        viewParticipantsAllowed,
       }
     };
 
-    return { ctx };
+    return { ctx, matrixAccess: null };
   },
 
   created() {
@@ -200,13 +210,21 @@ export default {
     }
 
     this.ctx.inited = true;
-    this._loadMoreOptions();
+    if (this.ctx.view !== this.view) {
+      routerSvc.replace('ParticipantsList', {cpId: this.ctx.cp.id}, {view: this.ctx.view});
+    }
+    if (this.currentViewAllowed && !this.navigationOnly) this._loadMoreOptions();
+    if (this.ctx.access.viewSpecimensAllowed && (this.cpViewCtx.isUpdateSpecimenAllowed() || this.cpViewCtx.isCreateSpecimenAllowed())) {
+      contentSvc.getAccess(this.ctx.cp.id).then(access => this.matrixAccess = access);
+    }
   },
 
   watch: {
     '$route.query.view': function(newValue) {
       console.log('Detected change in view. View = ' + newValue + ', params = ' + JSON.stringify(this.$route.params));
-      this.ctx.view = newValue || 'participants_list';
+      this.ctx.view = resolveCpListView(this.ctx.cp, newValue,
+        this.ctx.access.viewParticipantsAllowed, this.ctx.access.viewSpecimensAllowed);
+      if (newValue !== this.ctx.view) routerSvc.replace('ParticipantsList', {cpId: this.ctx.cp.id}, {view: this.ctx.view});
 
       //
       // when the list view changes, reset the filters
@@ -216,11 +234,17 @@ export default {
     },
 
     '$route.query.filters': function(newValue) {
-      this.ctx.query = newValue;
+      this.ctx.query = this.navigationOnly ? undefined : newValue;
     }
   },
 
   computed: {
+    navigationDataSource() { return navigationSvc.participantListSource(this.ctx.cp.id); },
+    navigationOnly() { return this.ctx.view === 'participants_list' && !this.ctx.access.viewParticipantsAllowed && this.ctx.access.viewSpecimensAllowed; },
+    canOpenMatrix() { return !!this.matrixAccess && (this.cpViewCtx.isCreateSpecimenAllowed() || this.cpViewCtx.isUpdateSpecimenAllowed()); },
+    currentViewAllowed() {
+      return this.ctx.view === 'participants_list' ? (this.ctx.access.viewParticipantsAllowed || this.ctx.access.viewSpecimensAllowed) : this.ctx.access.viewSpecimensAllowed;
+    },
     bcrumb: function () {
       const cp = this.cpViewCtx.getCp();
       return [
@@ -260,6 +284,10 @@ export default {
   },
 
   methods: {
+    openSelectedMatrix() {
+      if (this.canOpenMatrix && this.selectedSpecimens?.length) routerSvc.goto('SpecimenCollectionMatrix', {cpId: this.ctx.cp.id},
+        {ids: this.selectedSpecimens.map(specimen => specimen.id).join(','), returnTo: matrixOrigin(this.$route)});
+    },
     reloadList: function() {
       this.$refs.list.reload();
     },
@@ -344,11 +372,8 @@ export default {
       );
     },
 
-    viewSpecimens: function() {
-      routerSvc.goto('ParticipantsList', {cpId: this.ctx.cp.id}, {view: 'specimens_list'});
-    },
-
     viewParticipants: function() {
+      if (!this.ctx.access.viewParticipantsAllowed && !this.ctx.access.viewSpecimensAllowed) return;
       routerSvc.goto('ParticipantsList', {cpId: this.ctx.cp.id}, {view: 'participants_list'});
     },
 

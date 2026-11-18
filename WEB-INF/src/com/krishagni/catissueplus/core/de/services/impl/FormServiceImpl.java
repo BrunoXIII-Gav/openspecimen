@@ -56,6 +56,7 @@ import com.krishagni.catissueplus.core.biospecimen.services.impl.SystemFormUpdat
 import com.krishagni.catissueplus.core.common.Pair;
 import com.krishagni.catissueplus.core.common.PlusTransactional;
 import com.krishagni.catissueplus.core.common.access.AccessCtrlMgr;
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.common.access.SiteCpPair;
 import com.krishagni.catissueplus.core.common.domain.PdeAuditLog;
 import com.krishagni.catissueplus.core.common.errors.CommonErrorCode;
@@ -544,6 +545,22 @@ public class FormServiceImpl implements FormService, InitializingBean {
 				}
 			}
 			
+			if (forms != null) {
+				String objectType = switch (opDetail.getEntityType()) {
+					case COLLECTION_PROTOCOL_REGISTRATION -> "Participant";
+					case SPECIMEN, SPECIMEN_EVENT -> "Specimen";
+					case SPECIMEN_COLLECTION_GROUP -> "SpecimenCollectionGroup";
+					default -> null;
+				};
+				forms.removeIf(form -> {
+					String type = form.getEntityType() == null ? objectType : form.getEntityType();
+					Long objectId = entityId;
+					if ("CommonParticipant".equals(type) && opDetail.getEntityType() == ListEntityFormsOp.EntityType.COLLECTION_PROTOCOL_REGISTRATION) {
+						objectId = daoFactory.getCprDao().getById(entityId).getParticipant().getId();
+					}
+					return !ProtocolContentAccess.getInstance().isFormAllowed(type, objectId, form.getFormId());
+				});
+			}
 			return ResponseEvent.response(forms);			
 		} catch (OpenSpecimenException ose) {
 			return ResponseEvent.error(ose);
@@ -566,6 +583,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 			return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
 		}
 
+		ProtocolContentAccess.getInstance().ensureFormAllowed(form.getEntityType(), opDetail.getEntityId(), form.getFormId());
 		List<FormRecordSummary> formRecs = formDao.getFormRecords(opDetail.getFormCtxtId(), opDetail.getEntityId());
 		EntityFormRecords result = new EntityFormRecords();
 		result.setFormId(form.getFormId());
@@ -690,6 +708,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 		if (fcv.getFormId() == null || fcv.getRecordId() == null) {
 			return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
 		}
+		ProtocolContentAccess.getInstance().ensureFormAllowed(fcv.getObjectType(), fcv.getObjectId(), fcv.getFormId());
 		Container form = getContainer(fcv.getFormId(), null);
 		FormData record = formDataMgr.getFormData(form, fcv.getRecordId());
 		boolean phiAllowed = isPhiAccessAllowed(fcv.getObjectType(), fcv.getObjectId());
@@ -798,6 +817,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 				return ResponseEvent.userError(FormErrorCode.SYS_REC_DEL_NOT_ALLOWED);
 			}
 			
+			ProtocolContentAccess.getInstance().ensureFormAllowed(recEntry.getEntityType(), recEntry.getObjectId(), crit.getFormId());
 			String entityType = recEntry.getEntityType();
 			Long objectId = recEntry.getObjectId();
 			Object object = null;
@@ -861,6 +881,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 		String entityType = (String) opDetail.getRecIntegrationInfo().get("entityType");
 
 		ObjectCpDetail objCp = formDao.getObjectCpDetail(opDetail.getRecIntegrationInfo());
+		ProtocolContentAccess.getInstance().ensureAllowed(objCp.getCpId(), ProtocolContentAccess.formKey(opDetail.getContainerId()));
 		Long formCtxtId = formDao.getFormCtxtId(opDetail.getContainerId(), entityType, objCp.getCpId());
 
 		FormRecordEntryBean recordEntry = new FormRecordEntryBean();
@@ -977,6 +998,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 	//
 	@Override
 	public List<FormData> getSummaryRecords(Long formId, List<Long> recordIds) {
+		for (Long recordId : recordIds) getRecord(getContainer(formId, null), recordId);
 		return formDataMgr.getSummaryData(formId, recordIds);
 	}
 
@@ -987,7 +1009,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 
 	@Override
 	public List<FormData> getRecords(Container form, List<Long> recordIds) {
-		return formDataMgr.getFormData(form, recordIds);
+		return recordIds.stream().map(id -> getRecord(form, id)).collect(Collectors.toList());
 	}
 
 	@Override
@@ -1047,7 +1069,8 @@ public class FormServiceImpl implements FormService, InitializingBean {
 		FormListCriteria crit = new FormListCriteria()
 			.cpIds(Arrays.asList(-1L, cpId))
 			.entityTypes(Arrays.asList(entityTypes));
-		return formDao.getEntityForms(crit);
+		return formDao.getEntityForms(crit).stream().filter(form -> ProtocolContentAccess.getInstance()
+			.isAllowed(cpId, ProtocolContentAccess.formKey(form.getFormId(), form.getName()), form.getEntityType())).collect(Collectors.toList());
 	}
 
 	//
@@ -1506,6 +1529,16 @@ public class FormServiceImpl implements FormService, InitializingBean {
 
 		FormContextBean formContext = formContexts.get(0);
 		Container form = formData.getContainer();
+		if (!Objects.equals(formContext.getContainerId(), form.getId())) {
+			throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
+		}
+		Long accessObjectId = objectId;
+		if ("CommonParticipant".equals(formContext.getEntityType())) {
+			CollectionProtocolRegistration cpr = daoFactory.getCprDao().getById(objectId);
+			if (cpr == null) throw OpenSpecimenException.userError(CprErrorCode.M_NOT_FOUND, objectId, 1);
+			accessObjectId = cpr.getParticipant().getId();
+		}
+		ProtocolContentAccess.getInstance().ensureFormAllowed(formContext.getEntityType(), accessObjectId, form.getId());
 		boolean isInsert = (recordId == null);
 		if (!isInsert && formContext.isSysForm()) {
 			if (isEditableEvent(form)) {
@@ -1994,6 +2027,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 			entityType = record.getEntityType();
 		}
 
+		ProtocolContentAccess.getInstance().ensureFormAllowed(entityType, objectId, form.getId());
 		String accessType = getCuratedEntityType(entityType);
 		FormAccessChecker accessChecker = formAccessCheckers.get(accessType);
 		if (accessChecker == null || !accessChecker.isDataReadAllowed(accessType, objectId)) {
@@ -2094,6 +2128,7 @@ public class FormServiceImpl implements FormService, InitializingBean {
 		Map<Long, List<FormRecordSummary>> records = formDao.getFormRecords(objectId, entityType, inputFormId);
 		for (Map.Entry<Long, List<FormRecordSummary>> formRecs : records.entrySet()) {
 			Long formId = formRecs.getKey();
+			if (!ProtocolContentAccess.getInstance().isFormAllowed(entityType, objectId, formId)) continue;
 			Container container = Container.getContainer(formId);
 
 			List<Long> recIds = new ArrayList<>();

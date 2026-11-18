@@ -17,19 +17,32 @@ import com.krishagni.catissueplus.core.biospecimen.events.ReceivedEventDetail;
 import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
 import com.krishagni.catissueplus.core.biospecimen.repository.SpecimenDao;
 import com.krishagni.catissueplus.core.common.util.AuthUtil;
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 
 import static org.junit.Assert.*;
 
 public class SpecimenPoolingReceiptTest {
 
 	private User operator;
+	private ProtocolContentAccess previousContentAccess;
 	private CollectionProtocol cp;
 	private DaoFactory daos;
 	private int pooledEventsSaved;
 	private Specimen poolingSpecimen;
 
 	@Before
-	public void setUp() {
+	public void setUp() throws Exception {
+		// This fixture exercises the existing unrestricted pooling workflow.
+		Field singleton = ProtocolContentAccess.class.getDeclaredField("instance");
+		singleton.setAccessible(true);
+		previousContentAccess = (ProtocolContentAccess) singleton.get(null);
+		ProtocolContentAccess legacyAccess = new ProtocolContentAccess() {
+			@Override public boolean isAllowed(Long cpId, String key) { return true; }
+		};
+		Field rbac = ProtocolContentAccess.class.getDeclaredField("rbacDaos");
+		rbac.setAccessible(true);
+		rbac.set(legacyAccess, proxy(com.krishagni.rbac.repository.DaoFactory.class, (method, args) -> null));
+		singleton.set(null, legacyAccess);
 		operator = new User();
 		operator.setId(1L);
 		operator.setType(User.Type.NONE);
@@ -66,8 +79,10 @@ public class SpecimenPoolingReceiptTest {
 	}
 
 	@After
-	public void clearUser() {
+	public void clearUser() throws Exception {
 		AuthUtil.clearCurrentUser();
+		Field singleton = ProtocolContentAccess.class.getDeclaredField("instance");
+		singleton.setAccessible(true); singleton.set(null, previousContentAccess);
 	}
 
 	@Test

@@ -1,6 +1,8 @@
 
 package com.krishagni.catissueplus.core.biospecimen.domain;
 
+import com.krishagni.rbac.common.errors.RbacErrorCode;
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -1607,6 +1609,9 @@ public class Specimen extends BaseExtensionEntity {
 			//
 			return;
 		}
+		if (isCollected(collectionStatus)) {
+			ProtocolContentAccess.getInstance().ensureCreationAllowed(getCollectionProtocol().getId(), getLineage());
+		}
 
 		BigDecimal previousParentConsumption = reconcileParentQty ? getParentConsumptionForBalance() : null;
 		boolean hierarchyUpdated = false;
@@ -1657,6 +1662,17 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	public void setCollectionDetails(Specimen existing, CollectionEventDetail input) {
+		if (isPrimary() && getCollectionProtocol() != null &&
+			!ProtocolContentAccess.getInstance()
+				.isAllowed(getCollectionProtocol().getId(), "collection")) {
+			if (input != null) throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
+			if ((existing == null && !isPending()) ||
+				(existing != null && !Objects.equals(existing.getCollectionStatus(), getCollectionStatus()))) {
+				throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
+			}
+			if (existing != null) updateCollectionDetails(existing);
+			return;
+		}
 		if (isAliquot() || isDerivative()) {
 			return;
 		}
@@ -1759,6 +1775,19 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	public void setReceivedDetails(Specimen existing, ReceivedEventDetail input) {
+		if (isPrimary() && getCollectionProtocol() != null &&
+			!ProtocolContentAccess.getInstance()
+				.isAllowed(getCollectionProtocol().getId(), "receipt")) {
+			if (input != null) throw OpenSpecimenException.userError(RbacErrorCode.ACCESS_DENIED);
+			// Copy exactly; updateReceivedDetails may fill in user/time defaults.
+			setReceivedQuality(existing == null ? getPv(RECV_QUALITY, TO_BE_RECEIVED, true) : existing.getReceivedQuality());
+			setReceivedUser(existing == null ? null : existing.getReceivedUser());
+			setReceivedTime(existing == null ? null : existing.getReceivedTime());
+			setReceivedComments(existing == null ? null : existing.getReceivedComments());
+			setReceivedQuantity(existing == null ? null : existing.getReceivedQuantity());
+			setReceivedQuantityReason(existing == null ? null : existing.getReceivedQuantityReason());
+			return;
+		}
 		if (isAliquot() || isDerivative()) {
 			return;
 		}
@@ -2259,6 +2288,9 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	public void addChildSpecimen(Specimen specimen) {
+		if (specimen.getId() == null) {
+			ProtocolContentAccess.getInstance().ensureCreationAllowed(getCollectionProtocol().getId(), specimen.getLineage());
+		}
 		int childrenLimit = ConfigUtil.getInstance().getIntSetting(ConfigParams.MODULE, ConfigParams.MAX_CHILDREN_LIMIT, 100);
 		if (getChildCollection().size() >= childrenLimit) {
 			throw OpenSpecimenException.userError(SpecimenErrorCode.CHILDREN_LIMIT_MAXED, getLabel(), childrenLimit);
@@ -2998,6 +3030,7 @@ public class Specimen extends BaseExtensionEntity {
 	private void autoCollectParentSpecimens(Specimen childSpmn) {
 		Specimen parentSpmn = childSpmn.getParentSpecimen();
 		while (parentSpmn != null && parentSpmn.isPending()) {
+			ProtocolContentAccess.getInstance().ensureCreationAllowed(parentSpmn.getCollectionProtocol().getId(), parentSpmn.getLineage());
 			parentSpmn.setCollectionStatus(COLLECTED);
 			parentSpmn.updateAvailableStatus();
 			parentSpmn.setStatusChanged(true);
@@ -3068,7 +3101,8 @@ public class Specimen extends BaseExtensionEntity {
 		}
 
 		for (SpecimenRequirement childSr : sr.getOrderedChildRequirements()) {
-			if (childSr.isClosed()) {
+			if (childSr.isClosed() || !ProtocolContentAccess.getInstance()
+				.isCreationAllowed(parent.getCollectionProtocol().getId(), childSr.getLineage())) {
 				continue;
 			}
 

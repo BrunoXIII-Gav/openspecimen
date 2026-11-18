@@ -1,5 +1,5 @@
 <template>
-  <os-page-toolbar>
+  <os-page-toolbar v-if="!cpr.contextOnly">
     <template #default>
       <os-button left-icon="edit" :label="$t('common.buttons.edit')"
         @click="edit" v-if="isUpdateAllowed" />
@@ -21,7 +21,7 @@
     <os-grid-column width="12">
       <os-overview :schema="dict" :object="ctx" v-if="dict.length > 0" />
 
-      <os-section v-if="ctx.cpr.participant && ctx.cpr.participant.registeredCps.length > 0">
+      <os-section v-if="ctx.cpr.participant && (ctx.cpr.participant.registeredCps || []).length > 0">
         <template #title>
           <span v-t="'participants.other_registered_cps'">Other Registered Protocols</span>
         </template>
@@ -43,7 +43,7 @@
         </template>
 
         <template #content>
-          <OccurredVisits :cp="ctx.cp" :cpr="ctx.cpr" :visits="ctx.visits" :dict="ctx.visitDict" />
+          <OccurredVisits :cp="ctx.cp" :cpr="ctx.cpr" :visits="ctx.visits" :dict="ctx.visitDict" :navigation-only="navigationOnlyVisits" />
         </template>
       </os-section>
 
@@ -53,7 +53,7 @@
         </template>
 
         <template #content>
-          <MissedVisits :cp="ctx.cp" :cpr="ctx.cpr" :visits="ctx.visits" :dict="ctx.visitDict" />
+          <MissedVisits :cp="ctx.cp" :cpr="ctx.cpr" :visits="ctx.visits" :dict="ctx.visitDict" :navigation-only="navigationOnlyVisits" />
         </template>
       </os-section>
 
@@ -63,18 +63,18 @@
         </template>
 
         <template #content>
-          <PendingVisits :cp="ctx.cp" :cpr="ctx.cpr" :visits="ctx.visits" :dict="ctx.visitDict" />
+          <PendingVisits :cp="ctx.cp" :cpr="ctx.cpr" :visits="ctx.visits" :dict="ctx.visitDict" :navigation-only="navigationOnlyVisits" />
         </template>
       </os-section>
     </os-grid-column>
 
-    <os-delete-object ref="deleteCprDialog" :input="ctx.deleteOpts" />
+    <os-delete-object v-if="!cpr.contextOnly" ref="deleteCprDialog" :input="ctx.deleteOpts" />
 
-    <os-audit-trail ref="auditTrailDialog" :objects="ctx.auditObjs" />
+    <os-audit-trail v-if="!cpr.contextOnly" ref="auditTrailDialog" :objects="ctx.auditObjs" />
 
-    <os-plugin-views ref="moreMenuPluginViews" page="participant-detail" view="more-menu" :viewProps="ctx" />
+    <os-plugin-views v-if="!cpr.contextOnly" ref="moreMenuPluginViews" page="participant-detail" view="more-menu" :viewProps="ctx" />
 
-    <os-dialog ref="addToAnotherCpDialog">
+    <os-dialog v-if="!cpr.contextOnly" ref="addToAnotherCpDialog">
       <template #header>
         <span v-t="'participants.add_to_another_cp'"></span>
       </template>
@@ -102,6 +102,7 @@ import specimenSvc from '@/biospecimen/services/Specimen.js';
 import MissedVisits   from './MissedVisits.vue';
 import OccurredVisits from './OccurredVisits.vue';
 import PendingVisits  from './PendingVisits.vue';
+import navigationSvc from '@/biospecimen/services/SpecimenNavigation.js';
 
 export default {
   props: ['cpr'],
@@ -117,6 +118,7 @@ export default {
   data() {
     const cp = this.cpViewCtx.getCp();
     return {
+      navigationRequest: 0,
       ctx: {
         cp,
 
@@ -150,10 +152,11 @@ export default {
   },
 
   created() {
+    if (this.cpr.contextOnly) { this._setupCpr(); return; }
     Promise.all([
       this.cpViewCtx.getCprDict(),
-      this.cpViewCtx.getConsentsDict(),
-      this.cpViewCtx.getVisitDict(),
+      this.cpViewCtx.isReadConsentAllowed(this.cpr) ? this.cpViewCtx.getConsentsDict() : Promise.resolve([]),
+      this.cpViewCtx.isReadVisitAllowed(this.cpr) ? this.cpViewCtx.getVisitDict() : Promise.resolve([]),
       this.cpViewCtx.getRole()
     ]).then(
       ([dict, consentsDict, visitDict, userRole]) => {
@@ -165,6 +168,7 @@ export default {
   },
 
   computed: {
+    navigationOnlyVisits() { return !!this.cpr.contextOnly || !this.cpViewCtx.isReadVisitAllowed(this.cpr); },
     dict: function() {
       const result = [];
       Array.prototype.push.apply(result, this.ctx.dict || []);
@@ -215,6 +219,14 @@ export default {
   },
 
   methods: {
+    async _loadNavigationVisits() {
+      const requestId = ++this.navigationRequest;
+      this.ctx.visits = []; this.ctx.visitDict = [];
+      try {
+        const visits = await navigationSvc.visits(this.cpr.cpId, this.cpr.id);
+        if (requestId === this.navigationRequest) this.ctx.visits = visits;
+      } catch { if (requestId === this.navigationRequest) this.ctx.visits = []; }
+    },
     edit: function() {
       const cpr = this.ctx.cpr;
       routerSvc.goto('ParticipantAddEdit', {cpId: cpr.cpId, cprId: cpr.id});
@@ -266,6 +278,7 @@ export default {
 
     _setupCpr: function() {
       const cpr = this.ctx.cpr = this.cpr;
+      if (cpr.contextOnly) { this._loadNavigationVisits(); return; }
 
       this.ctx.auditObjs = [
         {objectId: cpr.id, objectName: 'collection_protocol_registration'},
@@ -311,6 +324,7 @@ export default {
       }
 
       if (!this.cpViewCtx.isReadVisitAllowed(cpr)) {
+        if (this.cpViewCtx.isReadSpecimenAllowed(cpr)) this._loadNavigationVisits();
         return;
       }
 
@@ -366,6 +380,7 @@ export default {
     },
 
     _loadMoreMenuOptions: async function() {
+      if (this.cpr.contextOnly) return;
       const ctxt = this.pluginViewProps = {...this.ctx, cpViewCtx: this.cpViewCtx};
 
       const cps = await this._getAddToOtherCps({});

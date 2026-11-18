@@ -31,6 +31,9 @@ public class LabelPrintJobServiceImpl implements LabelPrintJobService {
 			if (currentUser == null || !currentUser.canManagePrintJobs()) {
 				return ResponseEvent.userError(RbacErrorCode.ACCESS_DENIED);
 			}
+			if (Boolean.TRUE.equals(req.getPayload().includeData())) {
+				com.krishagni.catissueplus.core.common.access.ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
+			}
 
 			List<LabelPrintJobItem> items = daoFactory.getLabelPrintJobDao().getPrintJobItems(req.getPayload());
 			return ResponseEvent.response(LabelPrintJobItemDetail.from(items, Boolean.TRUE.equals(req.getPayload().includeData())));

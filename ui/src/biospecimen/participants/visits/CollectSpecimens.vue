@@ -9,13 +9,14 @@
         <os-message type="error" v-if="loadError">{{ $t(loadError) }}</os-message>
         <template v-else>
           <p>{{ $t('specimens.collection_matrix.help') }}</p>
+          <os-message type="info" v-if="!hasWork">{{ $t('specimens.collection_matrix.no_authorized_pending') }}</os-message>
           <fieldset :disabled="saving">
             <section v-if="needsVisitSave">
               <h4>{{ $t('specimens.collection_matrix.visit_details') }}</h4>
               <os-form ref="visitForm" :schema="visitSchema" :data="visitCtx" />
             </section>
-            <details class="common-details" v-if="hasPrimaries">
-              <summary>{{ $t('specimens.collection_matrix.common_details') }}</summary>
+            <details class="common-details" v-if="hasPrimaries && commonSchema.rows.length">
+              <summary>{{ $t(hasCollectPrimaries ? (contentSvcAllowed('receipt') ? 'specimens.collection_matrix.common_details' : 'roles.content.collection_common') : 'specimens.receipt_matrix.common') }}</summary>
               <os-form ref="commonForm" :schema="commonSchema" :data="commonCtx" />
               <os-button :label="$t('specimens.collection_matrix.apply_common')" @click="applyCommon" :disabled="saving" />
             </details>
@@ -24,15 +25,15 @@
                 :tree-layout="true" :show-row-actions="true" :expanded="expanded" @input="rowInput">
                 <template #row-actions="{rowItem}">
                   <os-button text left-icon="edit" :label="$t('specimens.collection_matrix.details')"
-                    @click="toggleDetails(rowItem.item)" v-if="rowItem.item.editable && rowItem.item.specimen.status == 'Collected'" />
+                    @click="toggleDetails(rowItem.item)" v-if="(rowItem.item.editable || rowItem.item.receiptEditable) && rowItem.item.specimen.status == 'Collected'" />
                 </template>
                 <template #expanded-row="{rowItem}">
-                  <div class="row-details" v-if="rowItem.item.editable && rowItem.item.specimen.status == 'Collected'">
+                  <div class="row-details" v-if="(rowItem.item.editable || rowItem.item.receiptEditable) && rowItem.item.specimen.status == 'Collected'">
                     <h4>{{ description(rowItem.item) }}</h4>
                     <os-form :ref="'details-' + rowItem.item.uid" :schema="rowItem.item.detailSchema" :data="rowItem.item"
                       :reference-prefix="'collection-' + rowItem.item.uid" @input="detailInput(rowItem.item)" />
                     <os-form :ref="'receipt-' + rowItem.item.uid" :schema="rowItem.item.receiptSchema" :data="rowItem.item"
-                      v-if="rowItem.item.specimen.lineage == 'New'" />
+                      v-if="rowItem.item.specimen.lineage == 'New' && rowItem.item.receiptSchema.rows.length" />
                   </div>
                 </template>
               </os-table-form>
@@ -40,7 +41,7 @@
           </fieldset>
         </template>
         <div class="actions">
-          <os-button primary :label="$t('common.buttons.submit')" :disabled="saving || !!loadError" @click="save" />
+          <os-button primary :label="$t('common.buttons.submit')" :disabled="saving || !!loadError || !hasWork" @click="save" />
           <os-button text :label="$t('common.buttons.cancel')" :disabled="saving" @click="cancel" />
         </div>
       </div>
@@ -49,6 +50,7 @@
 </template>
 
 <script>
+import contentSvc from '@/common/services/ProtocolContent.js';
 import alertsSvc from '@/common/services/Alerts.js';
 import exprUtil from '@/common/services/ExpressionUtil.js';
 import formUtil from '@/common/services/FormUtil.js';
@@ -56,6 +58,7 @@ import routerSvc from '@/common/services/Router.js';
 import util from '@/common/services/Util.js';
 import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
 import collectionSvc from '@/biospecimen/services/SpecimenCollection.js';
+import {matrixReturnRoute} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 import visitSvc from '@/biospecimen/services/Visit.js';
 
@@ -72,7 +75,8 @@ export default {
   data() {
     const cp = this.cpViewCtx.getCp();
     const visit = util.clone({...this.visit, $specimens: undefined});
-    Object.assign(visit, {cpId: cp.id, cprId: this.cpr.id});
+    const cpr = this.cpr || {cpId: cp.id, contextOnly: true};
+    Object.assign(visit, {cpId: cp.id, cprId: cpr.id});
     if (!(visit.id > 0) || visit.status != 'Complete') {
       visit.status = 'Complete';
       visit.visitDate = visit.visitDate || new Date();
@@ -80,9 +84,11 @@ export default {
     }
     formUtil.createCustomFieldsMap(visit);
     return {
+      contentAccess: null,
+      matrixGroups: [],
       cp, rows: [], expanded: [], loaded: false, saving: false, loadError: null,
       visitSchema: {rows: []}, commonSchema: {rows: []},
-      visitCtx: {cp, cpr: this.cpr, visit, userRole: this.cpViewCtx.getRole(),
+      visitCtx: {cp, cpr, visit, userRole: this.cpViewCtx.getRole(),
         objName: 'visit', objCustomFields: 'visit.extensionDetail.attrsMap'},
       commonCtx: {cp, specimen: {lineage: 'New', status: 'Collected', collectionEvent: {}, receivedEvent: {}}}
     };
@@ -90,14 +96,20 @@ export default {
 
   computed: {
     needsVisitSave() {
-      return !(this.visit.id > 0) || this.visit.status != 'Complete';
+      return !!this.visit && !this.cpr?.contextOnly && !this.visit.contextOnly && (!(this.visit.id > 0) ||
+        (this.visit.status != 'Complete' && !this.rows.some(row => row.originalStatus == 'Collected')));
     },
 
     hasPrimaries() {
-      return this.rows.some(row => row.editable && row.specimen.lineage == 'New');
+      return this.rows.some(row => (row.editable || row.receiptEditable) && row.specimen.lineage == 'New');
     },
 
+    hasCollectPrimaries() { return this.rows.some(row => row.editable && row.specimen.lineage == 'New'); },
+
+    hasWork() { return this.rows.some(row => row.editable || row.receiptEditable); },
+
     bcrumb() {
+      if (!this.cpr) return [{url: routerSvc.getUrl('ParticipantsList', {cpId: this.cp.id}), label: this.cp.shortTitle}];
       return [
         {url: routerSvc.getUrl('ParticipantsList', {cpId: this.cp.id}), label: this.cp.shortTitle},
         {url: routerSvc.getUrl('ParticipantsListItemDetail.Overview', {cpId: this.cp.id, cprId: this.cpr.id}), label: this.cpr.ppid},
@@ -141,6 +153,7 @@ export default {
 
   async created() {
     try {
+      this.contentAccess = await contentSvc.getAccess(this.cp.id);
       const query = this.$route.query;
       const parseIds = value => String(value || '').split(',').filter(Boolean).map(Number);
       const selection = {specimenIds: parseIds(query.specimenIds), reqIds: parseIds(query.reqIds),
@@ -149,22 +162,27 @@ export default {
         this.loadError = 'specimens.collection_matrix.invalid_selection';
         return;
       }
-      const [specimens, visitFields, visitLayout] = await Promise.all([
-        visitSvc.getSpecimens(this.cpr.id, this.visit.eventId, this.visit.id > 0 ? this.visit.id : undefined),
-        this.cpViewCtx.getVisitDict(true), this.cpViewCtx.getVisitAddEditLayout()
-      ]);
-      if (!selection.explicit && !specimens.length) {
-        routerSvc.replace('VisitAddEdit', this.routeParams(), {eventId: this.visit.eventId});
-        return;
+      const rights = {canCreate: this.cpViewCtx.isCreateSpecimenAllowed?.() !== false,
+        canUpdate: this.cpViewCtx.isUpdateSpecimenAllowed?.() !== false};
+      const access = {...this.contentAccess, ...rights};
+      if (!this.cpr || !this.visit) {
+        this.matrixGroups = await collectionSvc.loadMatrix(this.cp.id, query);
+        this.rows = this.matrixGroups.flatMap(group => collectionSvc.prepareRows(group.specimens,
+          {specimenIds: group.selectedIds, explicit: group.selectedIds.length > 0, includeDescendants: true, uidPrefix: 'v-' + group.visit.id + '-'},
+          this.cp, group.cpr, group.visit, access));
+      } else {
+        const specimens = await visitSvc.getSpecimens(this.cpr.id, this.visit.eventId, this.visit.id > 0 ? this.visit.id : undefined);
+        if (!selection.explicit && !specimens.length && this.needsVisitSave) {
+          routerSvc.replace('VisitAddEdit', this.routeParams(), {eventId: this.visit.eventId}); return;
+        }
+        this.rows = collectionSvc.prepareRows(specimens, selection, this.cp, this.cpr, this.visitCtx.visit, access);
       }
-      this.rows = collectionSvc.prepareRows(specimens, selection, this.cp, this.cpr, this.visitCtx.visit);
-      if (!this.rows.some(row => row.editable)) {
-        this.loadError = 'specimens.collection_matrix.nothing_to_collect';
-        return;
+      if (this.needsVisitSave) {
+        const [visitFields, visitLayout] = await Promise.all([this.cpViewCtx.getVisitDict(true), this.cpViewCtx.getVisitAddEditLayout()]);
+        this.visitSchema = this.filterSchema(formUtil.getFormSchema(visitFields, visitLayout), field => field.name != 'visit.status');
+        formUtil.setDefaultValues(this.visitSchema, this.visitCtx, true);
       }
-      this.visitSchema = this.filterSchema(formUtil.getFormSchema(visitFields, visitLayout), field => field.name != 'visit.status');
-      formUtil.setDefaultValues(this.visitSchema, this.visitCtx, true);
-      const lineages = [...new Set(this.rows.filter(row => row.editable).map(row => row.specimen.lineage))];
+      const lineages = [...new Set(this.rows.filter(row => row.editable || row.receiptEditable).map(row => row.specimen.lineage))];
       const schemas = {};
       await Promise.all(lineages.map(async lineage => {
         const [dict, layout] = await Promise.all([
@@ -173,7 +191,7 @@ export default {
         schemas[lineage] = {dict, schema: formUtil.getFormSchema(dict, layout)};
       }));
       for (const row of this.rows) {
-        if (!row.editable) continue;
+        if (!row.editable && !row.receiptEditable) continue;
         row.userRole = this.cpViewCtx.getRole();
         row.objName = 'specimen';
         row.objCustomFields = 'specimen.extensionDetail.attrsMap';
@@ -181,22 +199,35 @@ export default {
         formUtil.createCustomFieldsMap(specimen);
         const {dict, schema: baseSchema} = schemas[specimen.lineage];
         const schema = util.clone(baseSchema);
-        formUtil.setDefaultValues(schema, row, true);
+        if (row.editable) formUtil.setDefaultValues(schema, row, true);
         // Requirement defaults take precedence over common data.
-        if (specimen.lineage == 'New') {
+        if (row.editable && specimen.lineage == 'New') {
           specimen.collectionEvent = Object.assign({time: new Date(), user: specimen.collector,
             container: specimen.collectionContainer, procedure: specimen.collectionProcedure}, specimen.collectionEvent);
           specimen.receivedEvent = Object.assign({user: specimen.receiver}, specimen.receivedEvent);
-        } else {
+        } else if (row.editable) {
           specimen.createdOn = specimen.createdOn || new Date();
         }
-        specimen.availableQty = specimen.initialQty;
+        contentSvc.stripRestrictedData(specimen, this.contentAccess);
+        if (row.editable) specimen.availableQty = specimen.initialQty;
         row.matrixFields = dict.filter(field => MATRIX_FIELDS.includes(field.name));
         row.detailSchema = this.filterSchema(schema, field => !MATRIX_FIELDS.includes(field.name) &&
-          !['specimen.availableQty', 'specimen.processAllParent'].includes(field.name));
-        row.receiptSchema = specimenSvc.getReceivedEventAddEditFs(dict);
+          !['specimen.availableQty', 'specimen.processAllParent'].includes(field.name) &&
+          !field.name.startsWith('specimen.receivedEvent.'));
+        if (!row.editable) row.detailSchema = {rows: []};
+        row.receiptSchema = (row.editable || row.receiptEditable) && contentSvc.allows(this.contentAccess, 'receipt') ? specimenSvc.getReceivedEventAddEditFs(dict) : {rows: []};
+        if (row.receiptEditable) {
+          specimen.receivedEvent = specimen.receivedEvent || {};
+          specimen.receivedEvent.receivedQuality = specimen.receivedEvent.receivedQuality || 'To be Received';
+          row.receiptSchema = this.filterSchema(row.receiptSchema, field => field.name !== 'specimen.receivedEvent.newLabel');
+          row.receiptSchema.rows.forEach(schemaRow => schemaRow.fields.forEach(field => {
+            if (['specimen.receivedEvent.user', 'specimen.receivedEvent.time'].includes(field.name)) {
+              field.validations = {...field.validations, required: {messageCode: 'specimens.receipt_matrix.required'}};
+            }
+          }));
+        }
         if (!this.commonSchema.rows.length && specimen.lineage == 'New') {
-          const commonFields = COMMON_FIELDS.map(name => dict.find(field => field.name == name)).filter(Boolean)
+          const commonFields = COMMON_FIELDS.filter(name => row.editable || name.startsWith('specimen.receivedEvent.')).map(name => dict.find(field => field.name == name)).filter(Boolean)
             .map(field => ({...util.clone(field), showWhen: 'true', validations: {}}));
           this.commonSchema = {rows: commonFields.map(field => ({fields: [field]}))};
         }
@@ -209,6 +240,9 @@ export default {
   },
 
   methods: {
+    contentSvcAllowed(key) {
+      return contentSvc.allows(this.contentAccess, key);
+    },
     filterSchema(schema, predicate) {
       return {...schema, rows: (schema.rows || []).map(row => ({...row, fields: row.fields.filter(predicate)}))
         .filter(row => row.fields.length)};
@@ -251,8 +285,8 @@ export default {
     },
 
     applyCommon() {
-      for (const row of this.rows.filter(row => row.editable && row.specimen.lineage == 'New' && row.specimen.status == 'Collected')) {
-        for (const name of COMMON_FIELDS) {
+      for (const row of this.rows.filter(row => (row.editable || row.receiptEditable) && row.specimen.lineage == 'New' && row.specimen.status == 'Collected')) {
+        for (const name of COMMON_FIELDS.filter(name => row.editable || name.startsWith('specimen.receivedEvent.'))) {
           const value = exprUtil.getValue(this.commonCtx, name);
           if (value !== undefined && value !== null && value !== '') exprUtil.setValue(row, name, util.clone(value));
         }
@@ -289,7 +323,7 @@ export default {
           row.show = true;
           row.expanded = true;
         }
-        this.expanded = this.rows.filter(row => row.editable && row.specimen.status == 'Collected');
+        this.expanded = this.rows.filter(row => (row.editable || row.receiptEditable) && row.specimen.status == 'Collected');
         await this.$nextTick();
         let valid = !this.needsVisitSave || this.$refs.visitForm.validate();
         valid = this.validateCoreFields() && valid;
@@ -300,18 +334,38 @@ export default {
           }
         }
         if (!valid) return;
-        const visit = await collectionSvc.collect({...this.visitCtx.visit, status: this.visit.status}, collectionSvc.buildSpecimens(this.rows));
-        visitSvc.clearVisits(this.cpr);
-        delete this.visit.$specimens;
-        routerSvc.replace('ParticipantsListItemVisitDetail.Overview', this.routeParams(visit), {eventId: visit.eventId || this.visit.eventId});
+        const specimens = collectionSvc.buildSpecimens(this.rows);
+        specimens.forEach(specimen => contentSvc.stripRestrictedData(specimen, this.contentAccess));
+        const receipts = collectionSvc.buildReceipts(this.rows);
+        let savedVisit;
+        if (!this.needsVisitSave) {
+          await collectionSvc.saveMatrix(this.cp.id, specimens, receipts);
+        } else {
+          savedVisit = await collectionSvc.collect({...this.visitCtx.visit, status: this.visit.status}, specimens);
+        }
+        if (this.cpr) visitSvc.clearVisits(this.cpr);
+        if (this.visit) delete this.visit.$specimens;
+        this.returnToOrigin(savedVisit || this.visit);
         alertsSvc.success({code: 'specimens.collection_matrix.saved'});
       } finally {
         this.saving = false;
       }
     },
 
+    returnToOrigin(visit = this.visit) {
+      const origin = matrixReturnRoute(this.cp.id, this.$route?.query?.returnTo);
+      if (origin) {
+        routerSvc.replace(origin.name, origin.params, origin.query);
+      } else if (visit?.id > 0 && this.cpr?.id > 0) {
+        routerSvc.replace('ParticipantsListItemVisitDetail.Overview', this.routeParams(visit),
+          {eventId: visit.eventId || this.visit?.eventId});
+      } else {
+        routerSvc.replace('ParticipantsList', {cpId: this.cp.id}, {reload: true});
+      }
+    },
+
     cancel() {
-      routerSvc.goto('ParticipantsListItemVisitDetail.Overview', this.routeParams(), {eventId: this.visit.eventId});
+      this.returnToOrigin();
     }
   }
 };

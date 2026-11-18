@@ -35,6 +35,7 @@ public abstract class AbstractLabelPrinter {
 		String filename,
 
 		HttpServletResponse httpResp) {
+		com.krishagni.catissueplus.core.common.access.ProtocolContentAccess.getInstance().ensureUnrestrictedBulkAccess();
 
 		File printJobDir = new File(ConfigUtil.getInstance().getDataDir(), "print-jobs");
 		File result      = new File(printJobDir, AuthUtil.getCurrentUser().getId() + "_" + jobId + ".csv");

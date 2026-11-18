@@ -65,12 +65,16 @@
           </table>
         </template>
       </os-section>
+      <ProtocolContentPermissions :model-value="ctx.role.contentPolicies || []" :acl="ctx.role.acl || []" read-only />
     </os-grid-column>
   </os-grid>
 </template>
 
 <script>
+import ProtocolContentPermissions from './ProtocolContentPermissions.vue';
+
 export default {
+  components: {ProtocolContentPermissions},
   props: ['role'],
 
   data() {

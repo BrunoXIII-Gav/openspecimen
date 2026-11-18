@@ -110,6 +110,8 @@
           </div>
         </template>
 
+        <ProtocolContentPermissions v-model="dataCtx.role.contentPolicies" :acl="dataCtx.role.acl" />
+
         <div>
           <os-button primary :label="$t(!dataCtx.role.id ? 'common.buttons.create' : 'common.buttons.update')"
             @click="saveOrUpdate" />
@@ -122,6 +124,7 @@
 
 <script>
 import { reactive, inject } from 'vue';
+import ProtocolContentPermissions from './ProtocolContentPermissions.vue';
 
 import alertSvc  from '@/common/services/Alerts.js';
 import i18n      from '@/common/services/I18n.js';
@@ -130,6 +133,8 @@ import routerSvc from '@/common/services/Router.js';
 import roleSvc   from '@/administrative/services/UserRole.js';
 
 export default {
+  components: {ProtocolContentPermissions},
+
   props: ['roleId'],
 
   inject: ['ui'],
@@ -152,7 +157,7 @@ export default {
     });
 
     let dataCtx = reactive({
-      role: { acl: [] },
+      role: { acl: [], contentPolicies: [] },
 
       currentUser: ui.currentUser
     });
@@ -168,6 +173,7 @@ export default {
         let respIdx = -1;
         if (promises.length > 1) {
           const role = dataCtx.role = resps[++respIdx];
+          role.contentPolicies = role.contentPolicies || [];
           for (let el of role.acl || []) {
             el.name = el.resourceName;
             for (let {operationName} of el.operations) {
@@ -226,7 +232,7 @@ export default {
         return;
       }
 
-      const payload = {id, name, description, acl: []};
+      const payload = {id, name, description, acl: [], contentPolicies: this.dataCtx.role.contentPolicies};
       const seenResources = [];
       for (let el of acl) {
         const operations = [];

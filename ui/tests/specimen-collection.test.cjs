@@ -5,6 +5,9 @@ const vm = require('node:vm');
 const {test} = require('node:test');
 const babel = require('@babel/core');
 const {parse, compileTemplate} = require('@vue/compiler-sfc');
+const contentPolicy = require('../src/common/services/protocol-content-policy.mjs');
+const contentAccess = {...contentPolicy, getAccess: async () => ({unrestricted: true})};
+const matrixNavigation = require('../src/biospecimen/services/specimen-matrix-navigation.mjs');
 
 const copy = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 function load(relativePath, mocks = {}, globals = {}) {
@@ -15,7 +18,8 @@ function load(relativePath, mocks = {}, globals = {}) {
     plugins: [require('@babel/plugin-transform-modules-commonjs')]});
   const module = {exports: {}};
   vm.runInNewContext(code, {module, exports: module.exports, Date, Number, Set, Map,
-    require: name => mocks[name] || (name.startsWith('@/') ? {} : require(name)), console, ...globals}, {filename});
+    require: name => mocks[name] || (name === '@/biospecimen/services/specimen-matrix-navigation.mjs' ? matrixNavigation :
+      name.startsWith('@/') ? {} : require(name)), console, ...globals}, {filename});
   return module.exports.default;
 }
 
@@ -35,6 +39,8 @@ function service() {
   const requests = [];
   const svc = load('biospecimen/services/SpecimenCollection.js', {
     '@/common/services/Util.js': {clone: copy},
+    '@/common/services/ProtocolContent.js': contentAccess,
+    '@/biospecimen/services/SpecimenReceipt.js': load('biospecimen/services/SpecimenReceipt.js'),
     '@/common/services/HttpClient.js': {post: async (url, data) => {
       requests.push({url, data: copy(data)});
       return {visit: {id: 42, cpId: 1, cprId: 31, eventId: 2}};
@@ -209,16 +215,19 @@ function editor(collect) {
   const {svc} = service();
   const routes = [], errors = [];
   const component = load('biospecimen/participants/visits/CollectSpecimens.vue', {
+    '@/common/services/ProtocolContent.js': contentAccess,
     '@/common/services/Util.js': {clone: copy},
     '@/common/services/FormUtil.js': {createCustomFieldsMap: () => {}},
     '@/biospecimen/services/SpecimenCollection.js': {...svc,
-      validate: svc.validate.bind(svc), buildSpecimens: svc.buildSpecimens.bind(svc), collect},
+      validate: svc.validate.bind(svc), buildSpecimens: svc.buildSpecimens.bind(svc), buildReceipts: svc.buildReceipts.bind(svc),
+      saveMatrix: svc.saveMatrix.bind(svc), collect},
     '@/biospecimen/services/Visit.js': {clearVisits: () => {}},
     '@/common/services/Router.js': {replace: (...args) => routes.push(copy(args))},
     '@/common/services/Alerts.js': {success: () => {}, error: error => errors.push(error)}
   });
   const ctx = {cpr: copy(cpr), visit: {...visit}, cpViewCtx: {getCp: () => cp, getRole: () => ({})}};
   Object.assign(ctx, component.data.call(ctx));
+  ctx.contentAccess = {unrestricted: true};
   for (const [name, method] of Object.entries(component.methods)) ctx[name] = method.bind(ctx);
   ctx.rows = svc.prepareRows(tree(), select([3]), cp, cpr, visit);
   ctx.rows.forEach(row => { row.matrixFields = []; });
@@ -244,6 +253,57 @@ test('matrix blocks duplicate submissions, returns to the saved visit and can re
   await assert.rejects(failed.ctx.save(), /server rejected/);
   assert.equal(failed.ctx.saving, false);
   assert.equal(failed.routes.length, 0);
+});
+
+test('complete-information entry points carry their own page as the matrix return destination', () => {
+  for (const [file, method, name] of [
+    ['visits/Overview.vue', 'openMatrix', 'ParticipantsListItemVisitDetail.Overview'],
+    ['specimens/Overview.vue', 'openMatrix', 'ParticipantsListItemSpecimenDetail.Overview'],
+    ['List.vue', 'openSelectedMatrix', 'ParticipantsList']
+  ]) {
+    const routes = [];
+    const component = load('biospecimen/participants/' + file, {
+      './EventsSummaryList.vue': {},
+      '@/common/services/Router.js': {goto: (...args) => routes.push(copy(args))}
+    });
+    const origin = {name, params: {cpId: '1', cprId: '31', visitId: '42', specimenId: '100'}, query: {eventId: '2'}};
+    component.methods[method].call({canOpenMatrix: true, ctx: {cp}, cpr, visit: {id: 42, eventId: 2},
+      specimen: {id: 100}, selectedSpecimens: [{id: 100}], $route: origin});
+    assert.deepEqual(matrixNavigation.matrixReturnRoute(1, routes[0][2].returnTo), origin);
+  }
+});
+
+test('saving and cancelling return to the originating visit or specimen, including query context after a refresh', async () => {
+  for (const name of ['ParticipantsListItemVisitDetail.Overview', 'ParticipantsListItemSpecimenDetail.Overview']) {
+    const origin = {name, params: {cpId: '1', cprId: '31', visitId: '42', ...(name.includes('Specimen') ? {specimenId: '100'} : {})},
+      query: {eventId: '2', view: 'participants_list', filters: 'saved-filter'}};
+    const {ctx, routes} = editor();
+    ctx.needsVisitSave = false;
+    ctx.cpr.contextOnly = true;
+    ctx.visit = {id: 42, eventId: 2, contextOnly: true, $specimens: ['stale']};
+    ctx.$route = {query: {returnTo: matrixNavigation.matrixOrigin(origin)}};
+    await ctx.save();
+    assert.deepEqual(routes[0], [origin.name, origin.params, origin.query]);
+    assert.equal(ctx.visit.$specimens, undefined);
+    ctx.cancel();
+    assert.deepEqual(routes[1], routes[0]);
+  }
+});
+
+test('an older matrix link still returns a restricted user to the visit without a global specimen list', async () => {
+  const {ctx, routes} = editor();
+  ctx.needsVisitSave = false; ctx.cpr.contextOnly = true;
+  ctx.visit = {id: 42, eventId: 2, contextOnly: true};
+  await ctx.save();
+  assert.deepEqual(routes[0], ['ParticipantsListItemVisitDetail.Overview', {cpId: 1, cprId: 31, visitId: 42}, {eventId: 2}]);
+});
+
+test('matrix origin accepts only overview and list routes belonging to the current protocol', () => {
+  const origin = {name: 'ParticipantsListItemVisitDetail.Overview', params: {cpId: 2, cprId: 31, visitId: 42}};
+  assert.equal(matrixNavigation.matrixReturnRoute(1, matrixNavigation.matrixOrigin(origin)), null);
+  assert.equal(matrixNavigation.matrixReturnRoute(1, 'broken JSON'), null);
+  assert.equal(matrixNavigation.matrixReturnRoute(1, JSON.stringify({name: 'VisitCollectSpecimens', params: {cpId: 1}})), null);
+  assert.equal(matrixNavigation.matrixOrigin({name: 'VisitCollectSpecimens'}), undefined);
 });
 
 test('configured required fields and expanded custom forms prevent saving invalid data', async () => {
@@ -278,6 +338,7 @@ test('mounted matrix renders the real table and forms, validates hidden required
   const globals = {console: quiet, setTimeout, clearTimeout,
     window: {osSvc: {i18nSvc: {msg: translate}}, osUi: {currentUser: {id: 1}}}};
   const mocks = {
+    '@/common/services/ProtocolContent.js': contentAccess,
     '@/common/services/Util.js': util,
     '@/common/services/HttpClient.js': {
       addListener() {}, removeListener() {}, get: async () => tree(),
@@ -295,6 +356,7 @@ test('mounted matrix renders the real table and forms, validates hidden required
   mocks['@/common/services/ExpressionUtil.js'] = load('common/services/ExpressionUtil.js', mocks, globals);
   mocks['@/common/services/FieldFactory.js'] = load('common/services/FieldFactory.js', mocks, globals);
   mocks['@/common/services/FormUtil.js'] = load('common/services/FormUtil.js', mocks, globals);
+  mocks['@/biospecimen/services/SpecimenReceipt.js'] = load('biospecimen/services/SpecimenReceipt.js', mocks, globals);
   mocks['@/biospecimen/services/SpecimenCollection.js'] = load('biospecimen/services/SpecimenCollection.js', mocks, globals);
   mocks['@/biospecimen/services/Specimen.js'] = {getReceivedEventAddEditFs: () => ({rows: []})};
   mocks['@/biospecimen/services/Visit.js'] = {getSpecimens: async () => tree(), clearVisits() {}};
@@ -372,7 +434,7 @@ test('mounted matrix renders the real table and forms, validates hidden required
   app.directive('os-tooltip', {});
   const instance = app.mount({children: []});
   try {
-    for (let tick = 0; tick < 12; tick++) await vue.nextTick();
+    for (let tick = 0; tick < 40 && !instance.$refs.matrix; tick++) await vue.nextTick();
     assert.deepEqual(runtimeErrors.map(error => error.message), []);
     assert.equal(instance.loadError, null);
     assert.equal(instance.rows.length, 3);
@@ -430,6 +492,17 @@ test('mounted matrix renders the real table and forms, validates hidden required
   }
 });
 
+test('primary-only scope omits pending children and their required forms from collection and payload', () => {
+  const {svc} = service();
+  const rows = svc.prepareRows(tree(), {}, cp, cpr, visit, {allowed: ['collection'], createLineages: ['New']});
+  assert.deepEqual(copy(rows.map(row => row.specimen.reqId)), [1, 5]);
+  assert.equal(rows.every(row => row.specimen.lineage == 'New'), true);
+  assert.equal(svc.buildSpecimens(rows).some(specimen => specimen.children), false);
+  assert.equal(svc.prepareRows(tree(), select([3]), cp, cpr, visit, {allowed: ['collection'], createLineages: ['New']}).length, 0);
+  assert.equal(svc.prepareRows(tree(), select([3]), cp, cpr, visit, {allowed: ['collection'], createLineages: ['Aliquot']}).length, 0,
+    'a forbidden pending parent must not be implicitly collected');
+});
+
 test('matrix template compiles and new translations exist in supported locales', () => {
   const file = path.join(__dirname, '../src/biospecimen/participants/visits/CollectSpecimens.vue');
   const {descriptor} = parse(fs.readFileSync(file, 'utf8'));
@@ -441,4 +514,77 @@ test('matrix template compiles and new translations exist in supported locales',
     assert.ok(messages.specimens.collection_matrix.visit_details);
     assert.ok(messages.specimens.collection_matrix.parent_not_collected);
   }
+});
+
+
+test('one matrix resumes collection, receipt and processing across separate roles without recreating completed stages', () => {
+  const {svc} = service();
+  const collected = tree();
+  const collector = {allowed: ['collection'], createLineages: ['New'], canCreate: true, canUpdate: false};
+  const first = svc.prepareRows(collected, {}, cp, cpr, {...visit, id: 42}, collector);
+  assert.deepEqual(copy(first.map(row => row.specimen.reqId)), [1, 5]);
+  assert.equal(svc.buildReceipts(first).length, 0);
+  Object.assign(collected[0], {id: 100, label: 'B-100', status: 'Collected', availableQty: 10,
+    receivedEvent: {receivedQuality: 'To be Received'}});
+  Object.assign(collected[1], {id: 105, label: 'B-105', status: 'Collected', availableQty: 3,
+    receivedEvent: {receivedQuality: 'To be Received'}});
+  const receiver = {allowed: ['receipt'], createLineages: [], canCreate: false, canUpdate: true};
+  const second = svc.prepareRows(collected, {}, cp, cpr, {...visit, id: 42}, receiver);
+  assert.equal(second.filter(row => row.editable).length, 0);
+  assert.equal(second.filter(row => row.receiptEditable).length, 2);
+  second.forEach(row => row.specimen.receivedEvent = {receivedQuality: 'Acceptable', user: {id: 7}, time: 100});
+  assert.equal(svc.validate(second), null);
+  assert.deepEqual(copy(svc.buildSpecimens(second)), []);
+  assert.equal(svc.buildReceipts(second).length, 2);
+  collected.forEach(specimen => specimen.receivedEvent = {receivedQuality: 'Acceptable'});
+  const processor = {allowed: [], createLineages: ['Derived', 'Aliquot'], canCreate: true, canUpdate: true};
+  const third = svc.prepareRows(collected, {}, {...cp, visitCollectionMode: 'PRIMARY_SPMNS'}, cpr, {...visit, id: 42}, processor);
+  assert.deepEqual(copy(third.filter(row => row.editable).map(row => row.specimen.lineage)), ['Derived', 'Aliquot', 'Aliquot']);
+  assert.equal(third.some(row => row.receiptEditable), false);
+  const payload = copy(svc.buildSpecimens(third));
+  assert.equal(payload.length, 1); assert.deepEqual(Object.keys(payload[0]).sort(), ['children', 'id']);
+  assert.equal(payload[0].id, 100); assert.equal(payload[0].children[0].children.length, 2);
+  let nextId = 200;
+  const complete = specimen => { Object.assign(specimen, {id: specimen.id || nextId++, status: 'Collected'}); (specimen.children || []).forEach(complete); };
+  collected.forEach(complete);
+  const last = svc.prepareRows(collected, {}, cp, cpr, {...visit, id: 42}, processor);
+  assert.equal(last.some(row => row.editable || row.receiptEditable), false);
+  assert.deepEqual(copy(svc.buildSpecimens(last)), []);
+});
+
+test('opening a selected collected primary includes its pending descendants and isolates repeated requirements in different visits', () => {
+  const {svc} = service(), source = tree();
+  Object.assign(source[0], {id: 100, status: 'Collected', availableQty: 10});
+  const access = {allowed: [], createLineages: ['Derived', 'Aliquot'], canCreate: true};
+  const selection = {specimenIds: [100], explicit: true, includeDescendants: true, uidPrefix: 'v-42-'};
+  const rows = svc.prepareRows(source, selection, cp, cpr, {...visit, id: 42}, access);
+  assert.equal(rows.length, 4); assert.equal(rows.filter(row => row.editable).length, 3);
+  assert.equal(rows[2].parentUid, rows[1].uid);
+  const other = svc.prepareRows(source, {...selection, uidPrefix: 'v-43-'}, cp, cpr, {...visit, id: 43}, access);
+  assert.equal(rows.some(row => other.some(item => item.uid === row.uid)), false);
+});
+
+
+test('resuming existing collected samples does not silently discard receipts to save visit fields', () => {
+  const component = load('biospecimen/participants/visits/CollectSpecimens.vue');
+  assert.equal(component.computed.needsVisitSave.call({visit: {id: 42, status: 'Pending'}, cpr,
+    rows: [{originalStatus: 'Collected', receiptEditable: true}]}), false);
+  assert.equal(component.computed.needsVisitSave.call({visit: {id: 42, status: 'Pending'}, cpr,
+    rows: [{originalStatus: 'Pending'}]}), true);
+  const {svc} = service();
+  assert.equal(svc.prepareRows(tree(), {}, cp, {...cpr, contextOnly: true}, {id: 42, status: 'Pending'},
+    {allowed: ['collection'], createLineages: ['New']}).length, 0);
+});
+
+
+test('the receipt visit panel shows primaries and omits only unauthorized planned processing', () => {
+  const {svc} = service(), source = tree();
+  Object.assign(source[0], {id: 100, status: 'Collected'});
+  const access = {unrestricted: false, allowed: ['receipt'], createLineages: ['New']};
+  const result = svc.visibleVisitSpecimens(source, access);
+  assert.equal(result.length, 2); assert.equal(result[0].id, 100); assert.equal(result[0].children.length, 0);
+  assert.equal(source[0].children.length, 1, 'keep the original plan for other authorized roles');
+  assert.equal(svc.visibleVisitSpecimens(source, {unrestricted: true, createLineages: []})[0].children.length, 1);
+  Object.assign(source[0].children[0], {id: 101, status: 'Collected'});
+  assert.equal(svc.visibleVisitSpecimens(source, access)[0].children[0].id, 101, 'existing specimen reading keeps its base permission');
 });

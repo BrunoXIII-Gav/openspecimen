@@ -1358,6 +1358,7 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 		}
 
 		AccessCtrlMgr.getInstance().ensureCreateOrUpdateSpecimenRights(specimen);
+		com.krishagni.catissueplus.core.common.access.ProtocolContentAccess.getInstance().ensureCreationAllowed(existing, specimen);
 		EventPublisher.getInstance().publish(new SpecimenPreSaveEvent(existing, specimen));
 
 		String prevStatus = null;

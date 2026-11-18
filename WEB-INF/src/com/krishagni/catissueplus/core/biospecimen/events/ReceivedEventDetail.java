@@ -2,6 +2,7 @@ package com.krishagni.catissueplus.core.biospecimen.events;
 
 import java.math.BigDecimal;
 
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.administrative.domain.PermissibleValue;
 import com.krishagni.catissueplus.core.biospecimen.domain.Specimen;
 import com.krishagni.catissueplus.core.biospecimen.domain.SpecimenCollectionReceiveDetail;
@@ -61,6 +62,9 @@ public class ReceivedEventDetail extends SpecimenEventDetail {
 	}
 
 	public static ReceivedEventDetail from(Specimen specimen) {
+		if (specimen != null && specimen.getCollectionProtocol() != null &&
+			!ProtocolContentAccess.getInstance()
+				.isAllowed(specimen.getCollectionProtocol().getId(), "receipt")) return null;
 		if (specimen == null) {
 			return null;
 		} else if (specimen.isDerivative() || specimen.isAliquot()) {

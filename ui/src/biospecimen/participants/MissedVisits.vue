@@ -4,7 +4,7 @@
       class="os-muted-list-header os-bordered-list1"
       :data="missedVisits"
       :schema="{columns: tabFields}"
-      :showRowActions="true"
+      :showRowActions="!navigationOnly"
       @rowClicked="onVisitRowClick"
       :expanded="expandedVisits"
       ref="listView">
@@ -16,7 +16,7 @@
 
       <template class="visit-details" #expansionRow="{rowObject}">
         <os-overview :schema="dict" :object="{cp, cpr, visit: rowObject.visit, userRole}"
-          v-if="dict && dict.length > 0" />
+          v-if="!navigationOnly && dict && dict.length > 0" />
       </template>
     </os-list-view>
   </div>
@@ -25,10 +25,11 @@
 <script>
 
 import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
+import visitSvc from '@/biospecimen/services/Visit.js';
 import routerSvc from '@/common/services/Router.js';
 
 export default {
-  props: ['cp', 'cpr', 'visits', 'dict'],
+  props: ['cp', 'cpr', 'visits', 'dict', 'navigationOnly'],
 
   inject: ['cpViewCtx'],
 
@@ -45,6 +46,10 @@ export default {
   },
 
   created() {
+    if (this.navigationOnly) {
+      this.tabFields = visitSvc.getDefaultMissedVisitsTabFields().filter(field => field.name === 'visit.description');
+      return;
+    }
     this.cpViewCtx.getMissedVisitsTabFields().then(tabFields => this.tabFields = tabFields);
     this.userRole = this.cpViewCtx.getRole();
   },
@@ -104,6 +109,7 @@ export default {
     },
 
     onVisitRowClick: function(rowObject) {
+      if (this.navigationOnly) { this._gotoVisit(rowObject.visit); return; }
       const [prev] = this.expandedVisits;
       this.expandedVisits.length = 0;
       if (!prev || prev.visit != rowObject.visit) {

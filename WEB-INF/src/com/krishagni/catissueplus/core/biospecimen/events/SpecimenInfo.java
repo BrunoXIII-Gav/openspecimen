@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.administrative.domain.PermissibleValue;
 import com.krishagni.catissueplus.core.administrative.domain.StorageContainerPosition;
 import com.krishagni.catissueplus.core.administrative.events.StorageLocationSummary;
@@ -750,6 +751,7 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 			}
 		}
 
+		redactEventDefaults(result);
 		return result;
 	}	
 	
@@ -784,9 +786,21 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 		StorageLocationSummary location = new StorageLocationSummary();
 		result.setStorageLocation(location);
 		result.setStorageType(anticipated.getStorageType());
+		redactEventDefaults(result);
 		return result;
 	}	
 	
+	private static void redactEventDefaults(SpecimenInfo result) {
+		if (result.getCpId() == null) return;
+		var access = ProtocolContentAccess.getInstance();
+		if (!access.isAllowed(result.getCpId(), "collection")) {
+			result.setCollector(null);
+			result.setCollectionContainer(null);
+			result.setCollectionDate(null);
+		}
+		if (!access.isAllowed(result.getCpId(), "receipt")) result.setReceiver(null);
+	}
+
 	@Override
 	public int compareTo(SpecimenInfo other) {
 		int cmp = NumUtil.compareTo(sortOrder, other.sortOrder);

@@ -9,20 +9,16 @@
 <script>
 import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
 import routerSvc from '@/common/services/Router.js';
+import {resolveCpListView} from '@/biospecimen/services/cp-list-view.mjs';
 
 export default {
   inject: ['cpViewCtx'],
 
   created() {
     const cp = this.cpViewCtx.getCp();
-    cpSvc.getWorkflowProperty(cp.id, 'common', 'listView').then(
+    return cpSvc.getWorkflowProperty(cp.id, 'common', 'listView').then(
       route => {
-        if (route == 'cp-specimens' || route == 'specimens_list') {
-          route = 'specimens_list';
-        } else {
-          route = 'participants_list';
-        }
-
+        route = resolveCpListView(cp, route, this.cpViewCtx.isReadParticipantAllowed(), this.cpViewCtx.isReadSpecimenAllowed());
         routerSvc.goto('ParticipantsList', {cpId: cp.id}, {view: route});
       }
     );

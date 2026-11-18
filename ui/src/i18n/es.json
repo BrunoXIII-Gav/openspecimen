@@ -1835,6 +1835,7 @@
     "witness": "Testigo"
   },
   "participants": {
+    "no_list_access": "No tienes permiso para consultar este listado.",
     "add_participant": "Agregar Participante",
     "add_multiple_specimens": "Agregar Múltiples Muestras",
     "add_specimen": "Agregar Muestra",
@@ -2589,6 +2590,32 @@
     "value_req": "El valor es obligatorio"
   },
   "roles": {
+    "content": {
+      "creation_title": "Puede crear",
+      "requires_content_permission": "Este apartado está inactivo. Asigna Leer, Crear o Actualizar en Participantes, Visitas o Muestras. El acceso a la configuración del protocolo por sí solo no concede acceso a esos datos. Se conservan las selecciones guardadas.",
+      "requires_create_permission": "Estas opciones están inactivas porque el rol no tiene Crear en Muestras ni en Muestras primarias. Se conservan las selecciones y volverán a estar disponibles al activar el permiso.",
+      "primary_create_only": "Crear en Muestras primarias solo habilita primarias. Para configurar derivados o alícuotas, activa Crear en Muestras.",
+      "creation_help": "Limita los tipos de muestra que puede crear con sus permisos actuales.",
+      "creation_denied": "Tu rol no permite crear o recolectar este tipo de muestra en este protocolo.",
+      "create_New": "Muestras primarias",
+      "create_Derived": "Derivados",
+      "create_Aliquot": "Alícuotas",
+      "collection_common": "Datos comunes de recolección",
+      "denied": "No tienes acceso a este evento o formulario.",
+      "title": "Eventos y formularios dentro de los protocolos de recolección",
+      "help": "Restricciones adicionales a los permisos existentes.",
+      "legacy": "Comportamiento actual: este rol no tiene restricciones adicionales de eventos y formularios.",
+      "protocol": "Protocolo de recolección",
+      "all_protocols": "Todos los protocolos asignados a este rol",
+      "select_all": "Seleccionar opciones actuales",
+      "select_none": "Quitar selección",
+      "add": "Restringir eventos y formularios",
+      "none": "Esta regla no permite ningún evento ni formulario.",
+      "unavailable": "Permisos guardados que no están asociados actualmente con este protocolo:",
+      "load_error": "No se pudieron cargar los protocolos o formularios. Recarga antes de editar los permisos.",
+      "collection": "Recolección",
+      "receipt": "Recepción"
+    },
     "create_role": "Crear rol",
     "description": "Descripción",
     "description_req": "La descripción es obligatoria",
@@ -3387,10 +3414,18 @@
     "type_required": "El tipo es obligatorio"
   },
   "specimens": {
+    "context_unavailable": "No se puede cargar el contexto autorizado de esta muestra.",
+    "receipt_matrix": {
+      "title": "Completar recepción", "common": "Datos comunes de recepción", "apply": "Aplicar a todas las muestras",
+      "save": "Guardar recepción", "saved": "Recepción guardada.", "empty": "No hay muestras primarias recolectadas pendientes de recepción en esta selección.",
+      "skipped": "Se omitieron {count} muestras que no están pendientes de recepción.",
+      "denied": "No tienes permiso para completar la recepción.", "required": "Completa este campo de recepción.",
+      "load_failed": "No se pudieron cargar las muestras pendientes de recepción."
+    },
     "collection_matrix": {
-      "title": "Recolectar muestras planificadas",
+      "title": "Matriz de muestras planificadas",
       "visit_details": "Datos de la visita",
-      "help": "Completa las muestras seleccionadas y sus padres. Deja como Pendiente las que procesarás después. Las etiquetas indicadas como Automática se generan al guardar.",
+      "help": "Completa los datos que te corresponden. Las etapas pendientes pueden retomarse desde esta misma matriz.",
       "common_details": "Datos comunes de recolección y recepción",
       "apply_common": "Aplicar a muestras primarias",
       "common_applied": "Se aplicaron los datos comunes a las muestras primarias.",
@@ -3403,7 +3438,9 @@
       "parent_not_collected": "Un derivado o una alícuota recolectados deben tener su muestra padre recolectada. Completa el padre o deja el hijo pendiente.",
       "invalid_quantity": "Las cantidades y concentraciones deben ser números válidos, mayores o iguales a cero.",
       "duplicate_label": "La selección contiene etiquetas de muestras repetidas.",
-      "duplicate_barcode": "La selección contiene códigos de barras repetidos."
+      "duplicate_barcode": "La selección contiene códigos de barras repetidos.",
+      "open": "Completar información",
+      "no_authorized_pending": "No hay tareas pendientes que puedas completar con tus permisos."
     },
     "intermediate_material": "Material intermedio",
     "intermediate_from": "{type} — procedente de {source}",
@@ -3801,5 +3838,16 @@
     "visit_names": "Nombres de Visita",
     "visit_site": "Sede de Visita",
     "visit_site_req": "La sede de visita es obligatoria"
+  },
+  "navigation": {
+      "reference": "Referencia",
+      "registration": "Registro #{id}",
+      "visit": "Visita #{id}",
+      "visits_and_specimens": "Visitas y muestras",
+      "open_visits": "Ver visitas",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "empty_registrations": "No hay registros disponibles.",
+      "empty_visits": "No hay visitas disponibles."
   }
 }

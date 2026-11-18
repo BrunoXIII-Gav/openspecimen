@@ -10,6 +10,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.envers.Audited;
 
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.de.domain.DeObject;
 
 @Audited
@@ -38,6 +39,8 @@ public abstract class BaseExtensionEntity extends BaseEntity {
 		if (extension == null || extension.getFormId() == null) {
 			return;			
 		}
+		// A hidden form is not submitted, defaulted, or revalidated by this operation.
+		if (!ProtocolContentAccess.getInstance().isExtensionAllowed(extension)) return;
 		
 		if (extension.saveOrUpdate()) {
 			extensionRev = (extensionRev == null) ? 1 : extensionRev + 1;

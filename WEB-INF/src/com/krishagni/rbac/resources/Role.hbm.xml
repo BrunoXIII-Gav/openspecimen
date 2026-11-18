@@ -16,6 +16,8 @@
     <property name="name" column="NAME" />
     
     <property name="description" column="DESCRIPTION" />
+
+    <property name="contentPoliciesJson" column="CONTENT_POLICIES" type="text" />
     
     <set name="acl" inverse="true" cascade="all-delete-orphan" table="RBAC_ROLE_ACCESS_LIST">
       <key column="ROLE_ID"/>

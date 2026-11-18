@@ -1570,6 +1570,12 @@ const routes = [
                 component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/DefListView.vue'),
               },
               {
+                path: 'specimen-matrix',
+                alias: 'receive-specimens',
+                name: 'SpecimenCollectionMatrix',
+                component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/visits/CollectSpecimens.vue')
+              },
+              {
                 path: 'participants',
                 name: 'ParticipantsList',
                 component: () => import(/* webpackChunkName: "cp-view" */ '../biospecimen/participants/List.vue'),

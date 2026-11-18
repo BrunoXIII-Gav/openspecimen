@@ -11,7 +11,8 @@
     </os-page-head>
 
     <os-page-body>
-      <div class="children-form" v-if="parent.id">
+      <os-message type="error" v-if="creationDenied">{{ $t('roles.content.creation_denied') }}</os-message>
+      <div class="children-form" v-if="parent.id && !creationDenied">
         <div class="parent-summary">
           <div>
             <span class="summary-label">{{ $t('specimens.parent_specimen') }}</span>
@@ -176,6 +177,7 @@ import alertsSvc  from '@/common/services/Alerts.js';
 import cpSvc      from '@/biospecimen/services/CollectionProtocol.js';
 import routerSvc  from '@/common/services/Router.js';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
+import contentSvc from '@/common/services/ProtocolContent.js';
 import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 import formSvc     from '@/forms/services/Form.js';
 import formUtil    from '@/common/services/FormUtil.js';
@@ -189,6 +191,7 @@ export default {
   data() {
     return {
       parent: {},
+      creationDenied: false,
       count: 1,
       qtyPerAliquot: null,
       individualAliquotQuantities: false,
@@ -282,6 +285,11 @@ export default {
   },
 
   async created() {
+    const access = await contentSvc.getAccess(this.specimen.cpId);
+    if (!contentSvc.canCreate(access, this.lineage)) {
+      this.creationDenied = true;
+      return;
+    }
     const [parent, formDef, eventForms] = await Promise.all([
       specimenSvc.getById(this.specimen.parentId),
       specimenSvc.getCustomFieldsForm(this.specimen.cpId, this.lineage),

@@ -317,6 +317,10 @@ export default class CpViewContext {
     return this.access && this.access.createParticipant;
   }
 
+  isReadParticipantAllowed(cpr) {
+    return !!this.access?.readParticipant && this._isAccessBasedOnMrnAllowed(cpr, ['ParticipantPhi', 'ParticipantDeid'], ['Read']);
+  }
+
   isUpdateParticipantAllowed(cpr) {
     if (!this.access || !this.access.updateParticipant) {
       return false;
@@ -634,6 +638,7 @@ export default class CpViewContext {
 
   _loadAccessRights() {
     this.access = {
+      readParticipant: this._isAllowed(['ParticipantPhi', 'ParticipantDeid'], ['Read']),
       createParticipant: this._isAllowed('ParticipantPhi', ['Create']),
 
       updateParticipant: this._isAllowed('ParticipantPhi', ['Update']),

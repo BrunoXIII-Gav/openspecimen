@@ -15,10 +15,11 @@
     </os-page-head>
 
     <os-page-body>
+      <os-message type="error" v-if="ctx.accessChecked && !ctx.formAllowed">{{ $t('roles.content.denied') }}</os-message>
       <os-addedit-form-record :entity="object" :form-def="ctx.formDef" :form-id="formId"
         :form-ctxt-id="formCtxtId" :record-id="recordId" :hide-panel="true" :show-next="!!ctx.nextForm"
         :show-draft="allowDraftRecords" :field-reference-context="api.getFieldReferenceContext && api.getFieldReferenceContext()"
-        @saved="saved" @cancelled="saveCancelled" />
+        @saved="saved" @cancelled="saveCancelled" v-if="ctx.formAllowed" />
     </os-page-body>
   </os-page>
 </template>
@@ -26,6 +27,7 @@
 <script>
 
 import alertsSvc  from '@/common/services/Alerts.js';
+import contentSvc from '@/common/services/ProtocolContent.js';
 import formSvc    from '@/forms/services/Form.js';
 import routerSvc  from '@/common/services/Router.js';
 
@@ -35,7 +37,9 @@ export default {
   data() {
     return {
       ctx: {
-        formDef: {}
+        formDef: {},
+        formAllowed: false,
+        accessChecked: false
       },
 
       bcrumb: this.api.getBreadcrumb()
@@ -77,6 +81,12 @@ export default {
     },
 
     _setupForm: async function() {
+      this.ctx.formAllowed = false;
+      this.ctx.accessChecked = false;
+      const access = await contentSvc.getAccess(this.object.cpId);
+      this.ctx.formAllowed = contentSvc.allows(access, 'form:' + this.formId);
+      this.ctx.accessChecked = true;
+      if (!this.ctx.formAllowed) return;
       formSvc.getDefinition(this.formId).then(formDef => this.ctx.formDef = formDef);
       if (!this.recordId) {
         if (!this.forms) {

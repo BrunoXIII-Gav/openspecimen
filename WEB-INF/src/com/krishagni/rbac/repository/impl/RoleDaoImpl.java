@@ -50,6 +50,28 @@ public class RoleDaoImpl extends AbstractDao<Role> implements RoleDao {
 	public Class<?> getType() {
 		return Role.class;
 	}
+
+	@Override
+	public List<Role> getProtocolContentRoles(Long userId, Long cpId, Long instituteId) {
+		// Use the same subject-role assignments as the existing RBAC access view.
+		return createQuery("select sr.role from com.krishagni.rbac.domain.SubjectRole sr " +
+			"where sr.subject.id = :userId and (sr.collectionProtocol.id = :cpId or sr.collectionProtocol is null) " +
+			"and (sr.site.id in (select cps.site.id from com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolSite cps " +
+			"where cps.collectionProtocol.id = :cpId) or (sr.site is null and " +
+			"(sr.collectionProtocol is not null or exists (select s.id from com.krishagni.catissueplus.core.administrative.domain.Site s " +
+			"where s.institute.id = :instituteId and s.id in (select cs.site.id from " +
+			"com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolSite cs where cs.collectionProtocol.id = :cpId)))))", Role.class)
+			.setParameter("userId", userId).setParameter("cpId", cpId).setParameter("instituteId", instituteId).list();
+	}
+
+	@Override
+	public boolean hasContentPolicies(Long userId) {
+		// Oracle does not support DISTINCT or <> comparisons on a CLOB.
+		return createQuery("select sr.role from com.krishagni.rbac.domain.SubjectRole sr where sr.subject.id = :userId " +
+			"and sr.role.contentPoliciesJson is not null", Role.class)
+			.setParameter("userId", userId).list().stream()
+			.anyMatch(role -> !com.krishagni.catissueplus.core.common.access.ProtocolContentAccess.policies(role).isEmpty());
+	}
 	
 	private static final String FQN = Role.class.getName();
 	

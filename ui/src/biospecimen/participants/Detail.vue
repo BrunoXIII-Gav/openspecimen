@@ -7,7 +7,7 @@
 
       <span class="os-title" v-if="cpr && cpr.id > 0">
         <h3>
-          <os-dynamic-template v-if="ctx.header.leftTitle" :template="ctx.header.leftTitle"
+          <os-dynamic-template v-if="!cpr.contextOnly && ctx.header.leftTitle" :template="ctx.header.leftTitle"
             :cp="ctx.cp" :cpr="cpr" :hasPhiAccess="hasPhiAccess" />
 
           <span v-else>{{participantName}}</span>
@@ -20,7 +20,7 @@
         </div>
       </span>
 
-      <template #right v-if="ctx.header.rightTitle">
+      <template #right v-if="!cpr.contextOnly && ctx.header.rightTitle">
         <h3>
           <os-dynamic-template :template="ctx.header.rightTitle" :cp="ctx.cp" :cpr="cpr" :hasPhiAccess="hasPhiAccess" />
         </h3>
@@ -37,14 +37,14 @@
               </router-link>
             </li>
 
-            <li v-if="!ctx.cp.consentsWaived && !ctx.cp.visitLevelConsents && isReadConsentAllowed">
+            <li v-if="!cpr.contextOnly && !ctx.cp.consentsWaived && !ctx.cp.visitLevelConsents && isReadConsentAllowed">
               <router-link :to="getRoute('Consents')">
                 <os-icon name="file-signature" />
                 <span class="label" v-t="'participant_consents.list'">Consents</span>
               </router-link>
             </li>
 
-            <li>
+            <li v-if="!cpr.contextOnly">
               <router-link :to="getRoute('Forms')">
                 <os-icon name="file-alt" />
                 <span class="label" v-t="'common.forms'">Forms</span>
@@ -58,7 +58,7 @@
               </router-link>
             </li>
 
-            <os-plugin-views page="participant-detail" view="tab-menu" />
+            <os-plugin-views page="participant-detail" view="tab-menu" v-if="!cpr.contextOnly" />
           </ul>
         </os-side-menu>
 
@@ -106,6 +106,7 @@ export default {
       Object.assign(this.query, {filters: this.$route.query.filters});
     }
 
+    if (this.cpr.contextOnly) return;
     cpSvc.getWorkflowProperty(this.ctx.cp.id, 'common', 'participantHeader').then(
       header => {
         if (header) {
@@ -121,7 +122,7 @@ export default {
     },
 
     participantName: function() {
-      return cprSvc.getFormattedTitle(this.cpr);
+      return this.cpr.contextOnly ? this.cpr.ppid : cprSvc.getFormattedTitle(this.cpr);
     },
 
     isReadConsentAllowed: function() {

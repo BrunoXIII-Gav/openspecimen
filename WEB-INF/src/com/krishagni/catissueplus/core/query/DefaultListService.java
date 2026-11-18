@@ -5,13 +5,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 
 import com.krishagni.catissueplus.core.common.PlusTransactional;
+import com.krishagni.catissueplus.core.common.access.ProtocolContentAccess;
 import com.krishagni.catissueplus.core.common.errors.OpenSpecimenException;
 import com.krishagni.catissueplus.core.common.events.RequestEvent;
 import com.krishagni.catissueplus.core.common.events.ResponseEvent;
+import com.krishagni.rbac.common.errors.RbacErrorCode;
 
 public class DefaultListService implements ListService {
 	private Map<String, Function<Map<String, Object>, ListConfig>> listConfigFns = new HashMap<>();
@@ -117,6 +121,28 @@ public class DefaultListService implements ListService {
 			throw OpenSpecimenException.userError(ListError.NO_CFG, listName);
 		}
 
-		return cfg;
+		return filterContent(cfg);
+	}
+
+	private ListConfig filterContent(ListConfig cfg) {
+		ProtocolContentAccess access = ProtocolContentAccess.getInstance();
+		if (!access.hasRestrictions() || (cfg.getCpId() != null && cfg.getCpId() > 0 && access.isUnrestricted(cfg.getCpId()))) return cfg;
+		// Configurators may reuse their configuration. Never change a shared definition.
+		ListConfig filtered = new ListConfig();
+		BeanUtils.copyProperties(cfg, filtered);
+		filtered.setColumns(permittedColumns(cfg.getColumns(), cfg.getCpId()));
+		filtered.setHiddenColumns(permittedColumns(cfg.getHiddenColumns(), cfg.getCpId()));
+		filtered.setFilters(permittedColumns(cfg.getFilters(), cfg.getCpId()));
+		filtered.setOrderBy(permittedColumns(cfg.getOrderBy(), cfg.getCpId()));
+		filtered.setFixedColumns(permittedColumns(cfg.getFixedColumns(), cfg.getCpId()));
+		if (cfg.getPrimaryColumn() != null && !access.isQueryExpressionAllowed(cfg.getCpId(), cfg.getPrimaryColumn().getExpr())) {
+			throw OpenSpecimenException.userError(RbacErrorCode.CONTENT_BULK_RESTRICTED);
+		}
+		return filtered;
+	}
+
+	private List<Column> permittedColumns(List<Column> columns, Long cpId) {
+		return columns == null ? null : columns.stream().filter(column ->
+			ProtocolContentAccess.getInstance().isQueryExpressionAllowed(cpId, column.getExpr())).collect(Collectors.toList());
 	}
 }

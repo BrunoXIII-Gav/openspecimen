@@ -11,6 +11,7 @@
     </os-page-head>
 
     <os-page-body>
+      <os-message type="error" v-if="creationDenied">{{ $t('roles.content.creation_denied') }}</os-message>
       <div class="multiple-specimens" v-if="loaded">
         <section class="batch-setup">
           <div class="count-field">
@@ -84,6 +85,7 @@
 </template>
 
 <script>
+import contentSvc from '@/common/services/ProtocolContent.js';
 import alertsSvc   from '@/common/services/Alerts.js';
 import cpSvc       from '@/biospecimen/services/CollectionProtocol.js';
 import exprUtil    from '@/common/services/ExpressionUtil.js';
@@ -157,6 +159,7 @@ export default {
       extensionGeneral: false,
       commonCtx: null,
       loaded: false,
+      creationDenied: false,
       saving: false,
       sharing: {
         type: false,
@@ -220,6 +223,11 @@ export default {
 
   async created() {
     const cpId = this.cpViewCtx.getCp().id;
+    const access = await contentSvc.getAccess(cpId);
+    if (!contentSvc.canCreate(access, 'New')) {
+      this.creationDenied = true;
+      return;
+    }
     const [fields, layout, forms, settings, rules, orderSpec, extensionForm] = await Promise.all([
       this.cpViewCtx.getSpecimenDict(true, 'New'),
       this.cpViewCtx.getSpecimenAddEditLayout('New'),

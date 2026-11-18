@@ -41,7 +41,8 @@ export default {
     'autoSearchOpen',
     'allowStarring',
     'showRowActions',
-    'otherParams'
+    'otherParams',
+    'dataSource'
   ],
 
   emits: ['selectedRows', 'rowClicked', 'listLoaded', 'rowStarToggled'],
@@ -70,7 +71,7 @@ export default {
 
   async created() {
     const listId = this.listId = {listName: this.name, objectId: this.objectId};
-    this.config = await http.get('lists/config', listId);
+    this.config = this.dataSource ? this.dataSource.config : await http.get('lists/config', listId);
 
     const cache = {};
     this.schema.filters = this.filters = (this.config.filters || []).map(
@@ -192,19 +193,22 @@ export default {
       this.loading = true;
 
       const otherParams = this.otherParams || {};
-      this.list = await http.post(
-        'lists/data',
-        this.search,
-        {
-          ...this.listId,
-          includeCount: this.includeCount,
-          orderBy: orderBy,
-          orderDirection: orderDirection,
-          maxResults: pageSize,
-          ...otherParams
-        }
-      );
-      this.loading = false;
+      try {
+        this.list = this.dataSource ? await this.dataSource.load({filters, pageSize, orderBy, orderDirection, includeCount: this.includeCount}) : await http.post(
+          'lists/data',
+          this.search,
+          {
+            ...this.listId,
+            includeCount: this.includeCount,
+            orderBy: orderBy,
+            orderDirection: orderDirection,
+            maxResults: pageSize,
+            ...otherParams
+          }
+        );
+      } finally {
+        this.loading = false;
+      }
       
       this.schema = {filters: this.filters};
       const columns = this.schema.columns = this.list.columns.map(
@@ -307,6 +311,10 @@ export default {
     },
 
     loadListSize: async function() {
+      if (this.dataSource) {
+        this.size = await this.dataSource.count(this.searchFilters);
+        return;
+      }
       if (this.includeCount) {
         return;
       }

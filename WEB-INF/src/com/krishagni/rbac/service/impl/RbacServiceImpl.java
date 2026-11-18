@@ -673,6 +673,20 @@ public class RbacServiceImpl implements RbacService {
 		setName(detail, role);
 		role.setDescription(detail.getDescription());
 		role.setAcl(getAcl(detail, role));
+		if (detail.getContentPolicies() != null) {
+			Set<Long> protocols = new java.util.HashSet<>();
+			for (com.krishagni.rbac.events.ProtocolContentPolicy rule : detail.getContentPolicies()) {
+				if (rule == null || rule.getCpId() == null || (rule.getCpId() != -1L && rule.getCpId() <= 0) ||
+					!protocols.add(rule.getCpId()) || rule.getAllowed() == null || rule.getAllowed().stream().anyMatch(key ->
+						key == null || !(key.equals("collection") || key.equals("receipt") || key.matches("form:[1-9][0-9]*"))) ||
+					(rule.getCreateLineages() != null && rule.getCreateLineages().stream().anyMatch(lineage ->
+						lineage == null || !Set.of("New", "Derived", "Aliquot").contains(lineage)))) {
+					throw OpenSpecimenException.userError(com.krishagni.catissueplus.core.common.errors.CommonErrorCode.INVALID_INPUT,
+						"Invalid protocol content permissions");
+				}
+			}
+			role.setContentPoliciesJson(com.krishagni.catissueplus.core.common.util.Utility.objectToJson(detail.getContentPolicies()));
+		}
 		return role;
 	}
 	

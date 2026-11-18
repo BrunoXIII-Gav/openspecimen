@@ -4,7 +4,7 @@
       class="os-muted-list-header"
       :data="occurredVisits"
       :schema="{columns: tabFields}"
-      :showRowActions="true"
+      :showRowActions="!navigationOnly"
       @rowClicked="onVisitRowClick"
       :expanded="expandedVisits"
       ref="listView">
@@ -22,7 +22,7 @@
 
       <template class="visit-details" #expansionRow="{rowObject}">
         <os-overview :schema="dict" :object="{cp, cpr, visit: rowObject.visit, userRole}"
-          v-if="dict && dict.length > 0" />
+          v-if="!navigationOnly && dict && dict.length > 0" />
       </template>
     </os-list-view>
   </div>
@@ -38,7 +38,7 @@ import visitSvc from '@/biospecimen/services/Visit.js';
 import wfSvc from '@/biospecimen/services/Workflow.js';
 
 export default {
-  props: ['cp', 'cpr', 'visits', 'dict'],
+  props: ['cp', 'cpr', 'visits', 'dict', 'navigationOnly'],
 
   inject: ['cpViewCtx'],
 
@@ -55,6 +55,10 @@ export default {
   },
 
   created() {
+    if (this.navigationOnly) {
+      this.tabFields = visitSvc.getDefaultOccurredVisitsTabFields().filter(field => field.name === 'visit.description');
+      return;
+    }
     this.cpViewCtx.getOccurredVisitsTabFields().then(tabFields => this.tabFields = tabFields);
     this.userRole = this.cpViewCtx.getRole();
   },
@@ -68,6 +72,7 @@ export default {
 
   methods: {
     onVisitRowClick: function(rowObject) {
+      if (this.navigationOnly) { this.gotoVisit(rowObject.visit); return; }
       const [prev] = this.expandedVisits;
       this.expandedVisits.length = 0;
       if (!prev || prev.visit != rowObject.visit) {

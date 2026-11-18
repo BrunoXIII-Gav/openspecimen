@@ -9,18 +9,17 @@
               @click="edit" v-if="isAnyUserUpdateAllowed" />
 
             <os-menu icon="plus" :label="$t('common.buttons.create')"
-              :options="[
-                {icon: 'flask',     caption: $t('specimens.derived'),  onSelect: createDerivatives},
-                {icon: 'share-alt', caption: $t('specimens.aliquots'), onSelect: createAliquots}
-              ]"
+              :options="creationOptions"
 
-              v-if="specimen.availabilityStatus == 'Available' && isCreateChildrenAllowed"
+              v-if="specimen.availabilityStatus == 'Available' && isCreateChildrenAllowed && creationOptions.length"
             />
 
             <os-button left-icon="print" :label="$t('common.buttons.print')"
               @click="confirmPrint" v-if="isPrintAllowed" />
 
             <os-add-to-cart :specimens="[{id: specimen.id}]" />
+
+            <os-button :label="$t('specimens.collection_matrix.open')" @click="openMatrix" v-if="canOpenMatrix" />
 
             <os-menu left-icon="plus" :label="$t('specimens.add_event')" :options="ctx.eventForms"
               :lazy-load="true" @menu-toggled="loadEventForms"
@@ -92,7 +91,7 @@
           </div>
         </template>
       </os-section>
-      <FieldReferences :cp-id="ctx.cp.id" target="specimen" :cpr-id="cpr.id" :visit-id="visit.id"
+      <FieldReferences v-if="!cpr.contextOnly && !visit.contextOnly" :cp-id="ctx.cp.id" target="specimen" :cpr-id="cpr.id" :visit-id="visit.id"
         :specimen-id="specimen.id" :parent-id="specimen.parentId"
         :target-prefix="'specimen-view-' + specimen.id" />
 
@@ -187,6 +186,7 @@
 </template>
 
 <script>
+import contentSvc from '@/common/services/ProtocolContent.js';
 
 import EventsSummaryList from './EventsSummaryList.vue';
 import SpecimenTree from '@/biospecimen/components/SpecimenTree.vue';
@@ -194,6 +194,7 @@ import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
+import {matrixOrigin} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
 import wfSvc from '@/biospecimen/services/Workflow.js';
 
 import alertsSvc from '@/common/services/Alerts.js';
@@ -248,6 +249,7 @@ export default {
       },
 
       eventOverviewPluginProps: { },
+      creationAccess: null,
 
       transferSchema,
 
@@ -261,6 +263,7 @@ export default {
 
   async created() {
     this._setupSpecimen();
+    this.creationAccess = await contentSvc.getAccess(this.ctx.cp.id);
     const fields = await this.cpViewCtx.getSpecimenDict(false, this.specimen.lineage);
     this.ctx.dict = this._getOverviewFields(fields, this.specimen.lineage);
     if (typeof this.action == 'string') {
@@ -287,6 +290,15 @@ export default {
   },
 
   computed: {
+    canOpenMatrix() {
+      return this.cpViewCtx.isReadSpecimenAllowed(this.cpr) && (this.isAnyUserUpdateAllowed || this.cpViewCtx.isCreateSpecimenAllowed(this.cpr));
+    },
+    creationOptions() {
+      return [
+        {lineage: 'Derived', icon: 'flask', caption: this.$t('specimens.derived'), onSelect: this.createDerivatives},
+        {lineage: 'Aliquot', icon: 'share-alt', caption: this.$t('specimens.aliquots'), onSelect: this.createAliquots}
+      ].filter(option => contentSvc.canCreate(this.creationAccess, option.lineage));
+    },
     overviewFields() {
       return this.ctx.dict.filter(field => !this.specimen.intermediate || field.name != 'specimen.label')
         .map(field => field.name == 'specimen.parentLabel' && this.specimen.parentIntermediate ?
@@ -390,6 +402,10 @@ export default {
   },
 
   methods: {
+    openMatrix() {
+      if (this.canOpenMatrix) routerSvc.goto('SpecimenCollectionMatrix', {cpId: this.ctx.cp.id},
+        {ids: String(this.specimen.id), returnTo: matrixOrigin(this.$route)});
+    },
     _getOverviewFields: function(fields, lineage) {
       if (!['Derived', 'Aliquot'].includes(lineage)) {
         return fields;

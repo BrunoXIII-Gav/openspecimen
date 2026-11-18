@@ -10,7 +10,7 @@
       :allow-selection="allowSelection"
       :data="pendingVisits"
       :schema="{columns: tabFields}"
-      :showRowActions="true"
+      :showRowActions="!navigationOnly"
       :expanded="expandedVisits"
       @rowClicked="onVisitRowClick"
       @selectedRows="onVisitRowsSelection"
@@ -23,7 +23,7 @@
 
       <template class="visit-details" #expansionRow="{rowObject}">
         <os-overview :schema="dict" :object="{cp, cpr, visit: rowObject.visit, userRole}"
-          v-if="dict && dict.length > 0" />
+          v-if="!navigationOnly && dict && dict.length > 0" />
       </template>
     </os-list-view>
   </div>
@@ -32,11 +32,12 @@
 <script>
 
 import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
+import visitSvc from '@/biospecimen/services/Visit.js';
 import alertsSvc from '@/common/services/Alerts.js';
 import routerSvc from '@/common/services/Router.js';
 
 export default {
-  props: ['cp', 'cpr', 'visits', 'dict'],
+  props: ['cp', 'cpr', 'visits', 'dict', 'navigationOnly'],
 
   inject: ['cpViewCtx'],
 
@@ -55,6 +56,10 @@ export default {
   },
 
   created() {
+    if (this.navigationOnly) {
+      this.tabFields = visitSvc.getDefaultPendingVisitsTabFields().filter(field => field.name === 'visit.description');
+      return;
+    }
     this.cpViewCtx.getPendingVisitsTabFields().then(tabFields => this.tabFields = tabFields);
     this.cpViewCtx.isMultiVisitsCollectionAllowed().then(allowSelection => this.allowSelection = allowSelection);
     this.userRole = this.cpViewCtx.getRole();
@@ -77,12 +82,13 @@ export default {
     },
 
     isCreateOrUpdateVisitAllowed: function() {
-      return this.cpViewCtx.isCreateOrUpdateVisitAllowed(this.cpr);
+      return !this.navigationOnly && this.cpViewCtx.isCreateOrUpdateVisitAllowed(this.cpr);
     }
   },
 
   methods: {
     onVisitRowClick: function(rowObject) {
+      if (this.navigationOnly) { this._gotoVisit(rowObject.visit); return; }
       const [prev] = this.expandedVisits;
       this.expandedVisits.length = 0;
       if (!prev || prev.visit != rowObject.visit) {

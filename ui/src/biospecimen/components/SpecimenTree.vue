@@ -11,6 +11,8 @@
 
       <os-add-to-cart :specimens="selectedExistingSpecimens"  v-if="selectedExistingSpecimens.length > 0" />
 
+      <slot name="after-cart" />
+
       <os-specimen-actions :cp="cp" :specimens="selectedExistingSpecimens" @reloadSpecimens="reloadSpecimens"
         v-if="selectedExistingSpecimens.length > 0" />
 

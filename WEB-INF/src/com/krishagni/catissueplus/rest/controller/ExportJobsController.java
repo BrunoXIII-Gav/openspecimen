@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.krishagni.catissueplus.core.common.events.RequestEvent;
 import com.krishagni.catissueplus.core.common.events.ResponseEvent;
+import com.krishagni.catissueplus.core.common.util.ExcelExport;
 import com.krishagni.catissueplus.core.exporter.events.ExportDetail;
 import com.krishagni.catissueplus.core.exporter.events.ExportJobDetail;
 import com.krishagni.catissueplus.core.exporter.services.ExportService;
@@ -48,7 +49,7 @@ public class ExportJobsController {
 	public void getExportJobOutputFile(@PathVariable("id") Long jobId, HttpServletResponse httpResp) {
 		String outputFile = response(exportSvc.getExportFile(request(jobId)));
 		String fileExtn = FilenameUtils.getExtension(outputFile);
-		httpResp.setContentType("application/" + fileExtn);
+		httpResp.setContentType("xlsx".equals(fileExtn) ? ExcelExport.CONTENT_TYPE : "application/" + fileExtn);
 		httpResp.setHeader("Content-Disposition", "attachment;filename=ExportJob_" + jobId + "." + fileExtn);
 
 		InputStream in = null;

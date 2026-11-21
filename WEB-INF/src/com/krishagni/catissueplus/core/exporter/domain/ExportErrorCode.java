@@ -7,6 +7,12 @@ public enum  ExportErrorCode implements ErrorCode {
 
 	NO_GEN_FOR_OBJECT_TYPE,
 
+	INVALID_FORMAT,
+
+	EXCEL_TOO_MANY_COLUMNS,
+
+	EXCEL_CELL_TOO_LONG,
+
 	JOB_NOT_FOUND;
 
 	@Override

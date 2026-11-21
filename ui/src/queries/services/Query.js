@@ -2,6 +2,7 @@
 import alertsSvc from '@/common/services/Alerts.js';
 import http from '@/common/services/HttpClient.js';
 import util from '@/queries/services/Util.js';
+import exportFormat from '@/common/services/ExportFormat.js';
 
 class Query {
   async getCount(query, facets) {
@@ -67,8 +68,11 @@ class Query {
     return http.post('query', payload);
   }
 
-  async exportData(query, facets, orderBy) {
+  async exportData(query, facets, orderBy, format) {
+    const fileFormat = format || await exportFormat.choose();
+    if (!fileFormat) return null;
     const payload = {
+      fileFormat,
       savedQueryId: query.id,
       cpId: query.cpId,
       cpGroupId: query.cpGroupId,

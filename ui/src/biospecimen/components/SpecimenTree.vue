@@ -6,12 +6,12 @@
     </template>
 
     <template #actions>
-      <os-button primary :left-icon="'plus'" :label="$t('participants.collect')" @click="collectSpecimens"
-        v-if="cpr.hasConsented && visit && visit.cpId > 0 && (!specimen || specimen.status == 'Collected') && selectedPendingSpecimens.length > 0" />
+      <os-button primary :left-icon="'plus'" :label="$t('participants.collect')" :disabled="collecting" @click="collectSpecimens"
+        v-if="canCollect" />
 
       <os-add-to-cart :specimens="selectedExistingSpecimens"  v-if="selectedExistingSpecimens.length > 0" />
 
-      <slot name="after-cart" />
+      <slot name="after-cart" :selected-specimens="selectedSpecimens" />
 
       <os-specimen-actions :cp="cp" :specimens="selectedExistingSpecimens" @reloadSpecimens="reloadSpecimens"
         v-if="selectedExistingSpecimens.length > 0" />
@@ -47,15 +47,26 @@ import specimenSvc from '@/biospecimen/services/Specimen.js';
 import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 import util from '@/common/services/Util.js';
 import routerSvc from '@/common/services/Router.js';
+import alertsSvc from '@/common/services/Alerts.js';
+import contentSvc from '@/common/services/ProtocolContent.js';
+import collectionSvc from '@/biospecimen/services/SpecimenCollection.js';
+import visitSvc from '@/biospecimen/services/Visit.js';
+import {matrixOrigin} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
 
 export default {
   props: ['cp', 'cpr', 'visit', 'specimen', 'specimens', 'refDate', 'page-top'],
 
   emits: ['reload'],
 
+  inject: {cpViewCtx: {default: null}},
+
   data() {
     return {
       treeCfg: {},
+
+      contentAccess: null,
+
+      collecting: false,
 
       panelFixed: false,
 
@@ -72,6 +83,7 @@ export default {
   },
 
   created() {
+    contentSvc.getAccess(this.cp.id).then(access => this.contentAccess = access);
     const treeCfgQ = cpSvc.getSpecimenTreeCfg((this.cp && this.cp.id) || -1);
     const dictQ    = specimenSvc.getDict((this.cp && this.cp.id) || -1);
     Promise.all([dictQ, treeCfgQ]).then(
@@ -103,8 +115,17 @@ export default {
   unmounted() {
     window.removeEventListener('wheel', this.onScroll);
   },
-   
+
   computed: {
+    canCollect() {
+      return !!this.contentAccess && !!this.visit && (this.cpr.hasConsented || this.cpr.contextOnly) &&
+        (!this.specimen || this.specimen.status == 'Collected') &&
+        this.cpViewCtx?.isCreateSpecimenAllowed?.(this.cpr) !== false &&
+        this.items.some(({specimen}) => (!specimen.status || specimen.status == 'Pending') &&
+          (!Array.isArray(this.contentAccess?.createLineages) || this.contentAccess.createLineages.includes(specimen.lineage)) &&
+          (specimen.lineage != 'New' || contentSvc.allows(this.contentAccess, 'collection')));
+    },
+
     startDate: function() {
       if (this.refDate) {
         return new Date(this.refDate);
@@ -239,86 +260,75 @@ export default {
 
   methods: {
     onItemsSelection: function(items) {
-      const prevSelectedItems = this.prevSelectedItems || [];
-
-      // new items = items not present in previous selection
-      const newItems = items.filter(item => prevSelectedItems.indexOf(item) == -1);
-
-      // removed items = items present in previous selection but not in the current selection
-      const rmItems  = prevSelectedItems.filter(item => items.indexOf(item) == -1);
-
-      const added = [];
-      for (let item of newItems) {
-        if (!item.expanded) {
-          // when an item is selected in collapsed mode, select all its descendants as well
-          Array.prototype.push.apply(added, this._getDescendants(this.items, item));
-        }
-      }
-
-      const removed = [];
-      for (let item of rmItems) {
-        if (!item.expanded) {
-          // when an item is de-selected in collapsed mode, de-select all its descendants as well
-          Array.prototype.push.apply(removed, this._getDescendants(this.items, item));
-        }
-      }
-
-      items = items.concat(added.filter(item => items.indexOf(item) == -1)) // add new items
-        .filter(item => removed.indexOf(item) == -1); // filter the removed items
-
       this.ctx.selectedSpecimens = items;
-      this.prevSelectedItems = items;
-      this.$refs.spmnsTable.setSelection(items);
     },
 
     collectSpecimens: async function() {
-      const specimenIds = this.selectedPendingSpecimens.map(({specimen: {id}}) => id).filter(id => id > 0);
-      const reqIds = this.selectedPendingSpecimens
-        .filter(({specimen: {id, reqId}}) => !id && reqId > 0)
-        .map(({specimen: {reqId}}) => reqId);
-
-      if (specimenIds.length == 0 && reqIds.length == 0) {
-        alert('Nothing to collect');
-        return;
-      }
-
-      const reqOrSpmnIds = {specimens: specimenIds, requirements: reqIds};
-      const wfInstanceSvc = this.$osSvc.tmWfInstanceSvc;
-      if (wfInstanceSvc) {
-        const opts = {params: this._getBatchParams(this.$t('participants.collect_specimens'), reqOrSpmnIds)};
-
-        let wfName;
-        if (!this.visit.id || !this.visit.status || this.visit.status == 'Pending') {
-          wfName = await this._getCollectVisitsWf();
-          if (this.visit.id > 0) {
-            opts.inputType = 'visit';
-          }
-        } else {
-          wfName = await this._getCollectPendingSpmnsWf();
-          if (this.specimen) {
-            opts.inputType = 'specimen';
-          }
-        }
-
-        let inputItem = {
-          cpr:   {id: this.cpr.id, cpId: this.cp.id, cpShortTitle: this.cp.shortTitle},
-          visit: {id: this.visit.id, cpId: this.cp.id, cpShortTitle: this.cp.shortTitle}
+      if (this.collecting) return;
+      this.collecting = true;
+      try {
+        const [specimens, policy] = await Promise.all([
+          visitSvc.getSpecimens(this.cpr.id, this.visit.eventId, this.visit.id > 0 ? this.visit.id : undefined),
+          contentSvc.getAccess(this.cp.id)
+        ]);
+        const selection = {
+          explicit: this.ctx.selectedSpecimens.length > 0,
+          specimenIds: this.selectedSpecimens.filter(specimen => specimen.id > 0).map(specimen => specimen.id),
+          reqIds: this.selectedSpecimens.filter(specimen => !(specimen.id > 0)).map(specimen => specimen.reqId)
         };
-
-        if (this.visit.eventId) {
-          inputItem.cpe = {id: this.visit.eventId, cpId: this.cp.id, cpShortTitle: this.cp.shortTitle};
+        const plan = collectionSvc.collectionPlan(specimens, selection,
+          {...policy, canCreate: this.cpViewCtx?.isCreateSpecimenAllowed?.(this.cpr) !== false});
+        if (!plan.length) {
+          alertsSvc.error({code: selection.explicit ? 'specimens.collection_matrix.parent_not_collected' :
+            'specimens.collection_matrix.nothing_to_collect'});
+          return;
         }
+        const specimenIds = plan.filter(item => item.specimen.id > 0).map(item => item.specimen.id);
+        const reqIds = plan.filter(item => !(item.specimen.id > 0)).map(item => item.specimen.reqId);
+        const reqOrSpmnIds = {specimens: specimenIds, requirements: reqIds};
+        const wfInstanceSvc = this.$osSvc?.tmWfInstanceSvc;
+        if (wfInstanceSvc) {
+          const opts = {params: this._getBatchParams(this.$t('participants.collect_specimens'), reqOrSpmnIds)};
 
-        if (this.specimen) {
-          inputItem.specimen = {id: this.specimen.id};
+          let wfName;
+          if (!this.visit.id || !this.visit.status || this.visit.status == 'Pending') {
+            wfName = await this._getCollectVisitsWf();
+            if (this.visit.id > 0) {
+              opts.inputType = 'visit';
+            }
+          } else {
+            wfName = await this._getCollectPendingSpmnsWf();
+            if (this.specimen) {
+              opts.inputType = 'specimen';
+            }
+          }
+
+          let inputItem = {
+            cpr:   {id: this.cpr.id, cpId: this.cp.id, cpShortTitle: this.cp.shortTitle},
+            visit: {id: this.visit.id, cpId: this.cp.id, cpShortTitle: this.cp.shortTitle}
+          };
+
+          if (this.visit.eventId) {
+            inputItem.cpe = {id: this.visit.eventId, cpId: this.cp.id, cpShortTitle: this.cp.shortTitle};
+          }
+
+          if (this.specimen) {
+            inputItem.specimen = {id: this.specimen.id};
+          }
+
+          const instance = await wfInstanceSvc.createInstance({name: wfName}, null, null, null, [inputItem], opts);
+          wfInstanceSvc.gotoInstance(instance.id);
+
+          return;
         }
-
-        const instance = await wfInstanceSvc.createInstance({name: wfName}, null, null, null, [inputItem], opts);
-        wfInstanceSvc.gotoInstance(instance.id);
-      } else {
         routerSvc.goto('VisitCollectSpecimens',
           {cpId: this.cp.id, cprId: this.cpr.id, visitId: this.visit.id > 0 ? this.visit.id : -1},
-          {eventId: this.visit.eventId, specimenIds: specimenIds.join(','), reqIds: reqIds.join(',')});
+          {eventId: this.visit.eventId, mode: 'collect',
+            specimenIds: specimenIds.join(','),
+            reqIds: reqIds.join(','),
+            returnTo: matrixOrigin(this.$route)});
+      } finally {
+        this.collecting = false;
       }
     },
 
@@ -378,7 +388,7 @@ export default {
             depth, expanded: true, show: true, uid, parentUid
           };
           result.push(item);
-      
+
           const flattened = this._flattenSpecimens(children || [], depth + 1, uid, specimen);
           Array.prototype.push.apply(result, flattened);
           item.hasChildren = (flattened || []).length > 0;

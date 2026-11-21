@@ -38,6 +38,12 @@ public class SpecimenDetail extends SpecimenInfo {
 	private CollectionEventDetail collectionEvent;
 	
 	private ReceivedEventDetail receivedEvent;
+
+	private SpecimenFormRecordDetail processingEvent;
+
+	@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+	public SpecimenFormRecordDetail getProcessingEvent() { return processingEvent; }
+	public void setProcessingEvent(SpecimenFormRecordDetail processingEvent) { this.processingEvent = processingEvent; }
 	
 	private String labelFmt;
 	

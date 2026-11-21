@@ -81,6 +81,8 @@ public enum SpecimenErrorCode implements ErrorCode {
 	PARENT_NF_BY_VISIT_AND_SR,
 	
 	COLL_PARENT_REQ,
+
+	PRIMARY_RECEIPT_REQUIRED,
 	
 	COLL_OR_MISSED_PARENT_REQ,
 	

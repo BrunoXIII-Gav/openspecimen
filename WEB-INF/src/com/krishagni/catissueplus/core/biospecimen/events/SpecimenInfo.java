@@ -76,6 +76,11 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 		
 	private String lineage;
 
+	private Boolean primaryReceived;
+
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	public Boolean getPrimaryReceived() { return primaryReceived; }
+
 	private String anatomicSite;
 
 	private String laterality;
@@ -637,6 +642,7 @@ public class SpecimenInfo extends AttributeModifiedSupport implements Comparable
 
 	public static SpecimenInfo fromTo(Specimen specimen, SpecimenInfo result) {
 		result.setId(specimen.getId());
+		result.primaryReceived = specimen.getPrimarySpecimen().isReceived();
 		
 		SpecimenRequirement sr = specimen.getSpecimenRequirement();
 		if (sr != null) {

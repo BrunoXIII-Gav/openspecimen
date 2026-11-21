@@ -116,6 +116,75 @@ public class SpecimenWorkflowTest {
 		for (var entry : restore.entrySet()) entry.getKey().set(Modifier.isStatic(entry.getKey().getModifiers()) ? null : EventPublisher.getInstance(), entry.getValue());
 	}
 
+	@Test public void processingFormsRespectContentPermissionsAndIncludeTheirCaptions() throws Exception {
+		var processing = processingService(new ArrayList<>(), new krishagni.catissueplus.beans.FormContextBean());
+		assertTrue(processing.getForms(1L).isEmpty());
+		user.setType(User.Type.SUPER);
+		var forms = processing.getForms(1L);
+		assertEquals(1, forms.size()); assertEquals("Plasma event", forms.get(0).getFormCaption());
+	}
+
+	@Test public void processingRecordUsesTheNewChildAndDiscardsClientRecordIdentity() throws Exception {
+		assertProcessingRecordUsesTheNewChild("Derived");
+	}
+
+	@Test public void aliquotProcessingRecordChecksItsOwnPermissionsContextAndRequiredFields() throws Exception {
+		assertProcessingRecordUsesTheNewChild("Aliquot");
+	}
+
+	private void assertProcessingRecordUsesTheNewChild(String lineage) throws Exception {
+		user.setType(User.Type.SUPER);
+		var context = new krishagni.catissueplus.beans.FormContextBean();
+		context.setId(9L); context.setContainerId(90L); context.setEntityType("SpecimenEvent"); context.setCpId(-1L);
+		var data = new ArrayList<edu.common.dynamicextensions.napi.FormData>();
+		var processing = processingService(data, context);
+		var input = new SpecimenFormRecordDetail(); input.setFormId(90L); input.setFormCtxtId(9L);
+		input.setData(new HashMap<>(Map.of("notes", "Child processing", "id", 500L, "recordId", 600L,
+			"appData", Map.of("objectId", 999L, "formStatus", "DRAFT"))));
+		Specimen child = specimens.get(212L); child.setLineage(lineage);
+		processing.save(child, input);
+		assertEquals(1, data.size()); assertNull(data.get(0).getRecordId());
+		assertEquals(212L, data.get(0).getAppData().get("objectId"));
+		assertEquals("COMPLETE", data.get(0).getAppData().get("formStatus"));
+		// FormService adds the linked object before persisting the record.
+		// This must not fail when processing form data is saved.
+		data.get(0).getAppData().put("object", child);
+		assertSame(child, data.get(0).getAppData().get("object"));
+		assertEquals("Child processing", data.get(0).getFieldValue("notes").getValue());
+		context.setCpId(2L);
+		assertThrows(RuntimeException.class, () -> processing.save(child, input));
+		context.setCpId(-1L); context.setEntityType("Participant");
+		assertThrows(RuntimeException.class, () -> processing.save(child, input));
+		context.setEntityType("SpecimenEvent"); context.setContainerId(91L);
+		assertThrows(RuntimeException.class, () -> processing.save(child, input));
+		context.setContainerId(90L); input.setData(Map.of());
+		assertThrows(RuntimeException.class, () -> processing.save(child, input));
+		user.setType(User.Type.NONE);
+		assertThrows(RuntimeException.class, () -> processing.save(child, input));
+		assertEquals(1, data.size());
+	}
+
+	private com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenProcessingService processingService(
+		List<edu.common.dynamicextensions.napi.FormData> savedData, krishagni.catissueplus.beans.FormContextBean context) throws Exception {
+		var form = new edu.common.dynamicextensions.domain.nui.Container(); form.setId(90L); form.setName("PlasmaEvent"); form.setCaption("Plasma event");
+		var notes = new edu.common.dynamicextensions.domain.nui.StringTextField(); notes.setName("notes"); notes.setUserDefinedName("notes"); notes.setCaption("Notes"); notes.setMandatory(true); form.addControl(notes);
+		var processing = new com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenProcessingService() {
+			@Override protected edu.common.dynamicextensions.domain.nui.Container getForm(Long id) { return form; }
+			@Override protected void saveFormData(edu.common.dynamicextensions.napi.FormData data) { data.validate(); savedData.add(data); }
+		};
+		set(processing, "formDao", proxy(com.krishagni.catissueplus.core.de.repository.FormDao.class, (name, args) -> {
+			if (name.equals("getFormContext")) return context;
+			if (name.equals("getFormById")) { var result = new com.krishagni.catissueplus.core.de.domain.Form(); result.setId(90L); result.setName("PlasmaEvent"); result.setCaption("Plasma event"); return result; }
+			if (name.equals("getFormContexts")) {
+				if (!args[0].equals(-1L)) return List.of();
+				var result = new com.krishagni.catissueplus.core.de.events.FormCtxtSummary();
+				result.setFormId(90L); result.setFormCtxtId(9L); result.setEntityType("SpecimenEvent"); return List.of(result);
+			}
+			throw new AssertionError(name);
+		}));
+		return processing;
+	}
+
 	@Test public void specimenContextRequiresReadAndContainsNoParticipantOrVisitDetails() {
 		var response = service.getContext(212L); response.throwErrorIfUnsuccessful();
 		Map<?, ?> cpr = (Map<?, ?>) response.getPayload().get("cpr"), visit = (Map<?, ?>) response.getPayload().get("visit");
@@ -147,6 +216,78 @@ public class SpecimenWorkflowTest {
 		}
 	}
 
+	@Test public void explicitlySelectedReceivedPrimaryCanBeEditedWithoutChangingCollection() {
+		service.receive(List.of(input(212L))).throwErrorIfUnsuccessful();
+		var edit = input(212L); edit.setEditExisting(true);
+		edit.getReceivedEvent().setComments("Corrected receipt"); edit.getReceivedEvent().setTime(new Date(200));
+		service.receive(List.of(edit)).throwErrorIfUnsuccessful();
+		Specimen specimen = specimens.get(212L);
+		assertEquals("Corrected receipt", specimen.getReceivedComments());
+		assertEquals(new Date(200), specimen.getReceivedTime());
+		assertEquals("original collection", specimen.getCollectionComments());
+		assertEquals(new Date(10), specimen.getCollectionTime());
+		assertEquals(new BigDecimal("10"), specimen.getInitialQuantity());
+		assertEquals(new BigDecimal("8"), specimen.getAvailableQuantity());
+		assertEquals(2, saved.size());
+	}
+
+	@Test public void editingReceivedQuantityPreservesConsumptionAndRejectsQuantityBelowConsumedAmount() {
+		var first = input(212L); first.getReceivedEvent().setReceivedQtyDifferent(true);
+		first.getReceivedEvent().setReceivedQty(new BigDecimal("8")); first.getReceivedEvent().setReceivedQtyReason("Measured");
+		service.receive(List.of(first)).throwErrorIfUnsuccessful();
+		Specimen specimen = specimens.get(212L); specimen.setAvailableQuantity(new BigDecimal("3"));
+		var edit = input(212L); edit.setEditExisting(true); edit.getReceivedEvent().setReceivedQtyDifferent(true);
+		edit.getReceivedEvent().setReceivedQty(new BigDecimal("9")); edit.getReceivedEvent().setReceivedQtyReason("Corrected measurement");
+		service.receive(List.of(edit)).throwErrorIfUnsuccessful();
+		assertEquals(new BigDecimal("9"), specimen.getReceivedQuantity());
+		assertEquals(new BigDecimal("4"), specimen.getAvailableQuantity());
+		assertEquals(new BigDecimal("10"), specimen.getInitialQuantity());
+		saved.clear(); edit.getReceivedEvent().setReceivedQty(new BigDecimal("4"));
+		assertThrows(RuntimeException.class, () -> service.receive(List.of(edit)).throwErrorIfUnsuccessful());
+		assertTrue(saved.isEmpty());
+		assertEquals(new BigDecimal("9"), specimen.getReceivedQuantity());
+		assertEquals(new BigDecimal("4"), specimen.getAvailableQuantity());
+	}
+
+	@Test public void receiptMetadataEditsWithoutQuantityFieldsPreserveAnEarlierDiscrepancyAndConsumption() {
+		var first = input(212L); first.getReceivedEvent().setReceivedQtyDifferent(true);
+		first.getReceivedEvent().setReceivedQty(new BigDecimal("8")); first.getReceivedEvent().setReceivedQtyReason("Measured");
+		service.receive(List.of(first)).throwErrorIfUnsuccessful();
+		Specimen specimen = specimens.get(212L); specimen.setAvailableQuantity(new BigDecimal("3"));
+		var edit = input(212L); edit.setEditExisting(true); edit.getReceivedEvent().setComments("Corrected note");
+		service.receive(List.of(edit)).throwErrorIfUnsuccessful();
+		assertEquals("Corrected note", specimen.getReceivedComments());
+		assertEquals(new BigDecimal("8"), specimen.getReceivedQuantity());
+		assertEquals("Measured", specimen.getReceivedQuantityReason());
+		assertEquals(new BigDecimal("3"), specimen.getAvailableQuantity());
+	}
+
+	@Test public void explicitReceiptEditingStillRequiresEveryPermissionAndACollectedPrimary() {
+		service.receive(List.of(input(212L))).throwErrorIfUnsuccessful(); saved.clear();
+		var edit = input(212L); edit.setEditExisting(true);
+		for (String permission : List.of("read", "update", "receipt")) {
+			read = !permission.equals("read"); update = !permission.equals("update"); receipt = !permission.equals("receipt");
+			assertThrows(RuntimeException.class, () -> service.receive(List.of(edit)).throwErrorIfUnsuccessful());
+		}
+		read = update = receipt = true;
+		for (String lineage : List.of("Derived", "Aliquot")) {
+			specimens.get(212L).setLineage(lineage);
+			assertThrows(RuntimeException.class, () -> service.receive(List.of(edit)).throwErrorIfUnsuccessful());
+		}
+		specimens.get(212L).setLineage("New"); specimens.get(212L).setCollectionStatus("Pending");
+		assertThrows(RuntimeException.class, () -> service.receive(List.of(edit)).throwErrorIfUnsuccessful());
+		assertTrue(saved.isEmpty());
+	}
+
+	@Test public void invalidReceiptEditBatchDoesNotPartiallyOverwritePreviousReceipts() {
+		specimens.put(213L, specimen(213L));
+		service.receive(List.of(input(212L), input(213L))).throwErrorIfUnsuccessful(); saved.clear();
+		var first = input(212L); first.setEditExisting(true); first.getReceivedEvent().setComments("Do not persist");
+		var second = input(213L); second.setEditExisting(true); second.getReceivedEvent().setUser(null);
+		assertThrows(RuntimeException.class, () -> service.receive(List.of(first, second)).throwErrorIfUnsuccessful());
+		assertTrue(saved.isEmpty()); assertNull(specimens.get(212L).getReceivedComments());
+	}
+
 	@Test public void failedBatchAndRepeatedReceiptDoNotOverwritePreviousData() {
 		specimens.put(213L, specimen(213L));
 		var invalid = input(213L); invalid.getReceivedEvent().setTime(null);
@@ -175,7 +316,42 @@ public class SpecimenWorkflowTest {
 		assertTrue(saved.isEmpty());
 	}
 
-	@Test public void receiptPayloadRejectsOtherSpecimenFields() {
+	@Test public void individualCreationAndPendingToCollectedUpdatesRequirePrimaryReceiptEvenForAdmins() throws Exception {
+		user.setType(User.Type.SUPER);
+		var service = new com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenServiceImpl();
+		var method = service.getClass().getDeclaredMethod("saveOrUpdate", SpecimenDetail.class, Specimen.class, Specimen.class, Specimen.class);
+		method.setAccessible(true);
+		Specimen primary = specimens.get(212L);
+		for (String lineage : List.of("Derived", "Aliquot")) {
+			Specimen child = new Specimen() { @Override public boolean hasPhiFields() { return false; } };
+			child.setCollectionProtocol(cp); child.setVisit(primary.getVisit()); child.setCollectionStatus("Collected");
+			child.setLineage(lineage); child.setParentSpecimen(primary);
+			Specimen pending = specimen(213L); pending.setLineage(lineage); pending.setParentSpecimen(primary); pending.setCollectionStatus("Pending");
+			for (Specimen existing : Arrays.asList(null, pending)) {
+				var error = assertThrows(InvocationTargetException.class, () -> method.invoke(service, new SpecimenDetail(), child, existing, primary));
+				assertTrue(error.getCause().toString(), error.getCause() instanceof com.krishagni.catissueplus.core.common.errors.OpenSpecimenException);
+				assertTrue(((com.krishagni.catissueplus.core.common.errors.OpenSpecimenException) error.getCause()).containsError(
+					com.krishagni.catissueplus.core.biospecimen.domain.factory.SpecimenErrorCode.PRIMARY_RECEIPT_REQUIRED));
+			}
+		}
+		assertEquals(new BigDecimal("8"), primary.getAvailableQuantity());
+		assertTrue(saved.isEmpty());
+	}
+
+	@Test public void primaryReceiptReadinessFollowsTheOriginalPrimaryForEveryDescendant() {
+		Specimen primary = specimens.get(212L);
+		Specimen derivative = specimen(213L); derivative.setLineage("Derived"); derivative.setParentSpecimen(primary);
+		Specimen aliquot = specimen(214L); aliquot.setLineage("Aliquot"); aliquot.setParentSpecimen(derivative);
+		assertEquals(Boolean.FALSE, SpecimenInfo.from(aliquot).getPrimaryReceived());
+		PermissibleValue quality = new PermissibleValue(); quality.setValue("Acceptable"); primary.setReceivedQuality(quality);
+		assertEquals(Boolean.TRUE, SpecimenInfo.from(primary).getPrimaryReceived());
+		assertEquals(Boolean.TRUE, SpecimenInfo.from(derivative).getPrimaryReceived());
+		assertEquals(Boolean.TRUE, SpecimenInfo.from(aliquot).getPrimaryReceived());
+	}
+
+	@Test public void receiptPayloadRejectsOtherSpecimenFields() throws Exception {
+		var edit = new ObjectMapper().readValue("{\"id\":212,\"editExisting\":true,\"receivedEvent\":{}}", SpecimenReceiptInput.class);
+		assertEquals(Boolean.TRUE, edit.getEditExisting());
 		assertThrows(Exception.class, () -> new ObjectMapper().readValue("{\"id\":212,\"status\":\"Collected\"}", SpecimenReceiptInput.class));
 		assertThrows(Exception.class, () -> new ObjectMapper().readValue("{\"id\":212,\"collectionEvent\":{}}", SpecimenReceiptInput.class));
 	}

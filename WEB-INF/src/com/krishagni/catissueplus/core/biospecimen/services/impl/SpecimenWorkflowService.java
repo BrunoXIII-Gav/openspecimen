@@ -167,7 +167,8 @@ public class SpecimenWorkflowService {
 				Specimen specimen = find(entry.getKey());
 				ensureRead(specimen); ensureReceive(specimen);
 				daoFactory.getSpecimenDao().lockForQuantityUpdate(specimen);
-				if (!isPendingReceipt(specimen)) invalid("specimen is not pending receipt");
+				if (!specimen.isPrimary() || !specimen.isCollected() || !specimen.isActive()) invalid("receipt requires a collected primary specimen");
+				if (specimen.isReceived() && !Boolean.TRUE.equals(entry.getValue().getEditExisting())) invalid("select the specimen explicitly to edit its receipt");
 				prepared.put(specimen, prepareReceipt(specimen, entry.getValue().getReceivedEvent()));
 			}
 			for (var entry : prepared.entrySet()) {
@@ -189,6 +190,12 @@ public class SpecimenWorkflowService {
 			Specimen.TO_BE_RECEIVED.equals(event.getReceivedQuality()) || event.getTime() == null ||
 			event.getUser() == null || event.getUser().getId() == null || event.getUser().getId() <= 0 ||
 			(event.getNewLabel() != null && !event.getNewLabel().isBlank())) invalid("receipt quality, time and receiver");
+		// Editing only receiver/time/comments must not reset an earlier quantity discrepancy.
+		if (existing.isReceived() && event.getReceivedQtyDifferent() == null && event.getReceivedQty() == null && event.getReceivedQtyReason() == null) {
+			var quantity = existing.getReceivedQuantity();
+			event.setReceivedQtyDifferent(quantity != null && (existing.getInitialQuantity() == null || quantity.compareTo(existing.getInitialQuantity()) != 0));
+			event.setReceivedQty(quantity); event.setReceivedQtyReason(existing.getReceivedQuantityReason());
+		}
 		for (String attr : List.of("receivedQuality", "time", "user", "comments", "receivedQtyDifferent", "receivedQty", "receivedQtyReason")) event.attrModified(attr);
 		Specimen receipt = newReceiptSpecimen();
 		receipt.setCollectionProtocol(existing.getCollectionProtocol()); receipt.setVisit(existing.getVisit());

@@ -132,6 +132,9 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 
 	private FormService formSvc;
 
+	@org.springframework.beans.factory.annotation.Autowired
+	private SpecimenProcessingService processingService;
+
 	private AsyncTaskExecutor taskExecutor;
 
 	public void setDaoFactory(DaoFactory daoFactory) {
@@ -483,6 +486,7 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 	@PlusTransactional
 	public ResponseEvent<List<SpecimenDetail>> collectSpecimens(RequestEvent<List<SpecimenDetail>> req) {
 		try {
+			new SpecimenCollectionGuard(daoFactory).validate(req.getPayload());
 			Collection<Specimen> specimens = new ArrayList<>();
 			for (SpecimenDetail detail : req.getPayload()) {
 				Specimen specimen = collectSpecimen(detail, null, new HashMap<>());
@@ -1295,6 +1299,10 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 		}
 
 		Specimen specimen = existing;
+		if (detail.getProcessingEvent() != null && (existing != null && existing.isCollected() ||
+			!"Collected".equals(detail.getStatus()) || (!"Derived".equals(detail.getLineage()) && !"Aliquot".equals(detail.getLineage())))) {
+			throw OpenSpecimenException.userError(CommonErrorCode.INVALID_INPUT, "processing requires a newly collected child");
+		}
 		if (existing == null || !existing.isCollected() || detail.isUpdate()) {
 			specimen = saveOrUpdate(detail, null, existing, parent);
 			if (specimen.getPreCreatedSpmnsMap() != null) {
@@ -1303,6 +1311,8 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 		} else {
 			existing.setUid(detail.getUid());
 		}
+
+		if (detail.getProcessingEvent() != null) processingService.save(specimen, detail.getProcessingEvent());
 
 		if (CollectionUtils.isNotEmpty(detail.getChildren())) {
 			int childrenLimit = ConfigUtil.getInstance().getIntSetting(ConfigParams.MODULE, ConfigParams.MAX_CHILDREN_LIMIT, 100);
@@ -1359,6 +1369,9 @@ public class SpecimenServiceImpl implements SpecimenService, ObjectAccessor, Con
 
 		AccessCtrlMgr.getInstance().ensureCreateOrUpdateSpecimenRights(specimen);
 		com.krishagni.catissueplus.core.common.access.ProtocolContentAccess.getInstance().ensureCreationAllowed(existing, specimen);
+		if (specimen.isCollected() && !specimen.isPrimary() && (existing == null || !existing.isCollected())) {
+			specimen.ensurePrimaryReceived();
+		}
 		EventPublisher.getInstance().publish(new SpecimenPreSaveEvent(existing, specimen));
 
 		String prevStatus = null;

@@ -2,15 +2,14 @@
   <os-page>
     <os-page-head>
       <template #breadcrumb><os-breadcrumb :items="bcrumb" /></template>
-      <span class="os-title"><h3>{{ $t('specimens.collection_matrix.title') }}</h3></span>
+      <span class="os-title"><h3>{{ $t(collectionMode ? 'specimens.collection_matrix.title' : 'specimens.receipt_matrix.title') }}</h3></span>
     </os-page-head>
     <os-page-body>
       <div class="collection-matrix" v-if="loaded">
         <os-message type="error" v-if="loadError">{{ $t(loadError) }}</os-message>
         <template v-else>
-          <p>{{ $t('specimens.collection_matrix.help') }}</p>
-          <os-message type="info" v-if="!hasWork">{{ $t('specimens.collection_matrix.no_authorized_pending') }}</os-message>
-          <fieldset :disabled="saving">
+          <os-message type="info" v-if="!hasWork">{{ $t(collectionMode ? 'specimens.collection_matrix.no_authorized_pending' : 'specimens.receipt_matrix.empty') }}</os-message>
+          <fieldset :disabled="saving" v-if="hasWork">
             <section v-if="needsVisitSave">
               <h4>{{ $t('specimens.collection_matrix.visit_details') }}</h4>
               <os-form ref="visitForm" :schema="visitSchema" :data="visitCtx" />
@@ -20,9 +19,24 @@
               <os-form ref="commonForm" :schema="commonSchema" :data="commonCtx" />
               <os-button :label="$t('specimens.collection_matrix.apply_common')" @click="applyCommon" :disabled="saving" />
             </details>
+            <section class="processing-section" v-for="group in processingGroups" :key="group.uid" v-show="processingForms.length">
+              <div class="processing-controls">
+                <label>{{ $t('specimens.collection_matrix.processing_form') }}</label>
+                <os-dropdown :model-value="group.form?.formCtxtId || null" :list-source="processingFormOptions"
+                  :placeholder="$t('specimens.collection_matrix.choose_form')"
+                  @update:model-value="processingFormChanged(group, $event)" />
+                <os-boolean-checkbox v-model="group.shared" :inline-label="$t('specimens.collection_matrix.same_data')"
+                  @change="processingShare(group)" />
+                <span v-if="group.loading">{{ $t('common.loading') }}</span>
+              </div>
+              <os-message type="error" v-if="group.error">{{ $t('specimens.collection_matrix.processing_load_failed') }}</os-message>
+              <div class="shared-processing-fields" v-if="group.shared && group.form">
+                <os-form :ref="'processing-group-' + group.uid" :schema="group.schema" :data="group.data" />
+              </div>
+            </section>
             <div class="matrix-table">
-              <os-table-form ref="matrix" :schema="matrixSchema" :data="{cp}" :items="rows"
-                :tree-layout="true" :show-row-actions="true" :expanded="expanded" @input="rowInput">
+              <os-table-form ref="matrix" :schema="matrixSchema" :data="{cp}" :items="displayRows"
+                :tree-layout="!collectionMode" :show-row-actions="true" :expanded="expanded" @input="rowInput">
                 <template #row-actions="{rowItem}">
                   <os-button text left-icon="edit" :label="$t('specimens.collection_matrix.details')"
                     @click="toggleDetails(rowItem.item)" v-if="(rowItem.item.editable || rowItem.item.receiptEditable) && rowItem.item.specimen.status == 'Collected'" />
@@ -34,6 +48,10 @@
                       :reference-prefix="'collection-' + rowItem.item.uid" @input="detailInput(rowItem.item)" />
                     <os-form :ref="'receipt-' + rowItem.item.uid" :schema="rowItem.item.receiptSchema" :data="rowItem.item"
                       v-if="rowItem.item.specimen.lineage == 'New' && rowItem.item.receiptSchema.rows.length" />
+                    <div class="processing-detail" v-if="rowItem.item.processing && processingForms.length && !rowItem.item.processingGroup.shared && rowItem.item.processingGroup.form">
+                      <os-form :ref="'processing-' + rowItem.item.uid" :schema="processingSvc.effective(rowItem.item).schema"
+                        :data="processingSvc.effective(rowItem.item).data" />
+                    </div>
                   </div>
                 </template>
               </os-table-form>
@@ -41,7 +59,7 @@
           </fieldset>
         </template>
         <div class="actions">
-          <os-button primary :label="$t('common.buttons.submit')" :disabled="saving || !!loadError || !hasWork" @click="save" />
+          <os-button primary :label="$t(collectionMode ? 'common.buttons.submit' : 'specimens.receipt_matrix.save')" :disabled="saving || !!loadError || !hasWork" @click="save" />
           <os-button text :label="$t('common.buttons.cancel')" :disabled="saving" @click="cancel" />
         </div>
       </div>
@@ -58,6 +76,8 @@ import routerSvc from '@/common/services/Router.js';
 import util from '@/common/services/Util.js';
 import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
 import collectionSvc from '@/biospecimen/services/SpecimenCollection.js';
+import processingSvc from '@/biospecimen/services/SpecimenProcessing.js';
+import formSvc from '@/forms/services/Form.js';
 import {matrixReturnRoute} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 import visitSvc from '@/biospecimen/services/Visit.js';
@@ -86,6 +106,7 @@ export default {
     return {
       contentAccess: null,
       matrixGroups: [],
+      processingSvc, processingGroups: [], processingForms: [],
       cp, rows: [], expanded: [], loaded: false, saving: false, loadError: null,
       visitSchema: {rows: []}, commonSchema: {rows: []},
       visitCtx: {cp, cpr, visit, userRole: this.cpViewCtx.getRole(),
@@ -95,7 +116,16 @@ export default {
   },
 
   computed: {
+    collectionMode() { return this.$route.query.mode != 'information'; },
+
+    displayRows() { return this.collectionMode ? this.rows.filter(row => row.editable) : this.rows; },
+
+    processingFormOptions() {
+      return {selectProp: 'formCtxtId', displayProp: 'formCaption', options: this.processingForms};
+    },
+
     needsVisitSave() {
+      if (this.collectionMode === false) return false;
       return !!this.visit && !this.cpr?.contextOnly && !this.visit.contextOnly && (!(this.visit.id > 0) ||
         (this.visit.status != 'Complete' && !this.rows.some(row => row.originalStatus == 'Collected')));
     },
@@ -128,6 +158,11 @@ export default {
         {name: 'specimen.label', type: 'text', labelCode: 'specimens.label',
           value: row => row.specimen.label || (collectionSvc.manualLabel(row) ? '' : this.$t('specimens.collection_matrix.automatic')),
           showCellWhen: row => editable(row) && collectionSvc.manualLabel(row), showValue: true},
+        ...(this.collectionMode && this.rows.some(row => row.editable && row.specimen.lineage != 'New') ? [
+          {name: 'parentLabel', type: 'text', labelCode: 'specimens.parent_specimen',
+            value: row => row.parentSpecimen?.label || row.specimen.parentLabel || '',
+            showCellWhen: () => false, showValue: true}
+        ] : []),
         ...(this.cp.barcodingEnabled || this.rows.some(row => row.specimen.preBarcodedTube) ? [
           {name: 'specimen.barcode', type: 'text', labelCode: 'specimens.barcode', showValue: true,
             showCellWhen: row => collected(row) && (!this.cp.specimenBarcodeFmt || row.specimen.preBarcodedTube)}
@@ -157,7 +192,8 @@ export default {
       const query = this.$route.query;
       const parseIds = value => String(value || '').split(',').filter(Boolean).map(Number);
       const selection = {specimenIds: parseIds(query.specimenIds), reqIds: parseIds(query.reqIds),
-        explicit: query.specimenIds !== undefined || query.reqIds !== undefined};
+        explicit: query.specimenIds !== undefined || query.reqIds !== undefined,
+        mode: this.collectionMode ? 'collect' : 'information'};
       if ([...selection.specimenIds, ...selection.reqIds].some(id => !Number.isSafeInteger(id) || id <= 0)) {
         this.loadError = 'specimens.collection_matrix.invalid_selection';
         return;
@@ -168,7 +204,8 @@ export default {
       if (!this.cpr || !this.visit) {
         this.matrixGroups = await collectionSvc.loadMatrix(this.cp.id, query);
         this.rows = this.matrixGroups.flatMap(group => collectionSvc.prepareRows(group.specimens,
-          {specimenIds: group.selectedIds, explicit: group.selectedIds.length > 0, includeDescendants: true, uidPrefix: 'v-' + group.visit.id + '-'},
+          {specimenIds: group.selectedIds, explicit: group.selectedIds.length > 0, mode: selection.mode,
+            includeDescendants: selection.mode == 'information', uidPrefix: 'v-' + group.visit.id + '-'},
           this.cp, group.cpr, group.visit, access));
       } else {
         const specimens = await visitSvc.getSpecimens(this.cpr.id, this.visit.eventId, this.visit.id > 0 ? this.visit.id : undefined);
@@ -232,6 +269,11 @@ export default {
           this.commonSchema = {rows: commonFields.map(field => ({fields: [field]}))};
         }
       }
+      this.processingGroups = this.collectionMode ? processingSvc.collectionGroups(this.rows) : [];
+      if (this.processingGroups.length) {
+        this.processingForms = (await processingSvc.getForms(this.cp.id)).filter(form =>
+          contentSvc.allows(this.contentAccess, 'form:' + form.formId));
+      }
     } catch (error) {
       this.loadError = 'specimens.collection_matrix.load_failed';
     } finally {
@@ -240,6 +282,39 @@ export default {
   },
 
   methods: {
+    async processingFormChanged(target, key) {
+      const request = ++target.request;
+      target.form = this.processingForms.find(form => String(form.formCtxtId) == String(key)) || null;
+      target.schema = {rows: []}; target.data = {}; target.error = false; target.loading = !!target.form;
+      if (target.rows) target.rows.forEach(row => row.processing.data = {});
+      if (!target.form) return;
+      try {
+        const definition = await formSvc.getDefinition(target.form.formId);
+        if (request !== target.request) return;
+        const {schema, defaultValues} = formUtil.fromDeToStdSchema(definition);
+        target.schema = schema; target.data = util.clone(defaultValues || {});
+        if (target.rows) {
+          target.rows.forEach(row => row.processing.data = util.clone(target.data));
+          this.expandProcessingRows(target);
+        }
+      } catch (error) {
+        if (request === target.request) target.error = true;
+      } finally {
+        if (request === target.request) target.loading = false;
+      }
+    },
+
+    processingShare(group) {
+      processingSvc.share(group);
+      this.expandProcessingRows(group);
+    },
+
+    expandProcessingRows(group) {
+      if (group.shared || !group.form) return;
+      this.expanded = [...new Set([...this.expanded,
+        ...group.rows.filter(row => processingSvc.active(row))])];
+    },
+
     contentSvcAllowed(key) {
       return contentSvc.allows(this.contentAccess, key);
     },
@@ -318,6 +393,11 @@ export default {
       try {
         const error = collectionSvc.validate(this.rows);
         if (error) { alertsSvc.error({code: error}); return; }
+        const processing = this.rows.filter(row => processingSvc.active(row));
+        if (processing.some(row => {
+          const settings = processingSvc.effective(row);
+          return settings.loading || settings.error;
+        })) { alertsSvc.error({code: 'specimens.collection_matrix.processing_load_failed'}); return; }
         // Mount the detail forms even for descendants hidden by a collapsed tree node.
         for (const row of this.rows) {
           row.show = true;
@@ -328,10 +408,15 @@ export default {
         let valid = !this.needsVisitSave || this.$refs.visitForm.validate();
         valid = this.validateCoreFields() && valid;
         for (const row of this.expanded) {
-          for (const prefix of ['details-', 'receipt-']) {
+          for (const prefix of ['details-', 'receipt-', 'processing-']) {
             const refs = this.$refs[prefix + row.uid];
             for (const form of refs ? (Array.isArray(refs) ? refs : [refs]) : []) valid = form.validate() && valid;
           }
+        }
+        for (const group of this.processingGroups.filter(group => group.shared && group.form &&
+          group.rows.some(row => processingSvc.active(row)))) {
+          const refs = this.$refs['processing-group-' + group.uid];
+          for (const form of refs ? (Array.isArray(refs) ? refs : [refs]) : []) valid = form.validate() && valid;
         }
         if (!valid) return;
         const specimens = collectionSvc.buildSpecimens(this.rows);
@@ -346,7 +431,7 @@ export default {
         if (this.cpr) visitSvc.clearVisits(this.cpr);
         if (this.visit) delete this.visit.$specimens;
         this.returnToOrigin(savedVisit || this.visit);
-        alertsSvc.success({code: 'specimens.collection_matrix.saved'});
+        alertsSvc.success({code: this.collectionMode === false ? 'specimens.receipt_matrix.saved' : 'specimens.collection_matrix.saved'});
       } finally {
         this.saving = false;
       }
@@ -355,6 +440,10 @@ export default {
     returnToOrigin(visit = this.visit) {
       const origin = matrixReturnRoute(this.cp.id, this.$route?.query?.returnTo);
       if (origin) {
+        // An anticipated visit (-1) becomes a real visit after its first collection.
+        if (origin.name == 'ParticipantsListItemVisitDetail.Overview' && !(origin.params.visitId > 0) && visit?.id > 0) {
+          origin.params.visitId = visit.id;
+        }
         routerSvc.replace(origin.name, origin.params, origin.query);
       } else if (visit?.id > 0 && this.cpr?.id > 0) {
         routerSvc.replace('ParticipantsListItemVisitDetail.Overview', this.routeParams(visit),
@@ -373,9 +462,15 @@ export default {
 
 <style scoped>
 .collection-matrix { padding: 1rem; }
+.processing-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.processing-controls .os-dropdown { width: 19rem; max-width: 100%; }
+.processing-controls label { margin: 0; }
+.shared-processing-fields { padding-top: 1rem; }
+.processing-detail { margin-top: 1rem; }
 .collection-matrix section, .common-details { margin-bottom: 1.5rem; padding: 1rem; border: 1px solid #ddd; border-radius: 4px; }
 .common-details summary { cursor: pointer; margin-bottom: 1rem; }
-.matrix-table { overflow-x: auto; }
+.matrix-table { min-width: 0; }
+.matrix-table :deep(.os-table-form) { height: auto; overflow: visible; }
 fieldset { border: 0; padding: 0; min-width: 0; }
 .row-details { padding: 1rem; max-width: 1100px; }
 .actions { display: flex; gap: .5rem; margin-top: 1rem; }

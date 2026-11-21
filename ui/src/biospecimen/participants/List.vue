@@ -138,6 +138,7 @@ import routerSvc from '@/common/services/Router.js';
 import util      from '@/common/services/Util.js';
 import wfSvc     from '@/biospecimen/services/Workflow.js';
 import contentSvc from '@/common/services/ProtocolContent.js';
+import receiptSvc from '@/biospecimen/services/SpecimenReceipt.js';
 import {resolveCpListView} from '@/biospecimen/services/cp-list-view.mjs';
 import navigationSvc from '@/biospecimen/services/SpecimenNavigation.js';
 import {matrixOrigin} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
@@ -241,7 +242,10 @@ export default {
   computed: {
     navigationDataSource() { return navigationSvc.participantListSource(this.ctx.cp.id); },
     navigationOnly() { return this.ctx.view === 'participants_list' && !this.ctx.access.viewParticipantsAllowed && this.ctx.access.viewSpecimensAllowed; },
-    canOpenMatrix() { return !!this.matrixAccess && (this.cpViewCtx.isCreateSpecimenAllowed() || this.cpViewCtx.isUpdateSpecimenAllowed()); },
+    canOpenMatrix() {
+      return !!this.matrixAccess && this.cpViewCtx.isUpdateSpecimenAllowed() &&
+        contentSvc.allows(this.matrixAccess, 'receipt') && this.selectedSpecimens?.some(specimen => receiptSvc.canReceive(specimen));
+    },
     currentViewAllowed() {
       return this.ctx.view === 'participants_list' ? (this.ctx.access.viewParticipantsAllowed || this.ctx.access.viewSpecimensAllowed) : this.ctx.access.viewSpecimensAllowed;
     },
@@ -286,7 +290,7 @@ export default {
   methods: {
     openSelectedMatrix() {
       if (this.canOpenMatrix && this.selectedSpecimens?.length) routerSvc.goto('SpecimenCollectionMatrix', {cpId: this.ctx.cp.id},
-        {ids: this.selectedSpecimens.map(specimen => specimen.id).join(','), returnTo: matrixOrigin(this.$route)});
+        {ids: this.selectedSpecimens.map(specimen => specimen.id).join(','), mode: 'information', returnTo: matrixOrigin(this.$route)});
     },
     reloadList: function() {
       this.$refs.list.reload();

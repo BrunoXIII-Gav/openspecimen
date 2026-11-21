@@ -161,7 +161,8 @@ export default {
 
       const payload = { objectType: type, params: jobParams };
       exportSvc.exportRecords(payload).then(
-        () => {
+        job => {
+          if (!job) return;
           if (+this.cpId > 0) {
             routerSvc.goto('ParticipantsList', {cpId: this.cpId});
           } else {

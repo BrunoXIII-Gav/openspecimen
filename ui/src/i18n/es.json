@@ -1370,6 +1370,7 @@
     "visit_clinical_diagnosis": "Diagnóstico Clínico"
   },
   "export": {
+    "download_format": "Formato de descarga",
     "export_all_q": "¿Exportar todo?",
     "export_all_records_q": "¿Está seguro de que desea exportar todos los registros de {title}?",
     "export_records": "Exportar registros",
@@ -1830,9 +1831,9 @@
     "signed_consent_form": "Formulario de consentimiento firmado",
     "signed_form_deleted": "Formulario de consentimiento eliminado.",
     "signed_form_uploaded": "Formulario de consentimiento cargado.",
-    "upload_form": "Cargar formulario",
-    "upload_new_form": "Cargar consentimiento",
-    "witness": "Testigo"
+    "upload_form": "Cargar consentimiento informado",
+    "upload_new_form": "Cargar consentimiento informado",
+    "witness": "Investigador que toma el consentimiento"
   },
   "participants": {
     "no_list_access": "No tienes permiso para consultar este listado.",
@@ -3414,6 +3415,7 @@
     "type_required": "El tipo es obligatorio"
   },
   "specimens": {
+    "primary_receipt_required": "Debes recepcionar la muestra primaria antes de recolectar derivados o alícuotas.",
     "context_unavailable": "No se puede cargar el contexto autorizado de esta muestra.",
     "receipt_matrix": {
       "title": "Completar recepción", "common": "Datos comunes de recepción", "apply": "Aplicar a todas las muestras",
@@ -3423,6 +3425,12 @@
       "load_failed": "No se pudieron cargar las muestras pendientes de recepción."
     },
     "collection_matrix": {
+      "processing_form": "Formulario",
+      "choose_form": "Seleccionar formulario",
+      "same_data": "Mismos datos",
+      "event_data": "Datos",
+      "use_group": "Usar configuración del grupo",
+      "processing_load_failed": "No se pudo cargar el formulario de procesamiento. Selecciónalo nuevamente.",
       "title": "Matriz de muestras planificadas",
       "visit_details": "Datos de la visita",
       "help": "Completa los datos que te corresponden. Las etapas pendientes pueden retomarse desde esta misma matriz.",
@@ -3439,7 +3447,7 @@
       "invalid_quantity": "Las cantidades y concentraciones deben ser números válidos, mayores o iguales a cero.",
       "duplicate_label": "La selección contiene etiquetas de muestras repetidas.",
       "duplicate_barcode": "La selección contiene códigos de barras repetidos.",
-      "open": "Completar información",
+      "open": "Recepcionar",
       "no_authorized_pending": "No hay tareas pendientes que puedas completar con tus permisos."
     },
     "intermediate_material": "Material intermedio",

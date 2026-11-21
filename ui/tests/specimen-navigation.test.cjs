@@ -87,12 +87,13 @@ test('rendered restricted visit keeps the specimen tree and matrix without reque
   const vue = require('vue'), {renderToString} = require('@vue/server-renderer');
   let treeReads = 0;
   const specimens = [{id: 212, label: 'B-212', lineage: 'New', status: 'Collected'}];
-  const tree = {props: ['specimens'], render() { return vue.h('div', ['specimen-tree', this.$slots['after-cart']?.()]); }};
+  const tree = {props: ['specimens'], render() { return vue.h('div', ['specimen-tree', this.$slots['after-cart']?.({selectedSpecimens: []})]); }};
   const collectionSvc = load('biospecimen/services/SpecimenCollection.js');
   const component = load('biospecimen/participants/visits/Overview.vue', {
     '@/biospecimen/components/SpecimenTree.vue': tree,
     '@/biospecimen/services/SpecimenCollection.js': collectionSvc,
-    '@/common/services/ProtocolContent.js': {getAccess: async () => ({unrestricted: true})},
+    '@/common/services/ProtocolContent.js': {...require('../src/common/services/protocol-content-policy.mjs'), getAccess: async () => ({unrestricted: true})},
+    '@/biospecimen/services/SpecimenReceipt.js': load('biospecimen/services/SpecimenReceipt.js'),
     '@/biospecimen/components/FieldReferences.vue': {render() { throw Error('Forbidden field reference read'); }},
     '@/biospecimen/services/Visit.js': {getSpecimens: async (cprId, eventId, visitId) => {
       assert.equal(cprId, 32); assert.equal(visitId, 43); treeReads++; return specimens;
@@ -110,7 +111,7 @@ test('rendered restricted visit keeps the specimen tree and matrix without reque
   app.component('os-overview', {render() { throw Error('Forbidden visit overview'); }});
   const html = await renderToString(app);
   assert.equal(treeReads, 1); assert.equal(html.includes('specimen-tree'), true);
-  assert.equal(html.includes('specimens.collection_matrix.open'), true);
+  assert.equal(html.includes('specimens.collection_matrix.open'), false, 'receipt stays hidden until collected primaries have loaded');
   assert.equal(html.includes('common.buttons.edit'), false);
   assert.equal(html.includes('common.buttons.delete'), false);
   const instance = {cpr: cpr(), visit: visit(), cpViewCtx, $route: {query: {}}};
@@ -120,6 +121,7 @@ test('rendered restricted visit keeps the specimen tree and matrix without reque
   await component.created.call(instance);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(instance.ctx.specimens[0].id, 212);
+  assert.equal(component.computed.canOpenMatrix.call(instance), true);
   assert.equal(instance.ctx.dict.length, 0);
 });
 
@@ -150,6 +152,21 @@ test('a readable participant overview does not load visit or consent schemas wit
 test('the visit matrix does not request visit fields for a navigation-only visit', () => {
   const component = load('biospecimen/participants/visits/CollectSpecimens.vue');
   assert.equal(component.computed.needsVisitSave.call({cpr: {id: 32}, visit: visit(), rows: []}), false);
+});
+
+test('specimen tree links stay relative to the current UI application path', () => {
+  const component = load('common/components/SpecimenDescription.vue', {
+    '@/biospecimen/services/CollectionProtocol.js': {},
+    '@/common/services/Router.js': {getUrl: () => '#/cp-view/1/participants/34/visit/47/specimen/239/overview?eventId=2&reqId=5'},
+    '@/common/services/Util.js': {},
+    '@/biospecimen/services/SpecimenDisplay.js': {}
+  });
+  const link = component.computed.link.call({
+    noLink: false,
+    object: {id: 239, eventId: 2, reqId: 5},
+    $route: {query: {view: 'specimens'}}
+  });
+  assert.equal(link, '#/cp-view/1/participants/34/visit/47/specimen/239/overview?eventId=2&reqId=5');
 });
 
 test('the original query list displays only PPID and uses no clinical list config, queries or filters', async () => {

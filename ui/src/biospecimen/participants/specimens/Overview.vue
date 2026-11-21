@@ -195,6 +195,7 @@ import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
 import {matrixOrigin} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
+import receiptSvc from '@/biospecimen/services/SpecimenReceipt.js';
 import wfSvc from '@/biospecimen/services/Workflow.js';
 
 import alertsSvc from '@/common/services/Alerts.js';
@@ -291,9 +292,11 @@ export default {
 
   computed: {
     canOpenMatrix() {
-      return this.cpViewCtx.isReadSpecimenAllowed(this.cpr) && (this.isAnyUserUpdateAllowed || this.cpViewCtx.isCreateSpecimenAllowed(this.cpr));
+      return this.cpViewCtx.isReadSpecimenAllowed(this.cpr) && this.isAnyUserUpdateAllowed &&
+        receiptSvc.canReceive(this.specimen) && !!this.creationAccess && contentSvc.allows(this.creationAccess, 'receipt');
     },
     creationOptions() {
+      if (!receiptSvc.primaryReceived(this.specimen)) return [];
       return [
         {lineage: 'Derived', icon: 'flask', caption: this.$t('specimens.derived'), onSelect: this.createDerivatives},
         {lineage: 'Aliquot', icon: 'share-alt', caption: this.$t('specimens.aliquots'), onSelect: this.createAliquots}
@@ -404,7 +407,7 @@ export default {
   methods: {
     openMatrix() {
       if (this.canOpenMatrix) routerSvc.goto('SpecimenCollectionMatrix', {cpId: this.ctx.cp.id},
-        {ids: String(this.specimen.id), returnTo: matrixOrigin(this.$route)});
+        {ids: String(this.specimen.id), mode: 'information', returnTo: matrixOrigin(this.$route)});
     },
     _getOverviewFields: function(fields, lineage) {
       if (!['Derived', 'Aliquot'].includes(lineage)) {

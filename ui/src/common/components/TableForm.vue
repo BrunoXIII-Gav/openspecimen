@@ -66,6 +66,7 @@
         </tr>
 
         <template v-for="(itemModel, itemIdx) of itemModels" :key="itemModel.key">
+          <slot name="before-row" :rowItem="{item: itemModel.$context}" :columns-count="columnsCount" />
           <tr v-if="itemModel.show"
             :class="[expanded && expanded.indexOf(itemModel.$context) >= 0 ? 'expanded-row' : 'regular-row']">
             <td class="selection" v-if="readOnly && (selectionMode == 'radio' || selectionMode == 'checkbox')">
@@ -146,6 +147,7 @@
               <slot name="expanded-row" :rowItem="{item: itemModel.$context}" />
             </td>
           </tr>
+          <slot name="after-row" :rowItem="{item: itemModel.$context}" :columns-count="columnsCount" />
         </template>
         <tr class="footer-row" v-if="$slots.footerRow">
           <slot name="footerRow" />
@@ -195,7 +197,7 @@ export default {
     'expanded'
   ],
 
-  emits: ['input', 'form-validity', 'remove-item', 'copy-item', 'item-selected', 'selected-items', 'row-clicked'],
+  emits: ['input', 'form-validity', 'remove-item', 'copy-item', 'item-selected', 'selected-items', 'row-clicked', 'toggle-node'],
 
   components: {
     RadioButton

@@ -39,6 +39,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import com.krishagni.catissueplus.core.common.util.ExcelExport;
+import com.krishagni.catissueplus.core.common.util.ExportFormat;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -1982,6 +1985,10 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 		String queryId = UUID.randomUUID().toString();
 
 		try {
+			ExportFormat format = ExportFormat.from(op.getFileFormat());
+			if (format == ExportFormat.XLSX && (procFn != null || (proc != null && !(proc instanceof DefaultQueryExportProcessor)))) {
+				throw new IllegalArgumentException("Excel output is available for tabular query exports");
+			}
 			if (proc == null) {
 				proc = new DefaultQueryExportProcessor(op.getCpId(), op.getCpGroupId());
 			}
@@ -2000,6 +2007,9 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 			task.user = AuthUtil.getCurrentUser();
 			task.ipAddress = AuthUtil.getRemoteAddr();
 			task.filename = getExportFilename(op, procFn == null ? proc : null);
+			if (format == ExportFormat.XLSX) {
+				task.filename += ".xlsx";
+			}
 			task.query = query;
 			task.queryId = queryId;
 			task.proc = proc instanceof ExtendedExportProcessor ? (ExtendedExportProcessor) proc : null;
@@ -2086,11 +2096,23 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 					}
 				}
 
+				fout.close();
+				fout = null;
+				File dataFile = new File(getExportDataDir(), filename);
+				if (ExportFormat.from(op.getFileFormat()) == ExportFormat.XLSX) {
+					ExcelExport.convertCsv(dataFile, dataFile, Utility.getFieldSeparator(), false);
+				} else {
+					zipExportedDataFile(dataFile);
+				}
+
 				insertAuditLog(user, ipAddress, op, resp);
 				notifyExportCompleted();
 			} catch (Exception e) {
 				logger.error("Error exporting query data", e);
 				error = true;
+				if (e instanceof OpenSpecimenException ose) {
+					throw ose;
+				}
 				throw OpenSpecimenException.serverError(e);
 			} finally {
 				IOUtils.closeQuietly(fout);
@@ -2099,15 +2121,9 @@ public class QueryServiceImpl implements QueryService, InitializingBean {
 				}
 
 				File dataFile = new File(getExportDataDir(), filename);
-				if (!error) {
-					try {
-						zipExportedDataFile(dataFile);
-					} catch (Exception e) {
-						logger.error("Error compressing the query result to ZIP file. Deleting the file", e);
-						FileUtils.deleteQuietly(dataFile);
-					}
-				} else {
+				if (error) {
 					FileUtils.deleteQuietly(dataFile);
+					FileUtils.deleteQuietly(new File(getExportDataDir(), filename + ".zip"));
 				}
 
 				FileUtils.deleteQuietly(progressFile);

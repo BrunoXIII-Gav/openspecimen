@@ -2,11 +2,34 @@ import http from '@/common/services/HttpClient.js';
 import util from '@/common/services/Util.js';
 import contentSvc from '@/common/services/ProtocolContent.js';
 import receiptSvc from '@/biospecimen/services/SpecimenReceipt.js';
+import processingSvc from '@/biospecimen/services/SpecimenProcessing.js';
 
 const pending = specimen => !specimen.status || specimen.status == 'Pending';
 const populated = value => value !== null && value !== undefined && value !== '';
 
 class SpecimenCollection {
+  collectionPlan(specimens, selection = {}, access) {
+    const ids = new Set((selection.specimenIds || []).map(String));
+    const reqIds = new Set((selection.reqIds || []).map(String));
+    const eligible = [];
+    const walk = (source, parent, depth, ancestorsCollected, primaryReceived) => {
+      if (!parent || source.lineage == 'New') primaryReceived = receiptSvc.primaryReceived(source);
+      const active = !source.activityStatus || source.activityStatus == 'Active';
+      const allowed = active && access?.canCreate !== false &&
+        (!Array.isArray(access?.createLineages) || access.createLineages.includes(source.lineage)) &&
+        (source.lineage != 'New' || !access || contentSvc.allows(access, 'collection'));
+      const selected = !selection.explicit || (source.id > 0 ? ids.has(String(source.id)) : reqIds.has(String(source.reqId)));
+      if (pending(source) && allowed && selected && ancestorsCollected && (source.lineage == 'New' || primaryReceived) &&
+        (parent ? parent.id > 0 && parent.status == 'Collected' : source.lineage == 'New')) eligible.push({specimen: source, depth});
+      for (const child of source.children || []) walk(child, source, depth + 1,
+        ancestorsCollected && active && source.id > 0 && source.status == 'Collected', primaryReceived);
+    };
+    specimens.forEach(source => walk(source, null, 0, true));
+    if (selection.explicit || !eligible.length) return eligible;
+    const depth = Math.min(...eligible.map(item => item.depth));
+    return eligible.filter(item => item.depth == depth);
+  }
+
   visibleVisitSpecimens(specimens, access) {
     if (access?.unrestricted !== false || !Array.isArray(access.createLineages)) return specimens;
     const visible = source => {
@@ -19,6 +42,15 @@ class SpecimenCollection {
   // Reload the visit tree rather than passing editable objects through navigation.
   // Include the complete ancestry, including intermediate derivatives hidden in the overview.
   prepareRows(specimens, selection, cp, cpr, visit, access) {
+    if (selection.mode == 'collect') {
+      const plan = this.collectionPlan(specimens, selection, access);
+      if (!plan.length) return [];
+      const rows = this.prepareRows(specimens, {...selection, mode: null, explicit: true, includeDescendants: false,
+        specimenIds: plan.filter(item => item.specimen.id > 0).map(item => item.specimen.id),
+        reqIds: plan.filter(item => !(item.specimen.id > 0)).map(item => item.specimen.reqId)}, cp, cpr, visit, access);
+      rows.forEach(row => { row.receiptEditable = row.editable && row.receiptEditable; row.collectionOnly = true; });
+      return rows;
+    }
     const ids = new Set((selection.specimenIds || []).map(String));
     const reqIds = new Set((selection.reqIds || []).map(String));
     const explicit = selection.explicit;
@@ -30,11 +62,11 @@ class SpecimenCollection {
       if (pending(source) && (access?.canCreate === false || (source.lineage == 'New' && access && !contentSvc.allows(access, 'collection')))) return [];
       // Initial visit fields belong to the original visit collection flow.
       if (pending(source) && source.lineage == 'New' && (cpr.contextOnly || visit.contextOnly) && visit.status != 'Complete' && !visit.collectionReady) return [];
-      const receiptEditable = source.id > 0 && source.lineage == 'New' && source.status == 'Collected' &&
-        (!source.activityStatus || source.activityStatus == 'Active') &&
-        (!source.receivedEvent?.receivedQuality || source.receivedEvent.receivedQuality == 'To be Received') &&
+      const receiptEdit = selection.mode == 'information' && explicit && ids.has(String(source.id)) && !receiptSvc.isPending(source);
+      const receiptEditable = receiptSvc.canReceive(source) && (receiptSvc.isPending(source) || receiptEdit) &&
         access?.canUpdate !== false && !!access && contentSvc.allows(access, 'receipt');
-      const selected = explicit ? ids.has(String(source.id)) || reqIds.has(String(source.reqId)) || selectedAncestor :
+      const matches = ids.has(String(source.id)) || reqIds.has(String(source.reqId)) || selectedAncestor;
+      const selected = selection.mode == 'information' ? receiptEditable && (!explicit || ids.has(String(source.id))) : explicit ? matches :
         receiptEditable || source.status == 'Collected' || (pending(source) && (resuming || cp.visitCollectionMode != 'PRIMARY_SPMNS' || source.lineage == 'New'));
       const specimen = util.clone({...source, children: undefined});
       delete specimen.children;
@@ -44,7 +76,7 @@ class SpecimenCollection {
         parentUid: parent && parent.uid,
         parentSpecimen: parent && parent.specimen,
         specimen, cp, cpr, visit, depth, expanded: true, show: true,
-        editable: pending(source), receiptEditable, originalStatus: source.status || 'Pending'
+        editable: selection.mode != 'information' && pending(source), receiptEditable, receiptEdit, originalStatus: source.status || 'Pending'
       };
       const children = (source.children || []).flatMap(child => walk(child, row, depth + 1, selection.includeDescendants && selected));
       if (!selected && children.length == 0) return [];
@@ -79,6 +111,9 @@ class SpecimenCollection {
     for (const row of rows) {
       const specimen = row.specimen;
       const parent = rows.find(item => item.uid == row.parentUid);
+      if (row.collectionOnly && row.editable && parent && parent.originalStatus != 'Collected') {
+        return 'specimens.collection_matrix.parent_not_collected';
+      }
       if (!row.editable && specimen.status != 'Collected') return 'specimens.collection_matrix.parent_not_collected';
       if (row.editable && !['Collected', 'Pending', 'Missed Collection', 'Not Collected'].includes(specimen.status)) {
         return 'specimens.collection_status_req';
@@ -154,6 +189,10 @@ class SpecimenCollection {
         delete specimen.storageLocation;
       }
       if (children.length) specimen.children = children;
+      if (row.processing) {
+        const event = processingSvc.payload(row);
+        if (event) specimen.processingEvent = event;
+      }
       return specimen;
     };
     return rows.filter(row => !row.parentUid).map(build).filter(Boolean);

@@ -19,7 +19,7 @@ function load(relativePath, mocks = {}, globals = {}) {
   const module = {exports: {}};
   vm.runInNewContext(code, {module, exports: module.exports, Date, Number, Set, Map,
     require: name => mocks[name] || (name === '@/biospecimen/services/specimen-matrix-navigation.mjs' ? matrixNavigation :
-      name.startsWith('@/') ? {} : require(name)), console, ...globals}, {filename});
+      name.startsWith('@/') || name.endsWith('.vue') ? {} : require(name)), console, ...globals}, {filename});
   return module.exports.default;
 }
 
@@ -41,6 +41,7 @@ function service() {
     '@/common/services/Util.js': {clone: copy},
     '@/common/services/ProtocolContent.js': contentAccess,
     '@/biospecimen/services/SpecimenReceipt.js': load('biospecimen/services/SpecimenReceipt.js'),
+    '@/biospecimen/services/SpecimenProcessing.js': load('biospecimen/services/SpecimenProcessing.js', {'@/common/services/Util.js': {clone: copy}}),
     '@/common/services/HttpClient.js': {post: async (url, data) => {
       requests.push({url, data: copy(data)});
       return {visit: {id: 42, cpId: 1, cprId: 31, eventId: 2}};
@@ -87,7 +88,7 @@ test('automatic labels preserve preprinted values and manual formats require act
 test('partial collection leaves pending requirements unsaved and collected ancestors are references only', () => {
   const {svc} = service();
   const source = tree();
-  Object.assign(source[0], {id: 100, label: 'B-100', status: 'Collected', availableQty: 6});
+  Object.assign(source[0], {id: 100, primaryReceived: true, label: 'B-100', status: 'Collected', availableQty: 6});
   Object.assign(source[0].children[0], {id: 101, label: 'P-101', status: 'Collected', availableQty: 4});
   Object.assign(source[0].children[0].children[0], {id: 102, status: 'Pending'});
   const rows = svc.prepareRows(source, select([3, 4]), cp, cpr, {id: 42, status: 'Complete'});
@@ -185,36 +186,36 @@ test('pending visits and new visits use the combined transactional API; complete
   assert.equal(requests[2].url, 'specimens/collect');
 });
 
-test('the tree action carries every selected requirement, specimen and event to the matrix; plugin behavior stays intact', async () => {
-  const routes = [];
+test('tree collection reloads the plan, excludes blocked selections and returns to its origin', async () => {
+  const routes = [], errors = [], {svc} = service(), source = tree();
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected'});
+  Object.assign(source[1], {id: 105, primaryReceived: true, status: 'Collected'});
+  source[1].children = [{reqId: 6, lineage: 'Derived'}];
   const component = load('biospecimen/components/SpecimenTree.vue', {
-    '@/common/services/Router.js': {goto: (...args) => routes.push(copy(args))}
+    '@/common/services/Router.js': {goto: (...args) => routes.push(copy(args))},
+    '@/common/services/Alerts.js': {error: value => errors.push(value)},
+    '@/common/services/ProtocolContent.js': contentAccess,
+    '@/biospecimen/services/SpecimenCollection.js': svc,
+    '@/biospecimen/services/Visit.js': {getSpecimens: async () => source}
   });
-  const ctx = {cp, cpr, visit, $osSvc: {}, selectedPendingSpecimens: [
-    {specimen: {reqId: 3}}, {specimen: {id: 102, reqId: 4}}
-  ]};
+  const ctx = {cp, cpr, visit: {...visit, id: 42}, ctx: {selectedSpecimens: []}, selectedSpecimens: []};
   await component.methods.collectSpecimens.call(ctx);
-  assert.deepEqual(routes[0], ['VisitCollectSpecimens', {cpId: 1, cprId: 31, visitId: -1},
-    {eventId: 2, specimenIds: '102', reqIds: '3'}]);
-  let options, opened;
-  ctx.$osSvc.tmWfInstanceSvc = {
-    createInstance: async (...args) => { options = args; return {id: 9}; },
-    gotoInstance: id => { opened = id; }
-  };
-  ctx.$t = value => value;
-  ctx._getBatchParams = (title, ids) => ids;
-  ctx._getCollectVisitsWf = async () => 'sys-collect-visits';
+  assert.equal(routes[0][2].reqIds, '2,6');
+  ctx.ctx.selectedSpecimens = ctx.selectedSpecimens = [source[0].children[0], source[0].children[0].children[0]];
   await component.methods.collectSpecimens.call(ctx);
-  assert.equal(routes.length, 1);
-  assert.equal(options[4][0].cpe.id, 2);
-  assert.deepEqual(copy(options[5].params), {specimens: [102], requirements: [3]});
-  assert.equal(opened, 9);
+  assert.equal(routes[1][2].reqIds, '2', 'do not collect a child even when its pending parent is in the same selection');
+  ctx.ctx.selectedSpecimens = ctx.selectedSpecimens = [source[0].children[0].children[0]];
+  await component.methods.collectSpecimens.call(ctx);
+  assert.equal(routes.length, 2); assert.equal(errors.length, 1);
+  component.methods.onItemsSelection.call(ctx, [source[0].children[0]]);
+  assert.equal(ctx.ctx.selectedSpecimens.length, 1, 'selecting a collapsed row must not select descendants implicitly');
 });
 
 function editor(collect) {
   const {svc} = service();
   const routes = [], errors = [];
   const component = load('biospecimen/participants/visits/CollectSpecimens.vue', {
+    '@/biospecimen/services/SpecimenProcessing.js': load('biospecimen/services/SpecimenProcessing.js', {'@/common/services/Util.js': {clone: copy}}),
     '@/common/services/ProtocolContent.js': contentAccess,
     '@/common/services/Util.js': {clone: copy},
     '@/common/services/FormUtil.js': {createCustomFieldsMap: () => {}},
@@ -325,7 +326,7 @@ test('changing a parent to pending also leaves its selected descendants pending'
   assert.ok(ctx.rows.every(row => row.specimen.status == 'Pending'));
 });
 
-test('mounted matrix renders the real table and forms, validates hidden required details, then saves the hierarchy', async () => {
+for (const lineage of ['Derived', 'Aliquot']) test('mounted ' + lineage + ' collection uses one native table and shared or individual required event fields', async () => {
   // A Vue host renderer exercises component setup, refs, expansion and Vuelidate
   // without a browser or any access to a deployed database.
   const vue = require('vue');
@@ -338,6 +339,9 @@ test('mounted matrix renders the real table and forms, validates hidden required
   const globals = {console: quiet, setTimeout, clearTimeout,
     window: {osSvc: {i18nSvc: {msg: translate}}, osUi: {currentUser: {id: 1}}}};
   const mocks = {
+    '@/forms/services/Form.js': {getDefinition: async id => ({id, rows: [[
+      {name: 'notes', udn: 'notes', type: 'stringTextField', caption: 'Processing notes', mandatory: true}
+    ]]})},
     '@/common/services/ProtocolContent.js': contentAccess,
     '@/common/services/Util.js': util,
     '@/common/services/HttpClient.js': {
@@ -357,9 +361,19 @@ test('mounted matrix renders the real table and forms, validates hidden required
   mocks['@/common/services/FieldFactory.js'] = load('common/services/FieldFactory.js', mocks, globals);
   mocks['@/common/services/FormUtil.js'] = load('common/services/FormUtil.js', mocks, globals);
   mocks['@/biospecimen/services/SpecimenReceipt.js'] = load('biospecimen/services/SpecimenReceipt.js', mocks, globals);
+  mocks['@/biospecimen/services/SpecimenProcessing.js'] = load('biospecimen/services/SpecimenProcessing.js', mocks, globals);
+  mocks['@/biospecimen/services/SpecimenProcessing.js'].getForms = async () => [];
   mocks['@/biospecimen/services/SpecimenCollection.js'] = load('biospecimen/services/SpecimenCollection.js', mocks, globals);
   mocks['@/biospecimen/services/Specimen.js'] = {getReceivedEventAddEditFs: () => ({rows: []})};
-  mocks['@/biospecimen/services/Visit.js'] = {getSpecimens: async () => tree(), clearVisits() {}};
+  const source = tree();
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected', availableQty: 10});
+  Object.assign(source[1], {id: 105, primaryReceived: true, status: 'Collected', availableQty: 10});
+  source[1].children = [{reqId: 6, lineage: 'Derived', type: 'Plasma', initialQty: 4, parentConsumedQty: 6}];
+  if (lineage == 'Aliquot') {
+    Object.assign(source[0].children[0], {id: 200, status: 'Collected', availableQty: 4});
+    source[1].children = [];
+  }
+  mocks['@/biospecimen/services/Visit.js'] = {getSpecimens: async () => source, clearVisits() {}};
   const rendered = relative => {
     const component = load(relative, mocks, globals);
     const filename = path.join(__dirname, '../src', relative);
@@ -391,7 +405,7 @@ test('mounted matrix renders the real table and forms, validates hidden required
   const layout = {rows: ['specimen.createdOn', 'specimen.extensionDetail.attrsMap.processing']
     .map(name => ({fields: [{name}]}))};
   const host = {
-    createElement: type => ({type, children: [], props: {}, style: {}}),
+    createElement: type => ({type, children: [], props: {}, style: {}, addEventListener() {}, removeEventListener() {}}),
     createText: text => ({text}), createComment: text => ({text}),
     setText: (node, text) => { node.text = text; }, setElementText: (node, text) => { node.text = text; },
     parentNode: node => node.parent,
@@ -409,9 +423,9 @@ test('mounted matrix renders the real table and forms, validates hidden required
     patchProp: (node, name, oldValue, value) => { node.props[name] = value; }
   };
   const renderer = vue.createRenderer(host);
-  const app = renderer.createApp(component, {cpr, visit});
+  const app = renderer.createApp(component, {cpr, visit: {...visit, id: 42, status: 'Complete'}});
   app.config.globalProperties.$t = translate;
-  app.config.globalProperties.$route = {query: {reqIds: '3', specimenIds: ''}};
+  app.config.globalProperties.$route = {query: {mode: 'collect'}};
   const runtimeErrors = [];
   app.config.errorHandler = error => runtimeErrors.push(error);
   app.config.warnHandler = () => {};
@@ -428,7 +442,7 @@ test('mounted matrix renders the real table and forms, validates hidden required
   }};
   for (const name of ['page', 'page-head', 'page-body', 'breadcrumb', 'message', 'button', 'button-group',
     'span', 'input-text', 'input-number', 'specimen-measure', 'storage-position', 'dropdown', 'date-picker',
-    'label', 'inline-message', 'divider', 'icon', 'user-dropdown', 'pv-dropdown', 'site-dropdown']) {
+    'label', 'inline-message', 'divider', 'icon', 'user-dropdown', 'pv-dropdown', 'site-dropdown', 'boolean-checkbox']) {
     app.component('os-' + name, stub);
   }
   app.directive('os-tooltip', {});
@@ -437,55 +451,65 @@ test('mounted matrix renders the real table and forms, validates hidden required
     for (let tick = 0; tick < 40 && !instance.$refs.matrix; tick++) await vue.nextTick();
     assert.deepEqual(runtimeErrors.map(error => error.message), []);
     assert.equal(instance.loadError, null);
-    assert.equal(instance.rows.length, 3);
-    assert.equal(instance.$refs.matrix.itemModels.length, 3);
-    const visitForm = instance.$refs.visitForm;
-    const prefix = 'visit.extensionDetail.attrsMap.';
-    const visibleVisitFields = () => visitForm.formRows.flatMap(row => row.fields.map(field => field.name));
-    const inputVisit = async (name, value) => {
-      visitForm.formModel[prefix + name] = value;
-      visitForm.handleInput(visitFields.find(field => field.name == prefix + name));
-      await vue.nextTick();
+    assert.equal(instance.displayRows.length, 2);
+    assert.ok(instance.displayRows.every(row => row.specimen.lineage == lineage));
+    const components = (vnode, name) => {
+      const found = [];
+      const walk = node => {
+        if (!node) return;
+        if (node.component) {
+          if (node.component.type === name) found.push(node.component.proxy);
+          walk(node.component.subTree);
+        } else if (Array.isArray(node.children)) node.children.forEach(walk);
+      };
+      walk(vnode);
+      return found;
     };
-    assert.deepEqual(copy(visibleVisitFields()), [prefix + 'dropdown1']);
-    await inputVisit('dropdown1', 'opcion 1');
-    assert.deepEqual(copy(visibleVisitFields()), visitFields.map(field => field.name));
-    assert.equal(visitForm.validate(), false, 'visible conditional fields must be mandatory');
-    await inputVisit('textfield1', 'Detalle de visita');
-    await inputVisit('textfield2', 'Otro dato de visita');
-    assert.equal(visitForm.validate(), true);
-    await inputVisit('dropdown1', 'opcion 2');
-    await inputVisit('textfield1', '');
-    await inputVisit('textfield2', '');
-    assert.deepEqual(copy(visibleVisitFields()), [prefix + 'dropdown1']);
-    assert.equal(visitForm.validate(), true, 'hidden conditional fields must not block collection');
-    await inputVisit('dropdown1', 'opcion 1');
-    assert.equal(visitForm.validate(), false);
-    await inputVisit('textfield1', 'Detalle de visita');
-    await inputVisit('textfield2', 'Otro dato de visita');
-    errors.length = 0;
-    for (const row of instance.rows.slice(0, -1)) {
-      mocks['@/common/services/ExpressionUtil.js'].setValue(row, 'specimen.extensionDetail.attrsMap.processing', 'Procesado');
-    }
-    for (const row of instance.rows) {
-      row.show = row.depth == 0;
-      row.expanded = false;
-    }
+    const tables = () => components(instance.$.subTree, table);
+    assert.equal(tables().length, 1);
+    assert.equal(tables()[0].itemModels.length, 2);
+    assert.equal(instance.$refs.visitForm, undefined, 'a subsequent level does not require resaving visit fields');
     await instance.save();
-    assert.equal(requests.length, 0, 'required details on collapsed descendants must prevent the HTTP request');
-    assert.ok(errors.length > 0);
-    for (const row of instance.rows) {
+    assert.equal(requests.length, 0, 'required specimen details must prevent submitting');
+    for (const row of instance.displayRows) {
       mocks['@/common/services/ExpressionUtil.js'].setValue(row, 'specimen.extensionDetail.attrsMap.processing', 'Procesado');
     }
+    instance.processingForms = [{formId: 176, formCtxtId: 50, formCaption: 'evento plasma'}];
+    assert.equal(instance.processingGroups.length, 1);
+    const group = instance.processingGroups[0];
+    await instance.processingFormChanged(group, 50);
     await vue.nextTick();
+    assert.ok(instance.$refs['processing-group-' + group.uid], 'selecting the form immediately displays shared fields');
+    await instance.save();
+    assert.equal(requests.length, 0, 'required event fields must prevent submitting');
+    const refs = instance.$refs['processing-group-' + group.uid];
+    const eventForm = Array.isArray(refs) ? refs[0] : refs;
+    eventForm.formModel.notes = 'Shared processing';
+    eventForm.handleInput(group.schema.rows[0].fields[0]);
+    await vue.nextTick();
+    group.shared = false;
+    instance.processingShare(group);
+    await vue.nextTick();
+    assert.equal(instance.$refs['processing-group-' + group.uid]?.length || 0, 0);
+    for (const row of group.rows) {
+      assert.ok(instance.$refs['processing-' + row.uid], 'unchecking same data opens individual fields');
+      assert.equal(row.processing.data.notes, 'Shared processing');
+    }
+    group.rows[0].processing.data.notes = 'Individual processing';
+    assert.equal(group.rows[1].processing.data.notes, 'Shared processing', 'individual answers must not alias');
+    const payload = mocks['@/biospecimen/services/SpecimenCollection.js'].buildSpecimens(instance.rows);
+    const savedChildren = lineage == 'Derived' ? payload.map(parent => parent.children[0]) : payload[0].children[0].children;
+    assert.equal(savedChildren[0].processingEvent.data.notes, 'Individual processing');
+    assert.equal(savedChildren[1].processingEvent.data.notes, 'Shared processing');
+    group.shared = true;
+    instance.processingShare(group);
+    await vue.nextTick();
+    assert.ok(instance.$refs['processing-group-' + group.uid]);
     await instance.save();
     assert.deepEqual(runtimeErrors.map(error => error.message), []);
     assert.equal(requests.length, 1);
-    assert.equal(requests[0].url, 'visits/collect');
-    assert.equal(requests[0].data.visit.eventId, 2);
-    assert.equal(requests[0].data.visit.extensionDetail.attrsMap.dropdown1, 'opcion 1');
-    assert.equal(requests[0].data.visit.extensionDetail.attrsMap.textfield1, 'Detalle de visita');
-    assert.equal(requests[0].data.specimens[0].children[0].children[0].reqId, 3);
+    assert.equal(requests[0].url, 'specimens/matrix');
+    assert.equal(requests[0].data.specimens[0].processingEvent, undefined, 'do not modify the collected parent');
     assert.equal(routes[0][1].visitId, 42);
   } finally {
     app.unmount();
@@ -554,7 +578,7 @@ test('one matrix resumes collection, receipt and processing across separate role
 
 test('opening a selected collected primary includes its pending descendants and isolates repeated requirements in different visits', () => {
   const {svc} = service(), source = tree();
-  Object.assign(source[0], {id: 100, status: 'Collected', availableQty: 10});
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected', availableQty: 10});
   const access = {allowed: [], createLineages: ['Derived', 'Aliquot'], canCreate: true};
   const selection = {specimenIds: [100], explicit: true, includeDescendants: true, uidPrefix: 'v-42-'};
   const rows = svc.prepareRows(source, selection, cp, cpr, {...visit, id: 42}, access);
@@ -579,7 +603,7 @@ test('resuming existing collected samples does not silently discard receipts to 
 
 test('the receipt visit panel shows primaries and omits only unauthorized planned processing', () => {
   const {svc} = service(), source = tree();
-  Object.assign(source[0], {id: 100, status: 'Collected'});
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected'});
   const access = {unrestricted: false, allowed: ['receipt'], createLineages: ['New']};
   const result = svc.visibleVisitSpecimens(source, access);
   assert.equal(result.length, 2); assert.equal(result[0].id, 100); assert.equal(result[0].children.length, 0);
@@ -587,4 +611,140 @@ test('the receipt visit panel shows primaries and omits only unauthorized planne
   assert.equal(svc.visibleVisitSpecimens(source, {unrestricted: true, createLineages: []})[0].children.length, 1);
   Object.assign(source[0].children[0], {id: 101, status: 'Collected'});
   assert.equal(svc.visibleVisitSpecimens(source, access)[0].children[0].id, 101, 'existing specimen reading keeps its base permission');
+});
+
+
+test('collection proceeds through the shallowest pending level and never recreates completed rows', () => {
+  const {svc} = service(), source = tree(), mode = {mode: 'collect'};
+  const ids = rows => copy(rows.filter(row => row.editable).map(row => row.specimen.reqId));
+  assert.deepEqual(ids(svc.prepareRows(source, mode, cp, cpr, visit)), [1, 5]);
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected', availableQty: 10});
+  assert.deepEqual(ids(svc.prepareRows(source, mode, cp, cpr, visit)), [5], 'finish the pending primary before advancing');
+  Object.assign(source[1], {id: 105, primaryReceived: true, status: 'Collected'});
+  source[1].children = [{reqId: 6, lineage: 'Derived', type: 'Serum', parentConsumedQty: 1, initialQty: 1}];
+  assert.deepEqual(ids(svc.prepareRows(source, mode, cp, cpr, visit)), [2, 6]);
+  Object.assign(source[0].children[0], {id: 200, status: 'Collected', availableQty: 4});
+  assert.deepEqual(ids(svc.prepareRows(source, mode, cp, cpr, visit)), [6], 'do not include deeper aliquots while this level has work');
+  Object.assign(source[1].children[0], {id: 206, status: 'Collected'});
+  const aliquots = svc.prepareRows(source, mode, cp, cpr, visit);
+  assert.deepEqual(ids(aliquots), [3, 4]);
+  assert.equal(svc.validate(aliquots), null);
+  const payload = svc.buildSpecimens(aliquots);
+  assert.deepEqual(Object.keys(payload[0]).sort(), ['children', 'id']);
+  assert.deepEqual(Object.keys(payload[0].children[0]).sort(), ['children', 'id']);
+  source[0].children[0].children.forEach((child, i) => Object.assign(child, {id: 300 + i, status: 'Collected'}));
+  assert.equal(svc.prepareRows(source, mode, cp, cpr, visit).length, 0);
+});
+
+test('an explicit selection includes only eligible marked samples without adding parents, children or siblings', () => {
+  const {svc} = service(), source = tree();
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected'});
+  Object.assign(source[1], {id: 105, primaryReceived: true, status: 'Collected'});
+  source[1].children = [{reqId: 6, lineage: 'Derived'}];
+  const choose = reqIds => svc.prepareRows(source, {...select(reqIds), mode: 'collect'}, cp, cpr, visit);
+  assert.deepEqual(copy(choose([2, 3, 6]).filter(row => row.editable).map(row => row.specimen.reqId)), [2, 6]);
+  assert.equal(choose([3, 4]).length, 0, 'a selected pending parent does not make its children eligible');
+  assert.equal(choose([]).length, 0);
+  assert.deepEqual(copy(choose([6]).filter(row => row.editable).map(row => row.specimen.reqId)), [6]);
+  Object.assign(source[0].children[0], {id: 200, status: 'Collected'});
+  assert.deepEqual(copy(choose([3, 6]).filter(row => row.editable).map(row => row.specimen.reqId)), [3, 6],
+    'explicit selection may span levels when all immediate parents were already collected');
+});
+
+test('collection eligibility observes creation scopes and blocks every descendant of a pending parent', () => {
+  const {svc} = service(), source = tree(), access = {allowed: ['form:176'], canCreate: true, createLineages: ['Derived', 'Aliquot']};
+  assert.equal(svc.collectionPlan(source, {}, access).length, 0);
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected'});
+  assert.deepEqual(copy(svc.collectionPlan(source, {}, access).map(item => item.specimen.reqId)), [2]);
+  assert.equal(svc.collectionPlan(source, {}, {...access, canCreate: false}).length, 0);
+  assert.equal(svc.collectionPlan(source, select([3]), access).length, 0);
+  source[0].status = 'Missed Collection';
+  assert.equal(svc.collectionPlan(source, select([2]), access).length, 0);
+});
+
+test('the level is based on hierarchy rather than lineage, including direct aliquots and nested derivatives', () => {
+  const {svc} = service(), source = tree();
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected'});
+  Object.assign(source[1], {id: 105, primaryReceived: true, status: 'Collected'});
+  source[1].children = [{reqId: 6, lineage: 'Aliquot'}];
+  source[0].children[0].children.push({reqId: 7, lineage: 'Derived'});
+  assert.deepEqual(copy(svc.collectionPlan(source).map(item => item.specimen.reqId)), [2, 6]);
+  Object.assign(source[0].children[0], {id: 200, status: 'Collected'});
+  Object.assign(source[1].children[0], {id: 206, status: 'Collected'});
+  assert.deepEqual(copy(svc.collectionPlan(source).map(item => item.specimen.reqId)), [3, 4, 7]);
+});
+
+test('one top processing selector applies independently to every selected child and preserves shared answers when toggled', () => {
+  const {svc} = service(), source = tree(), processing = load('biospecimen/services/SpecimenProcessing.js', {'@/common/services/Util.js': {clone: copy}});
+  Object.assign(source[0], {id: 100, primaryReceived: true, status: 'Collected'});
+  Object.assign(source[1], {id: 105, primaryReceived: true, status: 'Collected'});
+  source[1].children = [{reqId: 6, lineage: 'Aliquot'}];
+  const rows = svc.prepareRows(source, {mode: 'collect'}, cp, cpr, visit);
+  const groups = processing.collectionGroups(rows);
+  assert.equal(groups.length, 1); assert.equal(groups[0].rows.length, 2);
+  const group = groups[0]; group.form = {formId: 176, formCtxtId: 50};
+  group.data = {notes: 'Common', id: 999, appData: {objectId: 999}};
+  assert.ok(group.rows.every(row => processing.payload(row).data.notes == 'Common'));
+  assert.equal(processing.payload(group.rows[0]).data.id, undefined);
+  group.shared = false; processing.share(group);
+  group.rows[0].processing.data.notes = 'Individual';
+  assert.equal(processing.payload(group.rows[1]).data.notes, 'Common');
+  group.shared = true; processing.share(group);
+  assert.equal(processing.payload(group.rows[1]).data.notes, 'Individual');
+  group.rows[0].specimen.status = 'Pending';
+  assert.equal(processing.payload(group.rows[0]), undefined);
+});
+
+test('saving an anticipated visit opens the persisted visit instead of its empty virtual origin', async () => {
+  const origin = {name: 'ParticipantsListItemVisitDetail.Overview', params: {cpId: '1', cprId: '31', visitId: '-1'},
+    query: {eventId: '2', view: 'participants_list'}};
+  const {ctx, routes} = editor(async () => ({id: 47, cprId: 31, eventId: 2, status: 'Complete'}));
+  ctx.visit = {...visit, id: -1};
+  ctx.$route = {query: {returnTo: matrixNavigation.matrixOrigin(origin)}};
+  await ctx.save();
+  assert.equal(routes.length, 1);
+  assert.equal(routes[0][0], origin.name);
+  assert.equal(Number(routes[0][1].visitId), 47, 'returning to -1 recreates an empty anticipated visit despite successful persistence');
+  assert.equal(routes[0][1].cprId, '31');
+  assert.deepEqual(routes[0][2], origin.query);
+});
+
+test('cancelling an anticipated visit preserves its original route without claiming it was saved', () => {
+  const origin = {name: 'ParticipantsListItemVisitDetail.Overview', params: {cpId: '1', cprId: '31', visitId: '-1'}, query: {eventId: '2'}};
+  const {ctx, routes} = editor();
+  ctx.visit = {...visit, id: -1};
+  ctx.$route = {query: {returnTo: matrixNavigation.matrixOrigin(origin)}};
+  ctx.cancel();
+  assert.deepEqual(routes[0], [origin.name, origin.params, origin.query]);
+});
+
+
+test('primary receipt is required for derived and direct aliquot collection, with or without explicit selection', () => {
+  const {svc} = service(), source = tree();
+  Object.assign(source[0], {id: 100, status: 'Collected', primaryReceived: false});
+  Object.assign(source[1], {id: 105, status: 'Collected', primaryReceived: false});
+  source[1].children = [{reqId: 6, lineage: 'Aliquot'}];
+  for (const selection of [{}, select([2, 6])]) {
+    assert.equal(svc.collectionPlan(source, selection).length, 0);
+    assert.equal(svc.prepareRows(source, {...selection, mode: 'collect'}, cp, cpr, visit).length, 0);
+  }
+  source[0].primaryReceived = true;
+  assert.deepEqual(copy(svc.collectionPlan(source).map(item => item.specimen.reqId)), [2]);
+  source[1].primaryReceived = true;
+  assert.deepEqual(copy(svc.collectionPlan(source).map(item => item.specimen.reqId)), [2, 6]);
+});
+
+test('nested children cannot bypass primary receipt through an already collected derivative', () => {
+  const {svc} = service(), source = tree();
+  Object.assign(source[0], {id: 100, status: 'Collected', primaryReceived: false});
+  Object.assign(source[0].children[0], {id: 200, status: 'Collected', primaryReceived: false});
+  const selection = select([3, 4]);
+  assert.equal(svc.collectionPlan(source, selection).length, 0);
+  source[0].primaryReceived = true;
+  // Only readiness is needed: this processing role has no access to receipt event fields.
+  const access = {allowed: [], createLineages: ['Aliquot'], canCreate: true};
+  assert.deepEqual(copy(svc.collectionPlan(source, selection, access).map(item => item.specimen.reqId)), [3, 4]);
+  source[0].primaryReceived = false;
+  source[0].children[0].primaryReceived = true;
+  assert.equal(svc.collectionPlan(source, selection, access).length, 0, 'always trust the original primary state');
 });

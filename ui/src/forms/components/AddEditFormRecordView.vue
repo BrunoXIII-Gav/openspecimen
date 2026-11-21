@@ -17,7 +17,7 @@
     <os-page-body>
       <os-message type="error" v-if="ctx.accessChecked && !ctx.formAllowed">{{ $t('roles.content.denied') }}</os-message>
       <os-addedit-form-record :entity="object" :form-def="ctx.formDef" :form-id="formId"
-        :form-ctxt-id="formCtxtId" :record-id="recordId" :hide-panel="true" :show-next="!!ctx.nextForm"
+        :form-ctxt-id="formCtxtId" :record-id="recordId" :hide-panel="true"
         :show-draft="allowDraftRecords" :field-reference-context="api.getFieldReferenceContext && api.getFieldReferenceContext()"
         @saved="saved" @cancelled="saveCancelled" v-if="ctx.formAllowed" />
     </os-page-body>
@@ -29,7 +29,6 @@
 import alertsSvc  from '@/common/services/Alerts.js';
 import contentSvc from '@/common/services/ProtocolContent.js';
 import formSvc    from '@/forms/services/Form.js';
-import routerSvc  from '@/common/services/Router.js';
 
 export default {
   props: ['object', 'formId', 'formCtxtId', 'recordId', 'api'],
@@ -69,11 +68,7 @@ export default {
         args: {recordId: record.id, formCaption: this.ctx.formDef.caption}
       });
 
-      if (record.nextForm) {
-        this._nextForm(this.ctx.nextForm);
-      } else {
-        this._navToOverview(record);
-      }
+      this._navToOverview(record);
     },
 
     saveCancelled: function() {
@@ -88,37 +83,10 @@ export default {
       this.ctx.accessChecked = true;
       if (!this.ctx.formAllowed) return;
       formSvc.getDefinition(this.formId).then(formDef => this.ctx.formDef = formDef);
-      if (!this.recordId) {
-        if (!this.forms) {
-          this.forms = await this.api.getForms();
-        }
-
-        let nextForm = undefined;
-        let cfFound  = false; // current form found?
-        for (let i = 0; i < this.forms.length - 1; ++i) {
-          let f = this.forms[i];
-          let nf = this.forms[i + 1];
-          if (!cfFound && f.formId == this.formId && f.formCtxtId == this.formCtxtId) {
-            cfFound = true;
-          }
-
-          if (cfFound && !nf.sysForm && (nf.multiRecord || nf.noOfRecords == 0)) {
-            nextForm = nf;
-            break;
-          }
-        }
-
-        this.ctx.nextForm = nextForm;
-      }
     },
 
     _navToOverview: function({containerId: formId, id: recordId}) {
       this.api.gotoOverview(formId, recordId);
-    },
-
-    _nextForm: function({formId, formCtxtId}) {
-      const route = routerSvc.getCurrentRoute();
-      routerSvc.goto(route.name, route.params, {formId, formCtxtId});
     }
   }
 }

@@ -6,6 +6,12 @@ import java.util.Map;
 public class ExportDetail {
 	private String objectType;
 
+	private String fileFormat;
+
+	public String getFileFormat() { return fileFormat; }
+
+	public void setFileFormat(String fileFormat) { this.fileFormat = fileFormat; }
+
 	private Map<String, String> params;
 
 	private List<Long> recordIds;

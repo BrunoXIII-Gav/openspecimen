@@ -17,6 +17,8 @@ function load(file, access = {createLineages: ['New']}, render = false) {
   const module = {exports: {}};
   vm.runInNewContext(code, {module, exports: module.exports, require: name => {
     if (name == '@/common/services/ProtocolContent.js') return {...policy, getAccess: async () => access};
+    if (name == '@/biospecimen/services/SpecimenReceipt.js') return {primaryReceived: specimen => specimen?.primaryReceived === true};
+    if (name == '@/biospecimen/services/Specimen.js') return {getById: async () => ({id: 100, primaryReceived: false})};
     if (name == './role-content-dependencies.mjs') return roleDependencies;
     if (name == '@/biospecimen/services/CollectionProtocol.js') return {getCps: async () => []};
     if (name == '@/common/services/HttpClient.js') return {get: async () => [
@@ -52,11 +54,12 @@ test('role selector keeps event permissions while independently selecting creati
 
 test('specimen create menu hides children for primary-only roles and offers either child independently', () => {
   const component = load('biospecimen/participants/specimens/Overview.vue');
-  const ctx = {$t: key => key, createDerivatives() {}, createAliquots() {}, creationAccess: {createLineages: ['New']}};
+  const ctx = {specimen: {primaryReceived: true}, $t: key => key, createDerivatives() {}, createAliquots() {}, creationAccess: {createLineages: ['New']}};
   const options = () => Array.from(component.computed.creationOptions.call(ctx), item => item.lineage);
   assert.deepEqual(options(), []);
   ctx.creationAccess = {createLineages: ['Derived']}; assert.deepEqual(options(), ['Derived']);
   ctx.creationAccess = {createLineages: ['Aliquot']}; assert.deepEqual(options(), ['Aliquot']);
+  ctx.specimen.primaryReceived = false; assert.deepEqual(options(), [], 'receipt is required even with Aliquot creation rights');
   ctx.creationAccess = null; assert.deepEqual(options(), []);
 });
 
@@ -133,4 +136,12 @@ test('bulk selection changes only content options enabled by the base ACL', () =
   for (const [name, method] of Object.entries(component.methods)) ctx[name] = method.bind(ctx);
   ctx.clearAllowed(0); assert.deepEqual(ctx.modelValue[0].allowed, ['receipt']);
   ctx.selectAll(0); assert.deepEqual(ctx.modelValue[0].allowed, ['receipt', 'form:1']);
+});
+
+for (const lineage of ['Derived', 'Aliquot']) test(`direct ${lineage} creation stops before loading forms until the primary is received`, async () => {
+  const component = load('biospecimen/participants/specimens/CreateChildren.vue', {createLineages: [lineage]});
+  const ctx = {specimen: {cpId: 1, parentId: 100}, lineage, creationDenied: false, receiptRequired: false};
+  await component.created.call(ctx);
+  assert.equal(ctx.receiptRequired, true);
+  assert.equal(ctx.creationDenied, false);
 });

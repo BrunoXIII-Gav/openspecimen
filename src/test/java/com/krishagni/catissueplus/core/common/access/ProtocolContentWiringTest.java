@@ -88,6 +88,9 @@ public class ProtocolContentWiringTest {
 				@Override public java.util.Map<String, Object> getFormInfo(Long cpId, String type) { return null; }
 			});
 			context.registerBean(ProtocolContentService.class);
+			context.getBeanFactory().registerSingleton("formService", proxy(com.krishagni.catissueplus.core.de.services.FormService.class,
+				(method, args) -> null));
+			context.registerBean(com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenProcessingService.class);
 			context.registerBean(com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenWorkflowService.class);
 			var processingAttempted = new java.util.concurrent.atomic.AtomicBoolean();
 			context.getBeanFactory().registerSingleton("specimenService", proxy(com.krishagni.catissueplus.core.biospecimen.services.SpecimenService.class, (method, args) -> {

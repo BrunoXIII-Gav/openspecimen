@@ -6,6 +6,12 @@ import org.apache.commons.lang3.StringUtils;
 public class ExecuteQueryEventOp  {
 
 	private String querySpace;
+
+	private String fileFormat;
+
+	public String getFileFormat() { return fileFormat; }
+
+	public void setFileFormat(String fileFormat) { this.fileFormat = fileFormat; }
 	
 	private Long cpId;
 

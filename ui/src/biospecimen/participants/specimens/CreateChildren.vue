@@ -12,7 +12,8 @@
 
     <os-page-body>
       <os-message type="error" v-if="creationDenied">{{ $t('roles.content.creation_denied') }}</os-message>
-      <div class="children-form" v-if="parent.id && !creationDenied">
+      <os-message type="error" v-if="receiptRequired">{{ $t('specimens.primary_receipt_required') }}</os-message>
+      <div class="children-form" v-if="parent.id && !creationDenied && !receiptRequired">
         <div class="parent-summary">
           <div>
             <span class="summary-label">{{ $t('specimens.parent_specimen') }}</span>
@@ -179,6 +180,7 @@ import routerSvc  from '@/common/services/Router.js';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 import contentSvc from '@/common/services/ProtocolContent.js';
 import specimenDisplay from '@/biospecimen/services/SpecimenDisplay.js';
+import receiptSvc from '@/biospecimen/services/SpecimenReceipt.js';
 import formSvc     from '@/forms/services/Form.js';
 import formUtil    from '@/common/services/FormUtil.js';
 import util       from '@/common/services/Util.js';
@@ -192,6 +194,7 @@ export default {
     return {
       parent: {},
       creationDenied: false,
+      receiptRequired: false,
       count: 1,
       qtyPerAliquot: null,
       individualAliquotQuantities: false,
@@ -290,8 +293,9 @@ export default {
       this.creationDenied = true;
       return;
     }
-    const [parent, formDef, eventForms] = await Promise.all([
-      specimenSvc.getById(this.specimen.parentId),
+    const parent = this.parent = await specimenSvc.getById(this.specimen.parentId);
+    if (!receiptSvc.primaryReceived(parent)) { this.receiptRequired = true; return; }
+    const [formDef, eventForms] = await Promise.all([
       specimenSvc.getCustomFieldsForm(this.specimen.cpId, this.lineage),
       specimenSvc.getEventForms(this.specimen.parentId)
     ]);

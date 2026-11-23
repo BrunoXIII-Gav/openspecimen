@@ -53,6 +53,8 @@ import com.krishagni.catissueplus.core.common.util.CsvFileWriter;
 import com.krishagni.catissueplus.core.common.util.CsvReader;
 import com.krishagni.catissueplus.core.common.util.CsvWriter;
 import com.krishagni.catissueplus.core.common.util.EmailUtil;
+import com.krishagni.catissueplus.core.common.util.ExcelExport;
+import com.krishagni.catissueplus.core.common.util.ExportFormat;
 import com.krishagni.catissueplus.core.common.util.LogUtil;
 import com.krishagni.catissueplus.core.common.util.MessageUtil;
 import com.krishagni.catissueplus.core.common.util.Utility;
@@ -190,6 +192,7 @@ public class ExportServiceImpl implements ExportService, InitializingBean {
 
 	@PlusTransactional
 	private ExportJob createJob(ExportDetail detail) {
+		ExportFormat format = ExportFormat.from(detail.getFileFormat());
 		ObjectSchema schema = schemaFactory.getSchema(detail.getObjectType(), detail.getParams());
 		if (schema == null) {
 			throw OpenSpecimenException.userError(ExportErrorCode.INVALID_OBJECT_TYPE, detail.getObjectType());
@@ -206,6 +209,7 @@ public class ExportServiceImpl implements ExportService, InitializingBean {
 		job.setCreatedBy(AuthUtil.getCurrentUser());
 		job.setCreationTime(Calendar.getInstance().getTime());
 		job.setParams(getParams(detail.getParams()));
+		job.param("fileFormat", format.name());
 		job.setSchema(schema);
 		job.setRecordIds(detail.getRecordIds());
 		job.setDisableNotifs(detail.isDisableNotifs());
@@ -416,7 +420,14 @@ public class ExportServiceImpl implements ExportService, InitializingBean {
 
 				generateRawRecordsFile();
 				generateOutputFile();
-				generateOutputZip(job);
+				if (ExportFormat.from(job.param("fileFormat")) == ExportFormat.XLSX) {
+					ExcelExport.convertCsv(new File(getOutputCsvFile(job)), new File(getOutputExcelFile(job)), Utility.getFieldSeparator(), true);
+					if (filesCount > 0) {
+						generateOutputZip(job);
+					}
+				} else {
+					generateOutputZip(job);
+				}
 				completed();
 				return 0;
 			} catch (Throwable t) {
@@ -858,13 +869,20 @@ public class ExportServiceImpl implements ExportService, InitializingBean {
 			return zipFile.getAbsolutePath();
 		}
 
-		return getOutputCsvFile(job);
+		return ExportFormat.from(job.param("fileFormat")) == ExportFormat.XLSX ? getOutputExcelFile(job) : getOutputCsvFile(job);
+	}
+
+	private String getOutputExcelFile(ExportJob job) {
+		return getJobDir(job) + File.separator + "output.xlsx";
 	}
 
 	private void cleanupFiles(ExportJob job) {
 		try {
 			new File(getRawDataFile(job)).delete();
 			new File(getOutputCsvFile(job)).delete();
+			if (new File(getJobDir(job), "output.zip").exists()) {
+				new File(getOutputExcelFile(job)).delete();
+			}
 			FileUtils.deleteDirectory(new File(getJobDir(job), "files"));
 		} catch (Exception e) {
 			logger.error("Error cleaning up export job output directory", e);
@@ -874,7 +892,11 @@ public class ExportServiceImpl implements ExportService, InitializingBean {
 	private void generateOutputZip(ExportJob job) throws IOException {
 		String jobDir = getJobDir(job);
 		File jobZipFile = new File(jobDir + ".zip");
-		IoUtil.zipFiles(jobDir, jobZipFile.getAbsolutePath(), Collections.singletonList(getRawDataFile(job)));
+		List<String> excluded = new ArrayList<>(Collections.singletonList(getRawDataFile(job)));
+		if (ExportFormat.from(job.param("fileFormat")) == ExportFormat.XLSX) {
+			excluded.add(getOutputCsvFile(job));
+		}
+		IoUtil.zipFiles(jobDir, jobZipFile.getAbsolutePath(), excluded);
 		FileUtils.moveFile(jobZipFile, new File(jobDir, "output.zip"));
 	}
 

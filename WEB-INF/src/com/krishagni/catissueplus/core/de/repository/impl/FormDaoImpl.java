@@ -18,6 +18,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
+import org.hibernate.query.sql.spi.NativeQueryImplementor;
 
 import com.krishagni.catissueplus.core.administrative.events.UserGroupSummary;
 import com.krishagni.catissueplus.core.administrative.repository.FormListCriteria;
@@ -1272,7 +1273,9 @@ public class FormDaoImpl extends AbstractDao<FormContextBean> implements FormDao
 		int startAt, int maxResults,
 		Function<Object[], Map<String, Object>> rowMapper) {
 
-		String sql = getCurrentSession().createNamedQuery(queryName, Object[].class).getQueryString();
+		// getQueryString() contains JDBC placeholders in Hibernate 7; preserve the named bindings.
+		String sql = getCurrentSession().createNamedQuery(queryName, Object[].class)
+			.unwrap(NativeQueryImplementor.class).toMemento(queryName).getOriginalSqlString();
 		if (CollectionUtils.isNotEmpty(names)) {
 			int orderByIdx = sql.lastIndexOf("order by");
 			sql = sql.substring(0, orderByIdx) + " and " + namesCond + " " + sql.substring(orderByIdx);

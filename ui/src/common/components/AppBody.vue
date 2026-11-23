@@ -1,16 +1,18 @@
 <template>
   <div class="os-app-body">
     <Toast class="os-app-toast" />
+    <ExportFormatDialog />
     <router-view />
   </div>
 </template>
 
 <script>
 import Toast from "primevue/toast";
+import ExportFormatDialog from './ExportFormatDialog.vue';
 
 export default {
   components: {
-    Toast
+    Toast, ExportFormatDialog
   }
 }
 

@@ -14,6 +14,11 @@ import com.krishagni.catissueplus.core.common.events.ResponseEvent;
 @RequestMapping("/specimens")
 public class SpecimenWorkflowController {
 	@Autowired private SpecimenWorkflowService service;
+	@Autowired private com.krishagni.catissueplus.core.biospecimen.services.impl.SpecimenProcessingService processing;
+	@GetMapping("/processing-forms") @ResponseBody
+	public List<com.krishagni.catissueplus.core.de.events.FormCtxtSummary> processingForms(@RequestParam("cpId") Long cpId) {
+		return processing.getForms(cpId);
+	}
 	@GetMapping("/{id}/authorized-context") @ResponseBody
 	public Map<String, Object> context(@PathVariable("id") Long id) { return ResponseEvent.unwrap(service.getContext(id)); }
 	@GetMapping("/matrix-context") @ResponseBody

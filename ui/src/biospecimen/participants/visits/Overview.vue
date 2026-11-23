@@ -33,8 +33,8 @@
       <SpecimenTree :cp="ctx.cp" :cpr="cpr" :visit="visit" :specimens="ctx.specimens"
         :ref-date="visit.status && visit.status != 'Pending' ? visit.visitDate : 0"
         @reload="reloadSpecimens" v-if="ctx.cp.id > 0 && isReadSpecimenAllowed">
-        <template #after-cart>
-          <os-button :label="$t('specimens.collection_matrix.open')" @click="openMatrix" v-if="canOpenMatrix" />
+        <template #after-cart="{selectedSpecimens}">
+          <os-button :label="$t('specimens.collection_matrix.open')" @click="openMatrix(selectedSpecimens)" v-if="canOpenMatrix" />
         </template>
       </SpecimenTree>
     </os-grid-column>
@@ -60,6 +60,7 @@ import visitSvc    from '@/biospecimen/services/Visit.js';
 import wfSvc       from '@/biospecimen/services/Workflow.js';
 import contentSvc from '@/common/services/ProtocolContent.js';
 import collectionSvc from '@/biospecimen/services/SpecimenCollection.js';
+import receiptSvc from '@/biospecimen/services/SpecimenReceipt.js';
 import {matrixOrigin} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
 
 export default {
@@ -90,6 +91,8 @@ export default {
         routeQuery: this.$route.query,
 
         specimens: [],
+
+        contentAccess: null,
 
         userRole: this.cpViewCtx.getRole(),
 
@@ -123,7 +126,8 @@ export default {
   computed: {
     canOpenMatrix() {
       return this.visit.id > 0 && this.cpViewCtx.isReadSpecimenAllowed(this.cpr) &&
-        (this.cpViewCtx.isUpdateSpecimenAllowed(this.cpr) || this.cpViewCtx.isCreateSpecimenAllowed(this.cpr));
+        this.cpViewCtx.isUpdateSpecimenAllowed(this.cpr) && !!this.ctx.contentAccess &&
+        contentSvc.allows(this.ctx.contentAccess, 'receipt') && this.ctx.specimens.some(specimen => receiptSvc.canReceive(specimen));
     },
     isUpdateAllowed: function() {
       return !this.visit.contextOnly && this.cpViewCtx.isUpdateVisitAllowed(this.cpr);
@@ -147,10 +151,11 @@ export default {
   },
 
   methods: {
-    openMatrix() {
+    openMatrix(selectedSpecimens = []) {
       if (this.canOpenMatrix) routerSvc.goto('VisitCollectSpecimens',
         {cpId: this.ctx.cp.id, cprId: this.cpr.id, visitId: this.visit.id},
-        {eventId: this.visit.eventId, returnTo: matrixOrigin(this.$route)});
+        {eventId: this.visit.eventId, mode: 'information', returnTo: matrixOrigin(this.$route),
+          ...(selectedSpecimens.length ? {specimenIds: selectedSpecimens.filter(specimen => specimen.id > 0).map(specimen => specimen.id).join(',')} : {})});
     },
     editVisit: function() {
       routerSvc.goto('VisitAddEdit', {cpId: this.ctx.cp.id, cprId: this.cpr.id, visitId: this.visit.id});
@@ -229,6 +234,7 @@ export default {
       const {id, eventId} = visit;
       Promise.all([visit.$specimens || visitSvc.getSpecimens(this.cpr.id, eventId, id), contentSvc.getAccess(this.ctx.cp.id)]).then(
         ([specimens, access]) => {
+          this.ctx.contentAccess = access;
           visit.$specimens = specimens;
           this.ctx.specimens = collectionSvc.visibleVisitSpecimens(specimens, access);
         }

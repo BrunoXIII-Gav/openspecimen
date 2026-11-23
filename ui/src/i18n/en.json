@@ -1413,6 +1413,7 @@
   },
 
   "export": {
+    "download_format": "Download format",
     "export_all_q": "Export All?",
     "export_all_records_q": "Are you sure you want to export all records of {title}?",
     "export_records": "Export Records",
@@ -1899,6 +1900,7 @@
     "bulk_update": "Bulk Update Participants",
     "bulk_updated": "{count} participants updated.",
     "collect": "Collect",
+    "process": "Process",
     "collect_pending_specimens": "Collect Pending Specimens",
     "collect_specimens": "Collect Specimens",
     "collect_unplanned_specimens": "Collect Unplanned Specimens",
@@ -3485,6 +3487,7 @@
   },
 
   "specimens": {
+    "primary_receipt_required": "The primary specimen must be received before collecting derivatives or aliquots.",
     "context_unavailable": "The authorized context for this specimen could not be loaded.",
     "receipt_matrix": {
       "title": "Complete receipt", "common": "Common receipt data", "apply": "Apply to all specimens",
@@ -3494,6 +3497,12 @@
       "load_failed": "Specimens pending receipt could not be loaded."
     },
     "collection_matrix": {
+      "processing_form": "Form",
+      "choose_form": "Select form",
+      "same_data": "Same data",
+      "event_data": "Data",
+      "use_group": "Use group settings",
+      "processing_load_failed": "The processing form could not be loaded. Select it again.",
       "title": "Planned specimen matrix",
       "visit_details": "Visit details",
       "help": "Complete the data assigned to you. Pending stages can be resumed in this same matrix.",
@@ -3510,7 +3519,7 @@
       "invalid_quantity": "Quantities and concentrations must be valid non-negative numbers.",
       "duplicate_label": "The selection contains duplicate specimen labels.",
       "duplicate_barcode": "The selection contains duplicate barcodes.",
-      "open": "Complete information",
+      "open": "Receive",
       "no_authorized_pending": "There are no pending tasks available with your permissions."
     },
     "intermediate_material": "Intermediate material",

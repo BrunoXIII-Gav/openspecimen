@@ -101,7 +101,9 @@ export default {
       const jobParams = {emailIds, ...(params || {})};
 
       const payload = { objectType: type, params: jobParams };
-      exportSvc.exportRecords(payload).then(() => routerSvc.goto('UsersList', {userId: -1}));
+      exportSvc.exportRecords(payload).then(job => {
+        if (job) routerSvc.goto('UsersList', {userId: -1});
+      });
     },
 
     cancel: function() {

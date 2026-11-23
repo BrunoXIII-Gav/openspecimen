@@ -28,6 +28,7 @@ import com.krishagni.catissueplus.core.common.errors.OpenSpecimenException;
 import com.krishagni.catissueplus.core.common.events.RequestEvent;
 import com.krishagni.catissueplus.core.common.events.ResponseEvent;
 import com.krishagni.catissueplus.core.common.util.ConfigUtil;
+import com.krishagni.catissueplus.core.common.util.ExcelExport;
 import com.krishagni.catissueplus.core.common.util.Utility;
 import com.krishagni.catissueplus.core.de.events.ExecuteQueryEventOp;
 import com.krishagni.catissueplus.core.de.events.ExecuteSavedQueryOp;
@@ -105,6 +106,17 @@ public class QueryController {
 
 		fileId = Utility.cleanPath(Utility.stripWs(fileId));
 		filename = Utility.cleanPath(Utility.stripWs(filename));
+		File file = response(querySvc.getExportDataFile(request(fileId)));
+		if (file.getName().endsWith(".xlsx")) {
+			if (filename.equals("QueryResults.zip") || filename.equals("QueryResults.csv.zip")) {
+				filename = "QueryResults_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime()) + ".xlsx";
+			} else if (!filename.endsWith(".xlsx")) {
+				int dot = filename.lastIndexOf('.');
+				filename = (dot >= 0 ? filename.substring(0, dot) : filename) + ".xlsx";
+			}
+			Utility.sendToClient(response, filename, ExcelExport.CONTENT_TYPE, file);
+			return;
+		}
 		if (!filename.endsWith(".zip")) {
 			filename += ".zip";
 		}
@@ -114,7 +126,6 @@ public class QueryController {
 			filename = "QueryResults_" + sdf.format(Calendar.getInstance().getTime()) + filename.substring(filename.indexOf("."));
 		}
 
-		File file = response(querySvc.getExportDataFile(request(fileId)));
 		Utility.sendToClient(response, filename, file);
 	}
 

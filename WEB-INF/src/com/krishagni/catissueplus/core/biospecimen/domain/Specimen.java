@@ -1158,6 +1158,12 @@ public class Specimen extends BaseExtensionEntity {
 		return isPrimary() && isCollected() && getReceivedQuality() != null && !getReceivedQuality().getValue().equals(TO_BE_RECEIVED);
 	}
 
+	public void ensurePrimaryReceived() {
+		if (!getPrimarySpecimen().isReceived()) {
+			throw OpenSpecimenException.userError(SpecimenErrorCode.PRIMARY_RECEIPT_REQUIRED);
+		}
+	}
+
 	public boolean isStorageSiteBasedAccessRightsEnabled() {
 		return getCollectionProtocol().storageSiteBasedAccessRightsEnabled();
 	}
@@ -2288,6 +2294,7 @@ public class Specimen extends BaseExtensionEntity {
 	}
 
 	public void addChildSpecimen(Specimen specimen) {
+		if (specimen.isCollected() && !specimen.isPrimary()) ensurePrimaryReceived();
 		if (specimen.getId() == null) {
 			ProtocolContentAccess.getInstance().ensureCreationAllowed(getCollectionProtocol().getId(), specimen.getLineage());
 		}

@@ -211,6 +211,37 @@ test('tree collection reloads the plan, excludes blocked selections and returns 
   assert.equal(ctx.ctx.selectedSpecimens.length, 1, 'selecting a collapsed row must not select descendants implicitly');
 });
 
+test('tree collection button distinguishes primary collection from processing', () => {
+  const {svc} = service();
+  const component = load('biospecimen/components/SpecimenTree.vue', {
+    '@/biospecimen/services/ProtocolContent.js': contentAccess,
+    '@/biospecimen/services/SpecimenCollection.js': svc
+  });
+  const source = tree();
+  const ctx = {
+    cpr, cpViewCtx: {isCreateSpecimenAllowed: () => true}, contentAccess: {unrestricted: true},
+    specimens: source, ctx: {selectedSpecimens: []}
+  };
+  ctx._collectionAccess = component.methods._collectionAccess.bind(ctx);
+  ctx._isPrimaryCollection = component.methods._isPrimaryCollection.bind(ctx);
+
+  assert.equal(component.computed.collectActionLabel.call(ctx), 'participants.collect');
+
+  Object.assign(source[0], {id: 100, status: 'Collected', primaryReceived: true});
+  Object.assign(source[1], {id: 101, status: 'Collected', primaryReceived: true});
+  assert.equal(component.computed.collectActionLabel.call(ctx), 'participants.process');
+
+  const pendingPrimary = {lineage: 'New', status: 'Pending'};
+  const pendingDerived = {lineage: 'Derived', status: 'Pending'};
+  ctx.ctx.selectedSpecimens = [{specimen: pendingDerived}];
+  assert.equal(component.computed.collectActionLabel.call(ctx), 'participants.process');
+  ctx.ctx.selectedSpecimens = [{specimen: pendingPrimary}, {specimen: pendingDerived}];
+  assert.equal(component.computed.collectActionLabel.call(ctx), 'participants.collect');
+
+  ctx.ctx.selectedSpecimens = [{specimen: {lineage: 'New', status: 'Pending', specimensPool: [{id: 1}]}}];
+  assert.equal(component.computed.collectActionLabel.call(ctx), 'participants.process');
+});
+
 function editor(collect) {
   const {svc} = service();
   const routes = [], errors = [];

@@ -1900,6 +1900,7 @@
     "bulk_update": "Bulk Update Participants",
     "bulk_updated": "{count} participants updated.",
     "collect": "Collect",
+    "process": "Process",
     "collect_pending_specimens": "Collect Pending Specimens",
     "collect_specimens": "Collect Specimens",
     "collect_unplanned_specimens": "Collect Unplanned Specimens",

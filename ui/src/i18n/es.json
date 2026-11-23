@@ -1849,6 +1849,7 @@
     "bulk_update": "Actualización Masiva de Participantes",
     "bulk_updated": "{count} participantes actualizados.",
     "collect": "Recolectar",
+    "process": "Procesar",
     "collect_pending_specimens": "Recolectar Muestras Pendientes",
     "collect_specimens": "Recolectar Muestras",
     "collect_unplanned_specimens": "Recolectar Muestras No Planificadas",

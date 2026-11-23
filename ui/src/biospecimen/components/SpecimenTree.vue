@@ -6,7 +6,7 @@
     </template>
 
     <template #actions>
-      <os-button primary :left-icon="'plus'" :label="$t('participants.collect')" :disabled="collecting" @click="collectSpecimens"
+      <os-button primary :left-icon="'plus'" :label="$t(collectActionLabel)" :disabled="collecting" @click="collectSpecimens"
         v-if="canCollect" />
 
       <os-add-to-cart :specimens="selectedExistingSpecimens"  v-if="selectedExistingSpecimens.length > 0" />
@@ -124,6 +124,25 @@ export default {
         this.items.some(({specimen}) => (!specimen.status || specimen.status == 'Pending') &&
           (!Array.isArray(this.contentAccess?.createLineages) || this.contentAccess.createLineages.includes(specimen.lineage)) &&
           (specimen.lineage != 'New' || contentSvc.allows(this.contentAccess, 'collection')));
+    },
+
+    collectActionLabel() {
+      const selected = this.ctx.selectedSpecimens
+        .map(({specimen}) => specimen)
+        .filter(specimen => !specimen.status || specimen.status == 'Pending');
+      if (selected.length > 0) {
+        return selected.some(specimen => this._isPrimaryCollection(specimen)) ?
+          'participants.collect' : 'participants.process';
+      }
+
+      if (this.ctx.selectedSpecimens.length > 0) {
+        return 'participants.collect';
+      }
+
+      const specimens = collectionSvc.collectionPlan(this.specimens || [], {}, this._collectionAccess())
+        .map(({specimen}) => specimen);
+      return specimens.some(specimen => this._isPrimaryCollection(specimen)) ?
+        'participants.collect' : 'participants.process';
     },
 
     startDate: function() {
@@ -259,6 +278,14 @@ export default {
   },
 
   methods: {
+    _collectionAccess() {
+      return {...this.contentAccess, canCreate: this.cpViewCtx?.isCreateSpecimenAllowed?.(this.cpr) !== false};
+    },
+
+    _isPrimaryCollection(specimen) {
+      return specimen.lineage == 'New' && !(specimen.specimensPool && specimen.specimensPool.length > 0);
+    },
+
     onItemsSelection: function(items) {
       this.ctx.selectedSpecimens = items;
     },

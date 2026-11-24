@@ -137,6 +137,12 @@
                         <os-input-text v-model="ctx.newValue" v-else />
                       </div>
                     </div>
+                    <div class="row" v-if="isMpiStartNumber">
+                      <div class="field">
+                        <os-button :label="$t('settings.biospecimen.mpi_sequence')"
+                          @click="openMpiSequenceDialog" />
+                      </div>
+                    </div>
                   </template>
 
                   <div>
@@ -175,6 +181,35 @@
       </template>
       <template #footer>
         <os-button primary :label="$t('common.buttons.done')" @click="closeHistory" />
+      </template>
+    </os-dialog>
+
+    <os-dialog ref="mpiSequenceDialog" size="sm">
+      <template #header>
+        <span v-t="'settings.biospecimen.mpi_sequence'">Adjust MPI Sequence</span>
+      </template>
+      <template #content>
+        <div class="row">
+          <div class="field">
+            <os-label>
+              <span v-t="'settings.biospecimen.mpi_sequence_current'">Current Next MPI Number</span>
+            </os-label>
+            <span>{{ctx.mpiSequence.currentNextNumber}}</span>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <os-label>
+              <span v-t="'settings.biospecimen.mpi_sequence_next'">Next MPI Number</span>
+            </os-label>
+            <os-input-number v-model="ctx.mpiSequence.nextNumber" :min="1" :maxFractionDigits="0" />
+          </div>
+        </div>
+        <div v-t="'settings.biospecimen.mpi_sequence_note'">Existing MPIs are not modified.</div>
+      </template>
+      <template #footer>
+        <os-button text :label="$t('common.buttons.cancel')" @click="closeMpiSequenceDialog" />
+        <os-button primary :label="$t('settings.biospecimen.mpi_sequence')" @click="setNextMpiNumber" />
       </template>
     </os-dialog>
   </os-page>
@@ -233,6 +268,11 @@ export default {
   computed: {
     reqHeaders: function() {
       return http.headers;
+    },
+
+    isMpiStartNumber: function() {
+      const setting = this.ctx.selectedSetting;
+      return setting && setting.module == 'biospecimen' && setting.name == 'mpi_start_number';
     }
   },
 
@@ -322,6 +362,31 @@ export default {
     closeHistory: function() {
       this.ctx.history = [];
       this.$refs.historyDialog.close();
+    },
+
+    openMpiSequenceDialog: function() {
+      settingSvc.getNextMpiNumber().then(
+        nextNumber => {
+          this.ctx.mpiSequence = {
+            currentNextNumber: nextNumber,
+            nextNumber
+          };
+          this.$refs.mpiSequenceDialog.open();
+        }
+      );
+    },
+
+    closeMpiSequenceDialog: function() {
+      this.$refs.mpiSequenceDialog.close();
+    },
+
+    setNextMpiNumber: function() {
+      settingSvc.setNextMpiNumber(this.ctx.mpiSequence.nextNumber).then(
+        nextNumber => {
+          this.ctx.mpiSequence.currentNextNumber = nextNumber;
+          this.closeMpiSequenceDialog();
+        }
+      );
     },
 
     searchSetting: function() {

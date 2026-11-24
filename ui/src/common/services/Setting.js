@@ -69,6 +69,14 @@ class Setting {
     return http.put('config-settings', setting);
   }
 
+  getNextMpiNumber() {
+    return http.get('config-settings/mpi-sequence');
+  }
+
+  setNextMpiNumber(nextNumber) {
+    return http.put('config-settings/mpi-sequence', {nextNumber});
+  }
+
   getDownloadUrl(setting) {
     return http.getUrl('config-settings/files', {query: {module: setting.module, property: setting.name}});
   }

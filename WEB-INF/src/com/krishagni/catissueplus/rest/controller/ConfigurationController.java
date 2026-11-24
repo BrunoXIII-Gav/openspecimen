@@ -82,6 +82,20 @@ public class ConfigurationController {
 	public ConfigSettingDetail saveConfigSetting(@RequestBody ConfigSettingDetail detail) {
 		return response(cfgSvc.saveSetting(request(detail)));
 	}
+
+	@RequestMapping(method = RequestMethod.GET, value = "/mpi-sequence")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public Long getNextMpiNumber() {
+		return response(cfgSvc.getNextMpiNumber());
+	}
+
+	@RequestMapping(method = RequestMethod.PUT, value = "/mpi-sequence")
+	@ResponseStatus(HttpStatus.OK)
+	@ResponseBody
+	public Long setNextMpiNumber(@RequestBody Map<String, Long> input) {
+		return response(cfgSvc.setNextMpiNumber(request(input == null ? null : input.get("nextNumber"))));
+	}
 	
 	@RequestMapping(method = RequestMethod.GET, value="/locale")
 	@ResponseStatus(HttpStatus.OK)

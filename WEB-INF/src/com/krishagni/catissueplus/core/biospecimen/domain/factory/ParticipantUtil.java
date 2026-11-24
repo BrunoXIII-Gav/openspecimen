@@ -94,7 +94,9 @@ public class ParticipantUtil {
 	public static MpiGenerator getMpiGenerator() {
 		String mpiFormat = getMpiCfgProp(ConfigParams.MPI_FORMAT);
 		if (StringUtils.isNotBlank(mpiFormat)) {
-			return new DefaultMpiGenerator(mpiFormat);
+			Integer mpiStartNumber = ConfigUtil.getInstance().getIntSetting(
+				ConfigParams.MODULE, ConfigParams.MPI_START_NUMBER, 1);
+			return new DefaultMpiGenerator(mpiFormat, mpiStartNumber);
 		} 
 		
 		String mpiGeneratorBean = getMpiCfgProp(ConfigParams.MPI_GENERATOR);

@@ -39,6 +39,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.event.ContextRefreshedEvent;
 
 import com.krishagni.catissueplus.core.biospecimen.events.FileDetail;
+import com.krishagni.catissueplus.core.biospecimen.ConfigParams;
 import com.krishagni.catissueplus.core.biospecimen.repository.DaoFactory;
 import com.krishagni.catissueplus.core.common.OpenSpecimenAppCtxProvider;
 import com.krishagni.catissueplus.core.common.Pair;
@@ -285,6 +286,65 @@ public class ConfigurationServiceImpl implements ConfigurationService, Initializ
 		} catch (Exception e) {
 			return ResponseEvent.serverError(e);
 		}
+	}
+
+	@Override
+	@PlusTransactional
+	public ResponseEvent<Long> getNextMpiNumber() {
+		try {
+			AccessCtrlMgr.getInstance().ensureUserIsAdmin();
+			return ResponseEvent.response(getNextMpiSequenceNumber());
+		} catch (OpenSpecimenException ose) {
+			return ResponseEvent.error(ose);
+		} catch (Exception e) {
+			return ResponseEvent.serverError(e);
+		}
+	}
+
+	@Override
+	@PlusTransactional
+	public ResponseEvent<Long> setNextMpiNumber(RequestEvent<Long> req) {
+		try {
+			AccessCtrlMgr.getInstance().ensureUserIsAdmin();
+			Long nextMpiNumber = req.getPayload();
+			if (nextMpiNumber == null || nextMpiNumber < 1) {
+				return ResponseEvent.userError(CommonErrorCode.INVALID_INPUT, "The next MPI number must be a positive integer");
+			}
+
+			String mpiFormat = getStrSetting(ConfigParams.MODULE, ConfigParams.MPI_FORMAT, (String)null);
+			if (StringUtils.isBlank(mpiFormat)) {
+				return ResponseEvent.userError(CommonErrorCode.INVALID_INPUT, "An MPI format must be configured before adjusting the MPI sequence");
+			}
+
+			String mpi;
+			try {
+				mpi = String.format(mpiFormat, nextMpiNumber);
+			} catch (IllegalArgumentException iae) {
+				return ResponseEvent.userError(CommonErrorCode.INVALID_INPUT, "The configured MPI format is invalid");
+			}
+
+			if (daoFactory.getParticipantDao().getByEmpi(mpi) != null) {
+				return ResponseEvent.userError(CommonErrorCode.INVALID_INPUT, "MPI already exists: " + mpi);
+			}
+
+			boolean updated = daoFactory.getUniqueIdGenerator().setNextUniqueId("MPI", "MPI", nextMpiNumber);
+			if (!updated) {
+				return ResponseEvent.userError(
+					CommonErrorCode.INVALID_INPUT,
+					"The next MPI number must be greater than or equal to " + getNextMpiSequenceNumber());
+			}
+
+			return ResponseEvent.response(nextMpiNumber);
+		} catch (OpenSpecimenException ose) {
+			return ResponseEvent.error(ose);
+		} catch (Exception e) {
+			return ResponseEvent.serverError(e);
+		}
+	}
+
+	private Long getNextMpiSequenceNumber() {
+		Integer initialNumber = getIntSetting(ConfigParams.MODULE, ConfigParams.MPI_START_NUMBER, 1);
+		return daoFactory.getUniqueIdGenerator().getNextUniqueId("MPI", "MPI", initialNumber.longValue());
 	}
 
 	@Override

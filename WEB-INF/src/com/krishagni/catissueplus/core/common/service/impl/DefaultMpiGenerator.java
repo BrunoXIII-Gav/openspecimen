@@ -13,14 +13,21 @@ public class DefaultMpiGenerator implements MpiGenerator {
 	private DaoFactory daoFactory;
 	
 	private String mpiFormat;
+
+	private long mpiStartNumber;
 	
 	public DefaultMpiGenerator(String mpiFormat) {
+		this(mpiFormat, 1);
+	}
+
+	public DefaultMpiGenerator(String mpiFormat, long mpiStartNumber) {
 		this.mpiFormat = mpiFormat;
+		this.mpiStartNumber = Math.max(1, mpiStartNumber);
 	}
 	
 	@Override
 	public String generateMpi() {
-		Long uniqueId = daoFactory.getUniqueIdGenerator().getUniqueId("MPI", "MPI");
+		Long uniqueId = daoFactory.getUniqueIdGenerator().getUniqueId("MPI", "MPI", mpiStartNumber - 1);
 		return String.format(mpiFormat, uniqueId.intValue());
 	}
 

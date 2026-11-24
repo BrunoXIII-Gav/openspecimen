@@ -140,4 +140,14 @@
       );
     </sql>
   </changeSet>
+
+  <changeSet author="brunoxiii" id="Initial MPI number">
+    <sql>
+      call add_cfg_prop(
+        'biospecimen', 'mpi_start_number',
+        'mpi_start_number', 'mpi_start_number_desc',
+        'INT', '1'
+      );
+    </sql>
+  </changeSet>
 </databaseChangeLog>

@@ -264,7 +264,10 @@ export default {
 
         this.ctx.twoStep = twoStep;
         this.ctx.addPatientOnLookupFail = addOnLookupFail;
-        this.ctx.lockedFields = lockedFields;
+        this.ctx.lockedFields = [...lockedFields];
+        if (!cpr.participant.id && this.$ui.global.appProps.auto_empi_enabled) {
+          this.ctx.lockedFields.push('cpr.participant.empi');
+        }
 
         let lookupFields = fields.filter(field => field.lookupParticipant == true || field.participantLookup == true);
         if (lookupFields.length == 0 && twoStep) {

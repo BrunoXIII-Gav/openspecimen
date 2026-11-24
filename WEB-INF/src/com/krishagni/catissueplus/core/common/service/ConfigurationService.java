@@ -25,6 +25,10 @@ public interface ConfigurationService {
 	ResponseEvent<String> uploadSettingFile(RequestEvent<FileDetail> req);
 
 	ResponseEvent<List<ConfigSettingDetail>> getSettingHistory(RequestEvent<Pair<String, String>> req);
+
+	ResponseEvent<Long> getNextMpiNumber();
+
+	ResponseEvent<Long> setNextMpiNumber(RequestEvent<Long> req);
 		
 	//
 	// Internal to app APIs

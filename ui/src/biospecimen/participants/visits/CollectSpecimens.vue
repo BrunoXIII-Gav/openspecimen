@@ -5,6 +5,7 @@
       <span class="os-title"><h3>{{ $t(collectionMode ? 'specimens.collection_matrix.title' : 'specimens.receipt_matrix.title') }}</h3></span>
     </os-page-head>
     <os-page-body>
+      <ConsentPendingNotice :cpr="cpr" />
       <div class="collection-matrix" v-if="loaded">
         <os-message type="error" v-if="loadError">{{ $t(loadError) }}</os-message>
         <template v-else>
@@ -81,6 +82,7 @@ import formSvc from '@/forms/services/Form.js';
 import {matrixReturnRoute} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 import visitSvc from '@/biospecimen/services/Visit.js';
+import ConsentPendingNotice from '@/biospecimen/consents/PendingNotice.vue';
 
 const MATRIX_FIELDS = ['specimen.label', 'specimen.barcode', 'specimen.initialQty',
   'specimen.parentConsumedQty', 'specimen.storageLocation', 'specimen.status'];
@@ -89,6 +91,7 @@ const COMMON_FIELDS = ['specimen.collectionEvent.time', 'specimen.collectionEven
   'specimen.receivedEvent.time', 'specimen.receivedEvent.user', 'specimen.receivedEvent.receivedQuality'];
 
 export default {
+  components: {ConsentPendingNotice},
   props: ['cpr', 'visit'],
   inject: ['cpViewCtx'],
 

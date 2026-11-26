@@ -1,5 +1,16 @@
 <template>
   <div class="os-consents">
+    <os-card v-if="!ctx.hasEc && !cp.consentsWaived && !cp.visitLevelConsents">
+      <template #header>{{ $t('consent_tracking.title') }}</template>
+      <template #body>
+        <os-boolean-checkbox v-model="ctx.consentTracking.documentRequired" :disabled="!editAllowed || ctx.trackingSaving"
+          :inline-label="$t('consent_tracking.track_document')" />
+        <os-boolean-checkbox v-model="ctx.consentTracking.responsesRequired" :disabled="!editAllowed || ctx.trackingSaving"
+          :inline-label="$t('consent_tracking.track_responses')" />
+        <os-button v-if="editAllowed" :label="$t('common.buttons.save')" @click="saveConsentTracking"
+          :disabled="!ctx.trackingLoaded || ctx.trackingSaving" />
+      </template>
+    </os-card>
     <os-page-toolbar v-if="editAllowed && !ctx.hasEc && !cp.consentsSource && ctx.tiers && ctx.tiers.length > 0">
       <template #default>
         <os-button left-icon="plus" :label="$t('common.buttons.add')" @click="showAddEditConsentTierDialog({})" />
@@ -161,6 +172,14 @@
             <os-label><span v-t="'cps.consent_group_caption'">Group title</span></os-label>
             <input class="group-caption" type="text" v-model.trim="ctx.consentGroup.caption" maxlength="200" />
           </div>
+          <div class="field">
+            <os-boolean-checkbox v-model="ctx.consentGroup.required" :inline-label="$t('consent_tracking.required_group')" />
+            <label>{{ $t('consent_tracking.group_completion') }}</label>
+            <select class="group-caption" v-model="ctx.consentGroup.completionMode">
+              <option value="ANY">{{ $t('consent_tracking.any_response') }}</option>
+              <option value="ALL">{{ $t('consent_tracking.all_responses') }}</option>
+            </select>
+          </div>
 
           <os-divider />
 
@@ -245,6 +264,9 @@ export default {
         tiers: null,
 
         consentGroups: [],
+        consentTracking: {documentRequired: true, responsesRequired: true},
+        trackingLoaded: false,
+        trackingSaving: false,
 
         consentGroup: {caption: "", members: []},
 
@@ -278,6 +300,10 @@ export default {
   created() {
     this._loadConsentTiers();
     this._loadConsentGroups();
+    cpSvc.loadWorkflows(this.cp.id, 'consentTracking').then(workflow => {
+      Object.assign(this.ctx.consentTracking, workflow?.data || {});
+      this.ctx.trackingLoaded = true;
+    });
   },
 
   computed: {
@@ -295,6 +321,15 @@ export default {
   },
 
   methods: {
+    async saveConsentTracking() {
+      this.ctx.trackingSaving = true;
+      try {
+        await cpSvc.saveWorkflow(this.cp.id, 'consentTracking', {...this.ctx.consentTracking});
+        alertsSvc.success({code: 'consent_tracking.saved'});
+      } finally {
+        this.ctx.trackingSaving = false;
+      }
+    },
     showAddEditConsentTierDialog: function(tier) {
       this.ctx.tier = util.clone(tier);
       this.$refs.addEditConsentTierDialog.open();
@@ -322,7 +357,7 @@ export default {
     },
 
     showConsentGroupDialog: function(group, index) {
-      const source = util.clone(group || {caption: "", members: []});
+      const source = util.clone({required: true, completionMode: 'ANY', ...(group || {caption: "", members: []})});
       source.members = (source.members || []).map(member => ({
         statementCode: member.statementCode,
         disabledWhen: [...(member.disabledWhen || [])],
@@ -485,6 +520,8 @@ export default {
     _normaliseConsentGroups: function(config) {
       return ((config && config.groups) || []).map(group => ({
         caption: group.caption,
+        required: group.required !== false,
+        completionMode: group.completionMode || 'ANY',
         members: (group.members || []).map(member => ({
           statementCode: member.statementCode,
           disabledWhen: member.disabledWhen || [],
@@ -508,8 +545,15 @@ export default {
 
 <style scoped>
 .os-consents {
-  height: 100%;
+  height: auto;
   padding: 0.5rem 1rem;
+}
+
+.os-consents :deep(> .os-grid.p-grid),
+.os-consents :deep(> .os-grid > .os-grid-column) {
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .os-consents :deep(.os-card) {

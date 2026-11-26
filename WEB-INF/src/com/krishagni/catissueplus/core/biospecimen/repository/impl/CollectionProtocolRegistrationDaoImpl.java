@@ -19,6 +19,7 @@ import com.krishagni.catissueplus.core.administrative.domain.Site;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocol;
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolRegistration;
 import com.krishagni.catissueplus.core.biospecimen.events.CprSummary;
+import com.krishagni.catissueplus.core.biospecimen.events.ConsentStatusDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.ParticipantSummary;
 import com.krishagni.catissueplus.core.biospecimen.events.PmiDetail;
 import com.krishagni.catissueplus.core.biospecimen.repository.CollectionProtocolRegistrationDao;
@@ -36,6 +37,16 @@ import com.krishagni.catissueplus.core.common.repository.SubQuery;
 import com.krishagni.catissueplus.core.common.util.Utility;
 
 public class CollectionProtocolRegistrationDaoImpl extends AbstractDao<CollectionProtocolRegistration> implements CollectionProtocolRegistrationDao {
+
+  @Override
+  public ConsentStatusDetail getConsentStatus(Long cprId) {
+    Object[] row = getCurrentSession().createNativeQuery(
+      "select tracking_enabled, document_missing, responses_missing from OS_CPR_CONSENT_STATUS_V where cpr_id = :id",
+      Object[].class).setParameter("id", cprId).uniqueResult();
+    if (row == null) return new ConsentStatusDetail(false, false, false);
+    return new ConsentStatusDetail(((Number) row[0]).intValue() == 1,
+      ((Number) row[1]).intValue() == 1, ((Number) row[2]).intValue() == 1);
+  }
 	
 	@Override
 	public Class<CollectionProtocolRegistration> getType() {

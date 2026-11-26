@@ -1,4 +1,20 @@
 {
+  "consent_tracking": {
+    "title": "Seguimiento del consentimiento",
+    "track_document": "Avisar si falta el documento",
+    "track_responses": "Avisar si faltan respuestas",
+    "saved": "Seguimiento del consentimiento actualizado.",
+    "required_group": "Incluir este grupo en los avisos de respuestas pendientes",
+    "group_completion": "Respuestas necesarias",
+    "any_response": "Al menos una decisión registrada",
+    "all_responses": "Una decisión por cada declaración aplicable",
+    "unavailable": "No se pudo comprobar el estado del consentimiento. Puedes continuar trabajando.",
+    "messages": {
+      "DOCUMENT_PENDING": "Falta subir el documento de consentimiento informado.",
+      "RESPONSES_PENDING": "Falta registrar las respuestas requeridas del consentimiento informado.",
+      "BOTH_PENDING": "Falta subir el documento y registrar las respuestas del consentimiento informado."
+    }
+  },
   "audit": {
     "reports": {
       "scope": "Auditoría de",
@@ -215,6 +231,7 @@
       "back": "Atrás",
       "cancel": "Cancelar",
       "clear": "Limpiar",
+      "clear_selection": "Quitar selección",
       "clone": "Clonar",
       "close": "Cerrar",
       "copy": "Copiar",
@@ -254,6 +271,7 @@
       "scan": "Escanear",
       "search": "Buscar",
       "select": "Seleccionar",
+      "select_file": "Seleccionar archivo",
       "send": "Enviar",
       "sort": "Ordenar",
       "submit": "Enviar",
@@ -524,6 +542,7 @@
     "list": "Declaraciones de Consentimiento",
     "statement": "Declaración",
     "statement_req": "La declaración es obligatoria",
+    "statement_too_long": "La declaración no puede superar los 4.000 caracteres.",
     "statement_code": "Código",
     "statement_code_req": "El código es obligatorio",
     "updated": "Consentimiento '{code}' actualizado."

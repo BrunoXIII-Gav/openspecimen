@@ -1,4 +1,20 @@
 {
+  "consent_tracking": {
+    "title": "Consent follow-up",
+    "track_document": "Warn when the document is missing",
+    "track_responses": "Warn when responses are missing",
+    "saved": "Consent follow-up updated.",
+    "required_group": "Include this group in missing-response warnings",
+    "group_completion": "Required responses",
+    "any_response": "At least one recorded decision",
+    "all_responses": "A decision for each applicable statement",
+    "unavailable": "The consent status could not be checked. You can continue working.",
+    "messages": {
+      "DOCUMENT_PENDING": "The informed consent document needs to be uploaded.",
+      "RESPONSES_PENDING": "The required informed consent responses need to be recorded.",
+      "BOTH_PENDING": "The informed consent document and required responses are pending."
+    }
+  },
   "audit": {
     "reports": {
       "scope": "Audit scope",
@@ -222,6 +238,7 @@
       "back":   "Back",
       "cancel": "Cancel",
       "clear": "Clear",
+      "clear_selection": "Clear Selection",
       "clone": "Clone",
       "close": "Close",
       "copy": "Copy",
@@ -261,6 +278,7 @@
       "scan": "Scan",
       "search": "Search",
       "select": "Select",
+      "select_file": "Choose file",
       "send":   "Send",
       "sort": "Sort",
       "submit": "Submit",
@@ -552,6 +570,7 @@
     "list": "Consent Statements",
     "statement": "Statement",
     "statement_req": "Statement is mandatory",
+    "statement_too_long": "The statement cannot exceed 4,000 characters.",
     "statement_code": "Code",
     "statement_code_req": "Code is mandatory",
     "updated": "Consent '{code}' updated."

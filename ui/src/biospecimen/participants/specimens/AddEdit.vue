@@ -27,6 +27,7 @@
     </os-page-head>
 
     <os-page-body>
+      <ConsentPendingNotice :cpr="cpr" />
       <os-message type="error" v-if="ctx.creationDenied">{{ $t('roles.content.creation_denied') }}</os-message>
       <section class="pool-sources" v-if="isPooling">
         <h4>{{ $t('specimens.pool_sources') }}</h4>
@@ -91,9 +92,10 @@ import formUtil   from '@/common/services/FormUtil.js';
 import routerSvc  from '@/common/services/Router.js';
 import util       from '@/common/services/Util.js';
 import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
+import ConsentPendingNotice from '@/biospecimen/consents/PendingNotice.vue';
 
 export default {
-  components: {'os-field-references': FieldReferences},
+  components: {'os-field-references': FieldReferences, ConsentPendingNotice},
   props: ['cpr', 'visit', 'specimen'],
 
   inject: ['cpViewCtx'],

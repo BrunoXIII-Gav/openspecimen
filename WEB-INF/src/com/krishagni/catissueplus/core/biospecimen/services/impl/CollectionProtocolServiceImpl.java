@@ -1547,6 +1547,12 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 					FieldReferenceRules.validate(cp.getId(), detail.getData(), deDaoFactory, formSvc);
 				} else if ("consentGroups".equals(detail.getName())) {
 					validateConsentGroups(cp, detail.getData());
+				} else if ("consentTracking".equals(detail.getName())) {
+          Map<String, Object> policy = detail.getData();
+          if (policy == null || !(policy.get("documentRequired") instanceof Boolean) ||
+            !(policy.get("responsesRequired") instanceof Boolean)) {
+            throw OpenSpecimenException.userError(CommonErrorCode.INVALID_INPUT, "consentTracking");
+          }
 				} else if (SpecimenTypeAbbreviations.WORKFLOW.equals(detail.getName())) {
 					detail.setData(SpecimenTypeAbbreviations.validate(detail.getData(), daoFactory.getPermissibleValueDao()));
 				}
@@ -1578,6 +1584,11 @@ public class CollectionProtocolServiceImpl implements CollectionProtocolService,
 			}
 
 			Map<?, ?> group = (Map<?, ?>) item;
+      if ((group.containsKey("required") && !(group.get("required") instanceof Boolean)) ||
+        (group.containsKey("completionMode") && (!(group.get("completionMode") instanceof String) ||
+          !Set.of("ANY", "ALL").contains(group.get("completionMode"))))) {
+        invalidConsentGroups();
+      }
 			Object captionObj = group.get("caption");
 			Object membersObj = group.get("members");
 			if (!(captionObj instanceof String) || StringUtils.isBlank((String) captionObj) ||

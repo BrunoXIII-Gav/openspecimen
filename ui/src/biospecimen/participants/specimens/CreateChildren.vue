@@ -11,6 +11,7 @@
     </os-page-head>
 
     <os-page-body>
+      <ConsentPendingNotice :cpr="cpr" />
       <os-message type="error" v-if="creationDenied">{{ $t('roles.content.creation_denied') }}</os-message>
       <os-message type="error" v-if="receiptRequired">{{ $t('specimens.primary_receipt_required') }}</os-message>
       <div class="children-form" v-if="parent.id && !creationDenied && !receiptRequired">
@@ -184,10 +185,12 @@ import receiptSvc from '@/biospecimen/services/SpecimenReceipt.js';
 import formSvc     from '@/forms/services/Form.js';
 import formUtil    from '@/common/services/FormUtil.js';
 import util       from '@/common/services/Util.js';
+import ConsentPendingNotice from '@/biospecimen/consents/PendingNotice.vue';
 
 let nextUid = 1;
 
 export default {
+  components: {ConsentPendingNotice},
   props: ['cpr', 'visit', 'specimen'],
 
   data() {

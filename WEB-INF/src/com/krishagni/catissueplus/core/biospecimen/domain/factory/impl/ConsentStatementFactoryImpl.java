@@ -42,6 +42,10 @@ public class ConsentStatementFactoryImpl implements ConsentStatementFactory {
 			ose.addError(ConsentStatementErrorCode.REQUIRED);
 			return;
 		}
+		if (statement.length() > ConsentStatement.MAX_STATEMENT_LENGTH) {
+			ose.addError(ConsentStatementErrorCode.TOO_LONG, ConsentStatement.MAX_STATEMENT_LENGTH);
+			return;
+		}
 		
 		consent.setStatement(statement);
 	}

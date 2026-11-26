@@ -93,7 +93,7 @@
 
   <os-dialog ref="uploadDocDialog">
     <template #header>
-      <span v-t="'participant_consents.upload_consent_form'">Upload Consent Form</span>
+      <span v-t="'participant_consents.upload_form'">Upload Consent Form</span>
     </template>
     <template #content>
       <div>
@@ -114,6 +114,7 @@
 
 import alertsSvc from '@/common/services/Alerts.js';
 import cprSvc from '@/biospecimen/services/Cpr.js';
+import trackingSvc from '@/biospecimen/services/ConsentTracking.js';
 import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
 import http from '@/common/services/HttpClient.js';
 import pvSvc from '@/common/services/PermissibleValue.js';
@@ -251,6 +252,7 @@ export default {
       cprSvc.updateConsents(this.cpr, consent).then(
         (savedConsent) => {
           this.consent = savedConsent;
+          trackingSvc.changed(this.cpr.id);
           alertsSvc.success({code: 'participant_consents.consents_updated'});
           this.cancelEditResponses();
         }
@@ -296,6 +298,7 @@ export default {
               () => {
                 alertsSvc.success({code: 'participant_consents.signed_form_deleted'});
                 this.consent.consentDocumentName = null;
+                trackingSvc.changed(this.cpr.id);
               }
             );
           }
@@ -312,6 +315,7 @@ export default {
         (consentDocumentName) => {
           alertsSvc.success({code: 'participant_consents.signed_form_uploaded'});
           this.consent.consentDocumentName = consentDocumentName;
+          trackingSvc.changed(this.cpr.id);
           this.cancelDocUpload();
         }
       );

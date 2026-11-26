@@ -1,5 +1,11 @@
 #macro(getMessage $code)$messageSource.getMessage($code, null, $locale)#end
 #macro(getPrecision)$cfgSvc.getIntSetting("query", "floating_point_precision", 0)#end
+#set($consentStatusColumn = "STATUS")
+#set($consentStatusValues = ["NOT_APPLICABLE", "DOCUMENT_PENDING", "RESPONSES_PENDING", "BOTH_PENDING", "NO_PENDING"])
+#if($locale.language == "es")
+#set($consentStatusColumn = "STATUS_ES")
+#set($consentStatusValues = ["No aplica", "Documento pendiente", "Respuestas pendientes", "Documento y respuestas pendientes", "Sin pendientes"])
+#end
 
 <form>
   <view>
@@ -436,6 +442,44 @@
         <caption>#getMessage("participant_consent_doc_name")</caption>
         <column>CONSENT_DOCUMENT_NAME</column>
       </textField>
+    </row>
+    <row>
+      <subForm>
+        <name>consentTracking</name>
+        <udn>consentTracking</udn>
+        <caption>#getMessage("participant_consent_tracking")</caption>
+        <table>OS_CPR_CONSENT_STATUS_V</table>
+        <primaryKey>CPR_ID</primaryKey>
+        <foreignKey>CPR_ID</foreignKey>
+        <parentKey>CPR_ID</parentKey>
+        <row>
+          <dropDown>
+            <name>status</name><udn>status</udn>
+            <caption>#getMessage("participant_consent_tracking_status")</caption>
+            <column>$consentStatusColumn</column>
+            <options>
+              #foreach($consentStatusValue in $consentStatusValues)
+              <option><value>$consentStatusValue</value></option>
+              #end
+            </options>
+          </dropDown>
+          <booleanCheckBox>
+            <name>pending</name><udn>pending</udn>
+            <caption>#getMessage("participant_consent_tracking_pending")</caption>
+            <column>PENDING</column>
+          </booleanCheckBox>
+          <booleanCheckBox>
+            <name>documentMissing</name><udn>documentMissing</udn>
+            <caption>#getMessage("participant_consent_tracking_document")</caption>
+            <column>DOCUMENT_MISSING</column>
+          </booleanCheckBox>
+          <booleanCheckBox>
+            <name>responsesMissing</name><udn>responsesMissing</udn>
+            <caption>#getMessage("participant_consent_tracking_responses")</caption>
+            <column>RESPONSES_MISSING</column>
+          </booleanCheckBox>
+        </row>
+      </subForm>
     </row>
     <row>
       <datePicker>

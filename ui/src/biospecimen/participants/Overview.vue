@@ -96,6 +96,7 @@ import util from '@/common/services/Util.js';
 
 import cpSvc from '@/biospecimen/services/CollectionProtocol.js';
 import cprSvc from '@/biospecimen/services/Cpr.js';
+import {isAutoPpid} from '@/biospecimen/services/cp-list-view.mjs';
 import visitSvc from '@/biospecimen/services/Visit.js';
 import specimenSvc from '@/biospecimen/services/Specimen.js';
 
@@ -173,7 +174,8 @@ export default {
       const result = [];
       Array.prototype.push.apply(result, this.ctx.dict || []);
       Array.prototype.push.apply(result, this.ctx.consentsDict || []);
-      return result;
+      return isAutoPpid(this.ctx.cp) && !this.cpr.contextOnly ?
+        result.filter(field => field.name !== 'cpr.ppid') : result;
     },
 
     hasOccurredVisits: function() {
@@ -285,23 +287,9 @@ export default {
         {objectId: cpr.participant.id, objectName: 'participant'}
       ]
 
-      let name = '';
-      if (cpr.participant.firstName && cpr.participant.firstName != '###') {
-        name = cpr.participant.firstName;
-      }
-
-      if (cpr.participant.lastName && cpr.participant.lastName != '###') {
-        if (name) {
-          name += ' ';
-        }
-
-        name += cpr.participant.lastName;
-      }
-
-      name = cpr.ppid + (name ? ' (' + name + ')' : '');
       this.ctx.deleteOpts = {
         type: this.$t('participants.cpr'),
-        title: name,
+        title: cprSvc.getFormattedTitle(cpr, this.ctx.cp),
         dependents: () => cprSvc.getDependents(cpr),
         forceDelete: true,
         askReason: true,

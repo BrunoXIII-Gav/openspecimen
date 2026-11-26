@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+  <!-- Read the existing workflow configuration live: no cached participant state or data rewrites. -->
+  <changeSet author="codex" id="Consent tracking workflow views mysql" dbms="mysql" runOnChange="true">
+    <sql splitStatements="true"><![CDATA[
+      create or replace view OS_CP_CONSENT_POLICY_V as
+      select w.cp_id, j.document_required, j.responses_required
+      from OS_CP_WORKFLOWS w,
+        json_table(w.workflows, '$[*]' columns (
+          workflow_name varchar(100) path '$.name',
+          document_required varchar(5) path '$.data.documentRequired',
+          responses_required varchar(5) path '$.data.responsesRequired'
+        )) j
+      where j.workflow_name = 'consentTracking';
+
+      create or replace view OS_CP_CONSENT_MEMBERS_V as
+      select w.cp_id, j.group_no, j.statement_code, j.group_required, j.completion_mode
+      from OS_CP_WORKFLOWS w,
+        json_table(w.workflows, '$[*]' columns (
+          workflow_name varchar(100) path '$.name',
+          nested path '$.data.groups[*]' columns (
+            group_no for ordinality, group_required varchar(5) path '$.required',
+            completion_mode varchar(5) path '$.completionMode',
+            nested path '$.members[*]' columns (statement_code varchar(255) path '$.statementCode')
+          )
+        )) j
+      where j.workflow_name = 'consentGroups' and j.statement_code is not null;
+
+      create or replace view OS_CP_CONSENT_CONDITIONS_V as
+      select w.cp_id, j.group_no, j.statement_code, 'visible' as condition_type, j.condition_code
+      from OS_CP_WORKFLOWS w,
+        json_table(w.workflows, '$[*]' columns (
+          workflow_name varchar(100) path '$.name',
+          nested path '$.data.groups[*]' columns (
+            group_no for ordinality,
+            nested path '$.members[*]' columns (
+              statement_code varchar(255) path '$.statementCode',
+              nested path '$.visibleWhen[*]' columns (condition_code varchar(255) path '$')
+            )
+          )
+        )) j
+      where j.workflow_name = 'consentGroups' and j.condition_code is not null
+      union all
+      select w.cp_id, j.group_no, j.statement_code, 'disabled', j.condition_code
+      from OS_CP_WORKFLOWS w,
+        json_table(w.workflows, '$[*]' columns (
+          workflow_name varchar(100) path '$.name',
+          nested path '$.data.groups[*]' columns (
+            group_no for ordinality,
+            nested path '$.members[*]' columns (
+              statement_code varchar(255) path '$.statementCode',
+              nested path '$.disabledWhen[*]' columns (condition_code varchar(255) path '$')
+            )
+          )
+        )) j
+      where j.workflow_name = 'consentGroups' and j.condition_code is not null;
+    ]]></sql>
+  </changeSet>
+
+  <changeSet author="codex" id="Consent tracking workflow views oracle" dbms="oracle" runOnChange="true">
+    <sql splitStatements="true"><![CDATA[
+      create or replace view OS_CP_CONSENT_POLICY_V as
+      select w.cp_id, j.document_required, j.responses_required
+      from OS_CP_WORKFLOWS w,
+        json_table(w.workflows, '$[*]' columns (
+          workflow_name varchar2(100) path '$.name',
+          document_required varchar2(5) path '$.data.documentRequired',
+          responses_required varchar2(5) path '$.data.responsesRequired'
+        )) j
+      where j.workflow_name = 'consentTracking';
+
+      create or replace view OS_CP_CONSENT_MEMBERS_V as
+      select w.cp_id, j.group_no, j.statement_code, j.group_required, j.completion_mode
+      from OS_CP_WORKFLOWS w,
+        json_table(w.workflows, '$[*]' columns (
+          workflow_name varchar2(100) path '$.name',
+          nested path '$.data.groups[*]' columns (
+            group_no for ordinality, group_required varchar2(5) path '$.required',
+            completion_mode varchar2(5) path '$.completionMode',
+            nested path '$.members[*]' columns (statement_code varchar2(255) path '$.statementCode')
+          )
+        )) j
+      where j.workflow_name = 'consentGroups' and j.statement_code is not null;
+
+      create or replace view OS_CP_CONSENT_CONDITIONS_V as
+      select w.cp_id, j.group_no, j.statement_code, 'visible' as condition_type, j.condition_code
+      from OS_CP_WORKFLOWS w,
+        json_table(w.workflows, '$[*]' columns (
+          workflow_name varchar2(100) path '$.name',
+          nested path '$.data.groups[*]' columns (
+            group_no for ordinality,
+            nested path '$.members[*]' columns (
+              statement_code varchar2(255) path '$.statementCode',
+              nested path '$.visibleWhen[*]' columns (condition_code varchar2(255) path '$')
+            )
+          )
+        )) j
+      where j.workflow_name = 'consentGroups' and j.condition_code is not null
+      union all
+      select w.cp_id, j.group_no, j.statement_code, 'disabled', j.condition_code
+      from OS_CP_WORKFLOWS w,
+        json_table(w.workflows, '$[*]' columns (
+          workflow_name varchar2(100) path '$.name',
+          nested path '$.data.groups[*]' columns (
+            group_no for ordinality,
+            nested path '$.members[*]' columns (
+              statement_code varchar2(255) path '$.statementCode',
+              nested path '$.disabledWhen[*]' columns (condition_code varchar2(255) path '$')
+            )
+          )
+        )) j
+      where j.workflow_name = 'consentGroups' and j.condition_code is not null;
+    ]]></sql>
+  </changeSet>
+
+  <changeSet author="codex" id="Consent tracking live status views" runOnChange="true">
+    <sql splitStatements="true"><![CDATA[
+      create or replace view OS_CPR_CONSENT_CONTEXT_V as
+      select cpr.identifier as cpr_id, coalesce(cp.consents_source_cp_id, cp.identifier) as source_cp_id,
+        src.identifier as source_cpr_id, src.consent_document_name,
+        case when coalesce(cp.consents_waived, 0) = 1 or coalesce(cp.visit_consents, 0) = 1
+          then 0 else 1 end as tracking_enabled,
+        coalesce(policy.document_required, 'true') as document_required,
+        coalesce(policy.responses_required, 'true') as responses_required
+      from CATISSUE_COLL_PROT_REG cpr
+        inner join CATISSUE_COLLECTION_PROTOCOL cp on cp.identifier = cpr.collection_protocol_id
+        left join OS_CP_CONSENT_POLICY_V policy on policy.cp_id = cp.identifier
+        left join CATISSUE_COLL_PROT_REG src
+          on src.collection_protocol_id = coalesce(cp.consents_source_cp_id, cp.identifier)
+          and src.participant_id = cpr.participant_id and src.activity_status != 'Disabled'
+      where cpr.activity_status != 'Disabled' and cp.activity_status != 'Disabled';
+
+      create or replace view OS_CPR_CONSENT_ANSWERS_V as
+      select resp.coll_prot_reg_id as cpr_id, stmt.code as statement_code, pv.value as response
+      from CATISSUE_CONSENT_TIER_RESPONSE resp
+        inner join CATISSUE_CONSENT_TIER tier on tier.identifier = resp.consent_tier_id
+        inner join OS_CONSENT_STATEMENTS stmt on stmt.identifier = tier.consent_stmt_id
+        inner join CATISSUE_PERMISSIBLE_VALUE pv on pv.identifier = resp.response_id
+      where tier.activity_status != 'Disabled';
+
+      create or replace view OS_CPR_CONSENT_REQUIRED_V as
+      select ctx.cpr_id,
+        case when member.group_no is null or member.completion_mode = 'ALL' then concat('statement:', stmt.code)
+          else concat('group:', cast(member.group_no as char(10))) end as requirement_key,
+        case when answer.response in ('Yes', 'No', 'Withdrawn') then 1 else 0 end as answered
+      from OS_CPR_CONSENT_CONTEXT_V ctx
+        inner join CATISSUE_CONSENT_TIER tier on tier.coll_protocol_id = ctx.source_cp_id
+          and tier.activity_status != 'Disabled'
+        inner join OS_CONSENT_STATEMENTS stmt on stmt.identifier = tier.consent_stmt_id
+        left join OS_CP_CONSENT_MEMBERS_V member
+          on member.cp_id = ctx.source_cp_id and member.statement_code = stmt.code
+        left join OS_CPR_CONSENT_ANSWERS_V answer
+          on answer.cpr_id = ctx.source_cpr_id and answer.statement_code = stmt.code
+      where coalesce(member.group_required, 'true') != 'false'
+        and (not exists (
+          select 1 from OS_CP_CONSENT_CONDITIONS_V cond
+          where cond.cp_id = ctx.source_cp_id and cond.group_no = member.group_no
+            and cond.statement_code = stmt.code and cond.condition_type = 'visible'
+        ) or exists (
+          select 1 from OS_CP_CONSENT_CONDITIONS_V cond
+            inner join OS_CPR_CONSENT_ANSWERS_V selected
+              on selected.cpr_id = ctx.source_cpr_id and selected.statement_code = cond.condition_code
+              and selected.response = 'Yes'
+          where cond.cp_id = ctx.source_cp_id and cond.group_no = member.group_no
+            and cond.statement_code = stmt.code and cond.condition_type = 'visible'
+        ))
+        and not exists (
+          select 1 from OS_CP_CONSENT_CONDITIONS_V cond
+            inner join OS_CPR_CONSENT_ANSWERS_V selected
+              on selected.cpr_id = ctx.source_cpr_id and selected.statement_code = cond.condition_code
+              and selected.response = 'Yes'
+          where cond.cp_id = ctx.source_cp_id and cond.group_no = member.group_no
+            and cond.statement_code = stmt.code and cond.condition_type = 'disabled'
+        );
+
+      create or replace view OS_CPR_CONSENT_FLAGS_V as
+      select ctx.cpr_id, ctx.tracking_enabled,
+        case when ctx.tracking_enabled = 1 and ctx.document_required != 'false'
+          and (ctx.consent_document_name is null or length(trim(ctx.consent_document_name)) = 0)
+          then 1 else 0 end as document_missing,
+        case when ctx.tracking_enabled = 1 and ctx.responses_required != 'false' and exists (
+          select 1 from OS_CPR_CONSENT_REQUIRED_V req where req.cpr_id = ctx.cpr_id
+          group by req.requirement_key having max(req.answered) = 0
+        ) then 1 else 0 end as responses_missing
+      from OS_CPR_CONSENT_CONTEXT_V ctx;
+
+      create or replace view OS_CPR_CONSENT_STATUS_V as
+      select flags.*,
+        case when document_missing = 1 or responses_missing = 1 then 1 else 0 end as pending,
+        case when tracking_enabled = 0 then 'NOT_APPLICABLE'
+          when document_missing = 1 and responses_missing = 1 then 'BOTH_PENDING'
+          when document_missing = 1 then 'DOCUMENT_PENDING'
+          when responses_missing = 1 then 'RESPONSES_PENDING'
+          else 'NO_PENDING' end as status,
+        case when tracking_enabled = 0 then 'No aplica'
+          when document_missing = 1 and responses_missing = 1 then 'Documento y respuestas pendientes'
+          when document_missing = 1 then 'Documento pendiente'
+          when responses_missing = 1 then 'Respuestas pendientes'
+          else 'Sin pendientes' end as status_es
+      from OS_CPR_CONSENT_FLAGS_V flags;
+    ]]></sql>
+  </changeSet>
+</databaseChangeLog>

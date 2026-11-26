@@ -27,6 +27,7 @@ import com.krishagni.catissueplus.core.biospecimen.domain.Participant;
 import com.krishagni.catissueplus.core.biospecimen.events.BulkRegistrationsDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolRegistrationDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentDetail;
+import com.krishagni.catissueplus.core.biospecimen.events.ConsentStatusDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CpEntityDeleteCriteria;
 import com.krishagni.catissueplus.core.biospecimen.events.CprSummary;
 import com.krishagni.catissueplus.core.biospecimen.events.FileDetail;
@@ -275,6 +276,17 @@ public class CollectionProtocolRegistrationsController {
 		resp.throwErrorIfUnsuccessful();
 		return resp.getPayload();
 	}
+
+  @RequestMapping(method = RequestMethod.GET, value = "/{id}/consent-status")
+  @ResponseStatus(HttpStatus.OK)
+  @ResponseBody
+  public ConsentStatusDetail getConsentStatus(@PathVariable("id") Long cprId) {
+    RegistrationQueryCriteria crit = new RegistrationQueryCriteria();
+    crit.setCprId(cprId);
+    ResponseEvent<ConsentStatusDetail> resp = cprSvc.getConsentStatus(getRequest(crit));
+    resp.throwErrorIfUnsuccessful();
+    return resp.getPayload();
+  }
 	
 	@RequestMapping(method= RequestMethod.PUT, value="/{id}/consents")
 	@ResponseStatus(HttpStatus.OK)

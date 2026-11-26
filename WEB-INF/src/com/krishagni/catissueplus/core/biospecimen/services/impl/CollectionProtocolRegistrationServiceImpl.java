@@ -61,6 +61,7 @@ import com.krishagni.catissueplus.core.biospecimen.events.BulkRegistrationsDetai
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolEventDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CollectionProtocolRegistrationDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.ConsentDetail;
+import com.krishagni.catissueplus.core.biospecimen.events.ConsentStatusDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.CpEntityDeleteCriteria;
 import com.krishagni.catissueplus.core.biospecimen.events.CprSummary;
 import com.krishagni.catissueplus.core.biospecimen.events.FileDetail;
@@ -547,6 +548,21 @@ public class CollectionProtocolRegistrationServiceImpl implements CollectionProt
 			return ResponseEvent.serverError(e);
 		}
 	}
+
+  @Override
+  @PlusTransactional
+  public ResponseEvent<ConsentStatusDetail> getConsentStatus(RequestEvent<RegistrationQueryCriteria> req) {
+    try {
+      RegistrationQueryCriteria crit = req.getPayload();
+      CollectionProtocolRegistration cpr = getCpr(crit.getCprId(), crit.getCpId(), crit.getPpid());
+      AccessCtrlMgr.getInstance().ensureReadConsentRights(cpr);
+      return ResponseEvent.response(daoFactory.getCprDao().getConsentStatus(cpr.getId()));
+    } catch (OpenSpecimenException ose) {
+      return ResponseEvent.error(ose);
+    } catch (Exception e) {
+      return ResponseEvent.serverError(e);
+    }
+  }
 	
 	@Override
 	@PlusTransactional

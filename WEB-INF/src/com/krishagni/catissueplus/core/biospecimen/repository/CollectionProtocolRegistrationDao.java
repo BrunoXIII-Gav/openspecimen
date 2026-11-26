@@ -7,10 +7,12 @@ import java.util.Map;
 
 import com.krishagni.catissueplus.core.biospecimen.domain.CollectionProtocolRegistration;
 import com.krishagni.catissueplus.core.biospecimen.events.CprSummary;
+import com.krishagni.catissueplus.core.biospecimen.events.ConsentStatusDetail;
 import com.krishagni.catissueplus.core.biospecimen.events.PmiDetail;
 import com.krishagni.catissueplus.core.common.repository.Dao;
 
 public interface CollectionProtocolRegistrationDao extends Dao<CollectionProtocolRegistration> {	
+  ConsentStatusDetail getConsentStatus(Long cprId);
 	List<CprSummary> getCprList(CprListCriteria crit);
 
 	Long getCprCount(CprListCriteria crit);

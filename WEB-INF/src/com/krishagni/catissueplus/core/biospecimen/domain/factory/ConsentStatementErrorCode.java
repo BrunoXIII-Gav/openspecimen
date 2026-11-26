@@ -8,6 +8,8 @@ public enum ConsentStatementErrorCode implements ErrorCode {
 	CODE_REQUIRED,
 
 	REQUIRED,
+
+	TOO_LONG,
 	
 	DUP_CODE,
 

@@ -4,6 +4,8 @@ import org.hibernate.envers.Audited;
 
 @Audited
 public class ConsentStatement extends BaseEntity {
+	public static final int MAX_STATEMENT_LENGTH = 4000;
+
 	private String code;
 	
 	private String statement;

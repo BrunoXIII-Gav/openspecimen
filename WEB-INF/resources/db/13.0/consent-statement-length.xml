@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+  <changeSet author="codex" id="Consent statements 4000 characters mysql" dbms="mysql">
+    <comment>Keep full-text uniqueness without a 4000-character index or a lossy prefix index.</comment>
+    <sql>
+      SET @os_consent_drop_indexes = (
+        SELECT GROUP_CONCAT(CONCAT('DROP INDEX `', REPLACE(index_name, '`', '``'), '`, ') SEPARATOR '')
+        FROM (
+          SELECT index_name
+          FROM information_schema.statistics
+          WHERE table_schema = DATABASE() AND LOWER(table_name) = 'os_consent_statements'
+            AND non_unique = 0 AND index_name != 'PRIMARY'
+          GROUP BY index_name
+          HAVING COUNT(*) = 1 AND MAX(UPPER(column_name)) = 'STATEMENT'
+        ) statement_indexes
+      );
+      SET @os_consent_charset = (
+        SELECT character_set_name FROM information_schema.columns
+        WHERE table_schema = DATABASE() AND LOWER(table_name) = 'os_consent_statements' AND column_name = 'STATEMENT'
+      );
+      SET @os_consent_collation = (
+        SELECT collation_name FROM information_schema.columns
+        WHERE table_schema = DATABASE() AND LOWER(table_name) = 'os_consent_statements' AND column_name = 'STATEMENT'
+      );
+      SET @os_consent_hash_input = (
+        SELECT CASE WHEN pad_attribute = 'PAD SPACE' THEN 'RTRIM(`STATEMENT`)' ELSE '`STATEMENT`' END
+        FROM information_schema.collations WHERE collation_name = @os_consent_collation
+      );
+      SET @os_consent_alter = CONCAT(
+        'ALTER TABLE OS_CONSENT_STATEMENTS ', COALESCE(@os_consent_drop_indexes, ''),
+        'MODIFY COLUMN STATEMENT VARCHAR(4000) CHARACTER SET ', @os_consent_charset,
+        ' COLLATE ', @os_consent_collation, ' NOT NULL, ',
+        'ADD COLUMN STATEMENT_HASH BINARY(32) GENERATED ALWAYS AS ',
+        '(UNHEX(SHA2(WEIGHT_STRING(', @os_consent_hash_input, '),256))) STORED, ',
+        'ADD UNIQUE INDEX OS_CONSENT_STMT_HASH_UQ (STATEMENT_HASH)'
+      );
+      PREPARE os_consent_stmt FROM @os_consent_alter;
+      EXECUTE os_consent_stmt;
+      DEALLOCATE PREPARE os_consent_stmt;
+    </sql>
+    <modifyDataType tableName="OS_CONSENT_STATEMENTS_AUD" columnName="STATEMENT" newDataType="${text.type}(4000)" />
+  </changeSet>
+
+  <changeSet author="codex" id="Consent statements 4000 characters oracle" dbms="oracle">
+    <sql splitStatements="false"><![CDATA[
+      BEGIN
+        FOR stmt_constraint IN (
+          SELECT c.constraint_name
+          FROM user_constraints c JOIN user_cons_columns cc ON cc.constraint_name = c.constraint_name
+          WHERE c.table_name = 'OS_CONSENT_STATEMENTS' AND c.constraint_type = 'U'
+          GROUP BY c.constraint_name
+          HAVING COUNT(*) = 1 AND MAX(cc.column_name) = 'STATEMENT'
+        ) LOOP
+          EXECUTE IMMEDIATE 'ALTER TABLE OS_CONSENT_STATEMENTS DROP CONSTRAINT "' || stmt_constraint.constraint_name || '"';
+        END LOOP;
+      END;
+    ]]></sql>
+    <modifyDataType tableName="OS_CONSENT_STATEMENTS" columnName="STATEMENT" newDataType="${text.type}(4000)" />
+    <sql>
+      ALTER TABLE OS_CONSENT_STATEMENTS ADD (
+        STATEMENT_HASH GENERATED ALWAYS AS (STANDARD_HASH(STATEMENT, 'SHA256')) VIRTUAL
+      );
+      CREATE UNIQUE INDEX OS_CONSENT_STMT_HASH_UQ ON OS_CONSENT_STATEMENTS (STATEMENT_HASH);
+    </sql>
+    <modifyDataType tableName="OS_CONSENT_STATEMENTS_AUD" columnName="STATEMENT" newDataType="${text.type}(4000)" />
+  </changeSet>
+</databaseChangeLog>

@@ -15,7 +15,7 @@
     
     <property name="code" column="CODE"/>
 
-    <property name="statement" column="STATEMENT"/>
+    <property name="statement" column="STATEMENT" length="4000"/>
 
     <property name="activityStatus" column="ACTIVITY_STATUS"/>
     

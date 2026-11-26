@@ -42,7 +42,8 @@ export default {
     'allowStarring',
     'showRowActions',
     'otherParams',
-    'dataSource'
+    'dataSource',
+    'listTransformer'
   ],
 
   emits: ['selectedRows', 'rowClicked', 'listLoaded', 'rowStarToggled'],
@@ -208,6 +209,10 @@ export default {
         );
       } finally {
         this.loading = false;
+      }
+
+      if (typeof this.listTransformer === 'function') {
+        this.list = this.listTransformer(this.list);
       }
       
       this.schema = {filters: this.filters};

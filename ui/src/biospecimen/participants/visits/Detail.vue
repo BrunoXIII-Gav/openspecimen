@@ -68,6 +68,8 @@
           </ul>
         </os-side-menu>
 
+        <ConsentPendingNotice :cpr="cpr" />
+
         <router-view :cpr="cpr" :visit="visit" v-if="visit && (visit.id > 0 || visit.eventId > 0)" />
       </div>
     </os-page-body>
@@ -79,8 +81,10 @@
 import authSvc    from '@/common/services/Authorization.js';
 import cpSvc     from '@/biospecimen/services/CollectionProtocol.js';
 import routerSvc from '@/common/services/Router.js';
+import ConsentPendingNotice from '@/biospecimen/consents/PendingNotice.vue';
 
 export default {
+  components: {ConsentPendingNotice},
   props: ['cpr', 'visit', 'noNavButton'],
 
   inject: ['cpViewCtx'],

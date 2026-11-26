@@ -7,6 +7,7 @@ import http     from '@/common/services/HttpClient.js';
 
 import cprSchema from '@/biospecimen/schemas/participants/cpr.js';
 import addEditLayout from '@/biospecimen/schemas/participants/addedit.js';
+import {isAutoPpid} from '@/biospecimen/services/cp-list-view.mjs';
 
 class CollectionProtocolRegistration {
 
@@ -94,7 +95,7 @@ class CollectionProtocolRegistration {
     return fields.filter(field => defFields.indexOf(field.name) >= 0);
   }
 
-  getFormattedTitle(cpr) {
+  getFormattedTitle(cpr, cp) {
     cpr = cpr || {};
 
     let name = '';
@@ -119,7 +120,10 @@ class CollectionProtocolRegistration {
       name += participant.lastName;
     }
 
-    name = (cpr.ppid || '') + (name ? ' (' + name + ')' : '');
+    const mpi = participant.empi;
+    const identifier = !cpr.contextOnly && isAutoPpid(cp) && mpi && String(mpi).trim() &&
+      !String(mpi).startsWith('###') && mpi !== 'Not Specified' ? mpi : cpr.ppid;
+    name = (identifier || '') + (name ? ' (' + name + ')' : '');
     return name;
   }
 

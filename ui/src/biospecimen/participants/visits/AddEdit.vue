@@ -26,6 +26,7 @@
     </os-page-head>
 
     <os-page-body>
+      <ConsentPendingNotice :cpr="cpr" />
       <os-form ref="visitForm" :schema="ctx.addEditFs" :data="dataCtx" :reference-prefix="'visit-edit-' + cpr.id + '-' + dataCtx.visit.id" @input="handleInput($event)">
         <template #static-fields>
           <os-field-references :cp-id="dataCtx.cp.id" target="visit" :cpr-id="cpr.id" :visit-id="dataCtx.visit.id"
@@ -51,9 +52,10 @@ import formUtil   from '@/common/services/FormUtil.js';
 import routerSvc  from '@/common/services/Router.js';
 import util       from '@/common/services/Util.js';
 import FieldReferences from '@/biospecimen/components/FieldReferences.vue';
+import ConsentPendingNotice from '@/biospecimen/consents/PendingNotice.vue';
 
 export default {
-  components: {'os-field-references': FieldReferences},
+  components: {'os-field-references': FieldReferences, ConsentPendingNotice},
   props: ['cpr', 'visit'],
 
   inject: ['cpViewCtx'],

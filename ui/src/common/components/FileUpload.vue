@@ -2,10 +2,11 @@
 <template>
   <div class="os-file-upload" v-show="!inputValue">
     <FileUpload ref="uploader" mode="basic" name="file" :auto="auto != false" :url="uploadUrl" :tabindex="tabOrder"
+      :choose-label="$t('common.buttons.select_file')"
       :disabled="disabled" @before-send="addHeaders" @upload="onUpload" @error="onError" @select="onFileSelect" />
 
     <div v-if="selectedFile">
-      <os-button class="clear" :left-icon="'times'" :label="'Clear Selection'" @click="clear" />
+      <os-button class="clear" :left-icon="'times'" :label="$t('common.buttons.clear_selection')" @click="clear" />
     </div>
   </div>
   <div class="os-selected-file" v-if="inputValue">

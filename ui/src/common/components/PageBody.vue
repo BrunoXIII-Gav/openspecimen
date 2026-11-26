@@ -43,12 +43,14 @@
 }
 
 
-.os-page-body :deep(.os-side-menu ~ div) {
+.os-page-body :deep(.os-side-menu ~ div),
+.os-page-body :deep(.os-side-menu ~ .os-consent-pending-notice) {
   margin-left: 64px;
   transition: all 0.3s ease-in-out;
 }
 
-.os-page-body :deep(.os-side-menu:hover ~ div) {
+.os-page-body :deep(.os-side-menu:hover ~ div),
+.os-page-body :deep(.os-side-menu:hover ~ .os-consent-pending-notice) {
   margin-left: 225px;
 }
 </style>

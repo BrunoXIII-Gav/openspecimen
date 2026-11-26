@@ -84,6 +84,7 @@
         :auto-search-open="true"
         :allow-selection="!navigationOnly"
         :data-source="navigationOnly ? navigationDataSource : undefined"
+        :list-transformer="transformParticipantList"
         :selected="ctx.selectedItem"
         :include-count="includeCount"
         :url="itemUrl"
@@ -139,7 +140,7 @@ import util      from '@/common/services/Util.js';
 import wfSvc     from '@/biospecimen/services/Workflow.js';
 import contentSvc from '@/common/services/ProtocolContent.js';
 import receiptSvc from '@/biospecimen/services/SpecimenReceipt.js';
-import {resolveCpListView} from '@/biospecimen/services/cp-list-view.mjs';
+import {resolveCpListView, hideAutoPpidColumn} from '@/biospecimen/services/cp-list-view.mjs';
 import navigationSvc from '@/biospecimen/services/SpecimenNavigation.js';
 import {matrixOrigin} from '@/biospecimen/services/specimen-matrix-navigation.mjs';
 
@@ -288,6 +289,10 @@ export default {
   },
 
   methods: {
+    transformParticipantList(list) {
+      return this.navigationOnly ? list : hideAutoPpidColumn(list, this.ctx.cp);
+    },
+
     openSelectedMatrix() {
       if (this.canOpenMatrix && this.selectedSpecimens?.length) routerSvc.goto('SpecimenCollectionMatrix', {cpId: this.ctx.cp.id},
         {ids: this.selectedSpecimens.map(specimen => specimen.id).join(','), mode: 'information', returnTo: matrixOrigin(this.$route)});

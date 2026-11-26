@@ -62,6 +62,8 @@
           </ul>
         </os-side-menu>
 
+        <ConsentPendingNotice :cpr="cpr" />
+
         <router-view :cpr="cpr" v-if="cpr && cpr.id"> </router-view>
       </div>
     </os-page-body>
@@ -76,8 +78,10 @@ import routerSvc  from '@/common/services/Router.js';
 
 import cpSvc  from '@/biospecimen/services/CollectionProtocol.js';
 import cprSvc from '@/biospecimen/services/Cpr.js';
+import ConsentPendingNotice from '@/biospecimen/consents/PendingNotice.vue';
 
 export default {
+  components: {ConsentPendingNotice},
   props: ['cpr', 'noNavButton'],
 
   inject: ['cpViewCtx'],
@@ -122,7 +126,7 @@ export default {
     },
 
     participantName: function() {
-      return this.cpr.contextOnly ? this.cpr.ppid : cprSvc.getFormattedTitle(this.cpr);
+      return this.cpr.contextOnly ? this.cpr.ppid : cprSvc.getFormattedTitle(this.cpr, this.ctx.cp);
     },
 
     isReadConsentAllowed: function() {
